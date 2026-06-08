@@ -748,7 +748,7 @@ function renderQuiz() {
     '</div>';
   }).join('');
 
-  var backLabel = si === 0 ? 'Your Info' : 'Back';
+  var backLabel = 'Back';
   var nextLabel = isLast ? 'Complete Assessment' : 'Next Section';
   var hint = done
     ? '<span class="nav-hint all-good">All questions answered &mdash; ready to continue</span>'
@@ -796,19 +796,19 @@ function renderComplete() {
       '<p class="complete-sub">Your responses have been captured. The AI Readiness Score and strategic recommendations will be generated in the next step.</p>' +
       '<div class="complete-grid">' +
         '<div class="complete-stat">' +
-          '<div class="complete-stat-label">Respondent</div>' +
-          '<div class="complete-stat-val">' + esc(state.info.name || '—') + '</div>' +
-        '</div>' +
-        '<div class="complete-stat">' +
-          '<div class="complete-stat-label">Organization</div>' +
-          '<div class="complete-stat-val">' + esc(state.info.company || '—') + '</div>' +
+          '<div class="complete-stat-label">Pillars assessed</div>' +
+          '<div class="complete-stat-val">' + SECTIONS.length + ' of ' + SECTIONS.length + '</div>' +
         '</div>' +
         '<div class="complete-stat">' +
           '<div class="complete-stat-label">Questions answered</div>' +
           '<div class="complete-stat-val">' + answeredTotal() + ' / ' + TOTAL_Q + '</div>' +
         '</div>' +
+        '<div class="complete-stat">' +
+          '<div class="complete-stat-label">Status</div>' +
+          '<div class="complete-stat-val" style="color:rgba(110,231,183,0.90)">Complete</div>' +
+        '</div>' +
       '</div>' +
-      '<p class="complete-note">Your detailed AI Readiness Report will be sent to <strong>' + esc(state.info.email || 'your email') + '</strong>.</p>' +
+      '<p class="complete-note">Your responses have been captured. The AI Readiness Score and strategic recommendations will be generated in the next step.</p>' +
     '</div>' +
   '</div>';
 }
@@ -819,20 +819,8 @@ function bind() {
 
   /* Intro */
   el = document.getElementById('btn-begin');
-  if (el) el.onclick = function() { state.screen = 'info'; navigate(renderInfo); };
+  if (el) el.onclick = function() { state.screen = 'quiz'; state.section = 0; navigate(renderQuiz); };
 
-  /* Info — back */
-  el = document.getElementById('btn-info-back');
-  if (el) el.onclick = function() { saveInfo(); state.screen = 'intro'; navigate(renderIntro); };
-
-  /* Info — next */
-  el = document.getElementById('btn-info-next');
-  if (el) el.onclick = function() {
-    saveInfo();
-    var ok = validateInfo();
-    if (!ok) return;
-    state.screen = 'quiz'; state.section = 0; navigate(renderQuiz);
-  };
 
   /* Scale buttons — no full re-render, update in-place */
   document.querySelectorAll('.scale-btn').forEach(function(btn) {
@@ -867,7 +855,7 @@ function bind() {
   /* Quiz — back */
   el = document.getElementById('btn-quiz-back');
   if (el) el.onclick = function() {
-    if (state.section === 0) { state.screen = 'info'; navigate(renderInfo); }
+    if (state.section === 0) { state.screen = 'intro'; navigate(renderIntro); }
     else { state.section--; navigate(renderQuiz); }
   };
 
