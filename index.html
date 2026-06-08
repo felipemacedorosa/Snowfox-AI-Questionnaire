@@ -1,0 +1,939 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Readiness Assessment | Snowfox AI</title>
+  <meta name="description" content="Evaluate how prepared your organization is to adopt, scale, and generate measurable business value from AI.">
+  <link rel="icon" type="image/png" href="fox-icon.png">
+  <link rel="apple-touch-icon" href="fox-icon.png">
+  <link rel="stylesheet" href="fonts/fonts.css">
+  <style>
+
+/* ─── TOKENS ──────────────────────────────────────────── */
+:root {
+  --brand-start:  #8E2DE2;
+  --brand-end:    #4A00E0;
+  --brand-accent: #7030A0;
+  --grad: linear-gradient(135deg, var(--brand-start), var(--brand-end));
+
+  --pa-70: rgba(142,45,226,0.70);
+  --pa-40: rgba(142,45,226,0.40);
+  --pa-20: rgba(142,45,226,0.20);
+  --pa-10: rgba(142,45,226,0.10);
+
+  --text-h:   #ffffff;
+  --text-b:   rgba(238,232,255,0.96);
+  --text-m:   rgba(210,198,255,0.82);
+  --text-dim: rgba(190,175,245,0.50);
+  --text-p:   rgba(190,175,245,0.42);
+
+  --glass-bg:     rgba(8,3,32,0.76);
+  --glass-border: rgba(255,255,255,0.09);
+  --input-bg:     rgba(255,255,255,0.06);
+  --input-border: rgba(255,255,255,0.12);
+
+  --r:    10px;
+  --r-lg: 18px;
+  --blur: blur(28px);
+  --nav-h: 64px;
+  --max-w: 840px;
+  --err: rgba(239,68,68,0.65);
+}
+
+/* ─── RESET ───────────────────────────────────────────── */
+*,*::before,*::after { box-sizing:border-box; margin:0; padding:0; }
+html { scroll-behavior:smooth; font-size:16px; overflow-x:hidden; }
+body {
+  font-family:'Poppins',sans-serif;
+  background:#080320;
+  color:var(--text-b);
+  line-height:1.6;
+  overflow-x:hidden;
+  -webkit-font-smoothing:antialiased;
+  min-height:100dvh;
+}
+img { display:block; max-width:100%; }
+button { cursor:pointer; border:none; background:none; font-family:inherit; touch-action:manipulation; }
+input,select { font-family:inherit; }
+
+/* ─── BACKGROUND ──────────────────────────────────────── */
+#static-bg {
+  position:fixed; inset:0; z-index:0;
+  pointer-events:none; overflow:hidden;
+}
+#bg-glow {
+  position:absolute; inset:-8% -5%;
+  background:
+    radial-gradient(ellipse 65% 55% at 15% 20%,  rgba(142,45,226,0.28) 0%, transparent 55%),
+    radial-gradient(ellipse 50% 60% at 85% 78%,  rgba(74,0,224,0.24)   0%, transparent 55%),
+    radial-gradient(ellipse 48% 42% at 72% 14%,  rgba(99,102,241,0.18) 0%, transparent 52%),
+    radial-gradient(ellipse 42% 52% at 22% 82%,  rgba(109,40,217,0.16) 0%, transparent 52%),
+    linear-gradient(160deg, #0a0428 0%, #0d0535 40%, #070220 100%);
+  animation: bgDrift 28s ease-in-out infinite;
+  will-change:transform;
+}
+@keyframes bgDrift {
+  0%,100% { transform:translate(0,0) scale(1); }
+  33%     { transform:translate(-1.2%,0.8%) scale(1.01); }
+  66%     { transform:translate(1.0%,-0.7%) scale(1.01); }
+}
+
+/* ─── NAV ─────────────────────────────────────────────── */
+.nav {
+  position:fixed; inset-inline:0; top:0;
+  height:var(--nav-h); z-index:200;
+  display:flex; align-items:center; padding:0 24px;
+  background:rgba(5,1,22,0.82);
+  backdrop-filter:blur(20px);
+  -webkit-backdrop-filter:blur(20px);
+  border-bottom:1px solid rgba(255,255,255,0.07);
+}
+.nav-inner {
+  width:100%; max-width:var(--max-w);
+  margin-inline:auto;
+  display:flex; align-items:center; justify-content:space-between;
+}
+.nav-logo img { height:28px; width:auto; }
+.nav-save {
+  display:none; align-items:center; gap:7px;
+  font-size:12px; font-weight:500; color:var(--text-m);
+  padding:7px 16px; border-radius:20px;
+  border:1px solid rgba(255,255,255,0.11);
+  background:rgba(255,255,255,0.04);
+  transition:border-color .2s, color .2s, background .2s;
+  min-height:36px;
+}
+.nav-save:hover { border-color:var(--pa-40); color:#fff; }
+.nav-save.saved { color:#6ee7b7; border-color:rgba(110,231,183,0.35); background:rgba(110,231,183,0.06); }
+.nav-save svg { width:13px; height:13px; flex-shrink:0; }
+
+/* ─── LAYOUT ──────────────────────────────────────────── */
+.page {
+  position:relative; z-index:2;
+  min-height:100dvh; padding-top:var(--nav-h);
+  display:flex; justify-content:center;
+}
+#app {
+  width:100%; max-width:var(--max-w);
+  padding:36px 20px 72px;
+  opacity:0;
+  transition:opacity .22s ease;
+}
+#app.visible { opacity:1; }
+
+/* ─── GLASS CARD ──────────────────────────────────────── */
+.glass-card {
+  background:var(--glass-bg);
+  backdrop-filter:var(--blur);
+  -webkit-backdrop-filter:var(--blur);
+  border:1px solid var(--glass-border);
+  border-radius:var(--r-lg);
+  padding:48px 52px;
+}
+
+/* ─── GRADIENT TEXT ───────────────────────────────────── */
+.gt {
+  background:var(--grad);
+  -webkit-background-clip:text;
+  -webkit-text-fill-color:transparent;
+  background-clip:text;
+}
+
+/* ─── FOCUS ───────────────────────────────────────────── */
+:focus-visible {
+  outline:2px solid rgba(167,139,250,0.70);
+  outline-offset:3px;
+}
+
+/* ════════════════════════════════════════════════════════
+   INTRO SCREEN
+════════════════════════════════════════════════════════ */
+.screen-intro { display:flex; flex-direction:column; align-items:center; padding-top:20px; }
+.intro-card { width:100%; text-align:center; animation:fadeUp .5s cubic-bezier(.22,1,.36,1) both; }
+
+.intro-eyebrow {
+  display:inline-flex; align-items:center; gap:8px;
+  font-size:11.5px; font-weight:600; letter-spacing:.12em; text-transform:uppercase;
+  color:var(--text-m);
+  background:rgba(142,45,226,0.14); border:1px solid rgba(142,45,226,0.28);
+  border-radius:20px; padding:6px 18px; margin-bottom:30px;
+}
+.intro-eyebrow svg { width:13px; height:13px; opacity:.75; }
+
+.intro-title {
+  font-size:clamp(32px,5.5vw,52px);
+  font-weight:700; color:var(--text-h); line-height:1.18; margin-bottom:20px;
+}
+.intro-sub {
+  font-size:17px; color:var(--text-m);
+  max-width:520px; margin-inline:auto;
+  line-height:1.7; margin-bottom:40px;
+}
+
+.intro-stats {
+  display:flex; align-items:center; justify-content:center;
+  gap:0; margin-bottom:44px;
+  border:1px solid rgba(255,255,255,0.08);
+  border-radius:14px; overflow:hidden;
+  width:fit-content; margin-inline:auto;
+}
+.intro-stat {
+  display:flex; flex-direction:column; align-items:center;
+  padding:18px 36px; gap:4px;
+}
+.intro-stat + .intro-stat { border-left:1px solid rgba(255,255,255,0.08); }
+.intro-stat-val { font-size:26px; font-weight:700; color:var(--text-h); line-height:1; }
+.intro-stat-label { font-size:11px; color:var(--text-dim); text-transform:uppercase; letter-spacing:.08em; }
+
+.intro-pillars {
+  display:flex; flex-wrap:wrap; gap:8px;
+  justify-content:center; margin-bottom:44px;
+}
+.intro-pillar-tag {
+  font-size:12px; font-weight:500; color:var(--text-m);
+  background:rgba(255,255,255,0.04);
+  border:1px solid rgba(255,255,255,0.09);
+  border-radius:6px; padding:6px 14px;
+}
+
+.btn-primary {
+  display:inline-flex; align-items:center; gap:10px;
+  padding:0 38px; height:54px; border-radius:12px;
+  background:var(--grad); color:#fff;
+  font-size:15px; font-weight:600; letter-spacing:.03em;
+  box-shadow:0 4px 28px rgba(142,45,226,0.42);
+  transition:transform .2s ease, box-shadow .2s ease;
+}
+.btn-primary:hover { transform:translateY(-2px); box-shadow:0 8px 36px rgba(142,45,226,0.52); }
+.btn-primary:active { transform:translateY(0); }
+.btn-primary svg { width:16px; height:16px; }
+
+/* ════════════════════════════════════════════════════════
+   INFO FORM SCREEN
+════════════════════════════════════════════════════════ */
+.screen-header {
+  padding-bottom:28px; border-bottom:1px solid rgba(255,255,255,0.07); margin-bottom:32px;
+}
+.screen-eyebrow {
+  font-size:11.5px; font-weight:700; letter-spacing:.12em; text-transform:uppercase;
+  color:rgba(167,139,250,0.70); margin-bottom:10px;
+}
+.screen-title { font-size:28px; font-weight:700; color:var(--text-h); margin-bottom:8px; }
+.screen-sub { font-size:15px; color:var(--text-m); line-height:1.6; }
+
+.form-grid { display:grid; grid-template-columns:1fr 1fr; gap:20px; }
+.field-full { grid-column:1 / -1; }
+
+.field label {
+  display:block; font-size:11px; font-weight:700;
+  letter-spacing:.10em; text-transform:uppercase;
+  color:var(--text-m); margin-bottom:9px;
+}
+.req { color:rgba(167,139,250,0.80); }
+
+.field input, .field select {
+  width:100%; height:50px; padding:0 16px;
+  border-radius:var(--r);
+  background:var(--input-bg);
+  border:1px solid var(--input-border);
+  color:var(--text-h); font-size:14px;
+  outline:none;
+  transition:border-color .2s, background .2s;
+  -webkit-appearance:none; appearance:none;
+}
+.field select {
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='rgba(210%2C198%2C255%2C0.55)' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;
+  background-position:right 14px center;
+  padding-right:38px;
+}
+.field select option { background:#0d0535; color:var(--text-h); }
+.field input::placeholder { color:var(--text-p); }
+.field input:focus, .field select:focus {
+  border-color:var(--brand-start);
+  background:rgba(142,45,226,0.08);
+}
+.field input.error-field { border-color:var(--err); }
+.field-error {
+  font-size:12px; color:rgba(252,165,165,0.90);
+  margin-top:6px; display:none;
+}
+.field-error.visible { display:block; }
+.error-banner {
+  background:rgba(239,68,68,0.10); border:1px solid rgba(239,68,68,0.30);
+  border-radius:var(--r); padding:12px 16px;
+  font-size:13px; color:rgba(252,165,165,0.90);
+  margin-bottom:20px; display:none;
+}
+.error-banner.visible { display:block; }
+
+/* ════════════════════════════════════════════════════════
+   PROGRESS INDICATOR
+════════════════════════════════════════════════════════ */
+.progress-wrap { margin-bottom:36px; }
+
+.progress-segments {
+  display:flex; gap:5px; margin-bottom:14px;
+}
+.progress-seg {
+  flex:1; height:4px; border-radius:2px;
+  background:rgba(255,255,255,0.09);
+  position:relative; overflow:hidden;
+  transition:background .3s ease;
+}
+.progress-seg.done { background:rgba(142,45,226,0.55); }
+.progress-seg.active { background:rgba(142,45,226,0.18); }
+.progress-seg.active::after {
+  content:''; position:absolute; inset:0;
+  background:var(--grad);
+  animation:segFill .45s cubic-bezier(.22,1,.36,1) forwards;
+}
+@keyframes segFill { from { transform:scaleX(0); transform-origin:left; } to { transform:scaleX(1); transform-origin:left; } }
+
+.progress-meta {
+  display:flex; align-items:center; justify-content:space-between; gap:12px;
+}
+.progress-section-name { font-size:13px; font-weight:600; color:var(--text-m); }
+.progress-count { font-size:12px; color:var(--text-dim); white-space:nowrap; }
+
+/* ════════════════════════════════════════════════════════
+   SECTION HEADER
+════════════════════════════════════════════════════════ */
+.section-header { margin-bottom:36px; padding-bottom:28px; border-bottom:1px solid rgba(255,255,255,0.07); }
+.section-pillar-label {
+  font-size:12px; font-weight:700; letter-spacing:.12em; text-transform:uppercase;
+  color:rgba(167,139,250,0.65); margin-bottom:10px;
+}
+.section-title { font-size:clamp(22px,4vw,30px); font-weight:700; line-height:1.25; margin-bottom:10px; }
+.section-desc { font-size:14px; color:var(--text-m); line-height:1.65; }
+
+/* ════════════════════════════════════════════════════════
+   QUESTION BLOCK
+════════════════════════════════════════════════════════ */
+.question-block {
+  padding:28px 0;
+  border-bottom:1px solid rgba(255,255,255,0.06);
+}
+.question-block:first-of-type { padding-top:0; }
+.question-block:last-of-type { border-bottom:none; padding-bottom:0; }
+
+.question-num {
+  font-size:10.5px; font-weight:700; letter-spacing:.10em; text-transform:uppercase;
+  color:rgba(167,139,250,0.48); margin-bottom:10px;
+}
+.question-text {
+  font-size:16px; font-weight:500; color:var(--text-h); line-height:1.65;
+  margin-bottom:22px;
+}
+
+/* ─── SCALE ───────────────────────────────────────────── */
+.scale-row {
+  display:flex; gap:8px;
+}
+.scale-btn {
+  flex:1; min-height:80px;
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  padding:14px 6px 12px; gap:7px;
+  border-radius:var(--r);
+  border:1px solid rgba(255,255,255,0.08);
+  background:rgba(255,255,255,0.03);
+  color:inherit; font-family:inherit;
+  cursor:pointer;
+  transition:border-color .16s, background .16s, box-shadow .16s, transform .14s;
+  -webkit-tap-highlight-color:transparent;
+}
+.scale-btn:hover {
+  border-color:rgba(142,45,226,0.50);
+  background:rgba(142,45,226,0.10);
+  transform:translateY(-2px);
+}
+.scale-btn:active { transform:translateY(0) scale(0.97); }
+.scale-btn.selected {
+  border-color:rgba(142,45,226,0.80);
+  background:linear-gradient(145deg, rgba(142,45,226,0.28), rgba(74,0,224,0.22));
+  box-shadow:0 0 0 1px rgba(142,45,226,0.30), 0 4px 18px rgba(142,45,226,0.22);
+  transform:translateY(-2px);
+}
+.scale-num {
+  font-size:20px; font-weight:700; line-height:1; color:var(--text-h);
+  transition:color .15s;
+}
+.scale-btn.selected .scale-num {
+  background:var(--grad);
+  -webkit-background-clip:text;
+  -webkit-text-fill-color:transparent;
+  background-clip:text;
+}
+.scale-label {
+  font-size:9.5px; font-weight:500; color:var(--text-dim);
+  text-align:center; line-height:1.35;
+}
+.scale-btn.selected .scale-label { color:rgba(210,198,255,0.88); }
+
+/* Unanswered indicator */
+.question-block.unanswered .question-text { color:rgba(255,80,80,0.90); }
+
+/* ════════════════════════════════════════════════════════
+   NAVIGATION
+════════════════════════════════════════════════════════ */
+.quiz-nav {
+  display:flex; align-items:center; justify-content:space-between;
+  padding-top:32px; margin-top:32px;
+  border-top:1px solid rgba(255,255,255,0.07);
+  gap:16px;
+}
+.nav-hint { font-size:12px; color:var(--text-dim); flex:1; text-align:center; }
+.nav-hint.all-good { color:rgba(110,231,183,0.80); }
+
+.btn-back {
+  display:flex; align-items:center; gap:8px;
+  padding:0 22px; height:48px; border-radius:var(--r);
+  border:1px solid rgba(255,255,255,0.13);
+  background:rgba(255,255,255,0.04);
+  color:var(--text-m); font-size:14px; font-weight:500;
+  transition:border-color .18s, color .18s, background .18s;
+  flex-shrink:0;
+}
+.btn-back:hover { border-color:rgba(255,255,255,0.30); color:#fff; background:rgba(255,255,255,0.07); }
+.btn-back svg { width:14px; height:14px; }
+
+.btn-next {
+  display:flex; align-items:center; gap:8px;
+  padding:0 28px; height:48px; border-radius:var(--r);
+  background:var(--grad); color:#fff;
+  font-size:14px; font-weight:600; letter-spacing:.03em;
+  box-shadow:0 2px 18px rgba(142,45,226,0.38);
+  transition:transform .18s, box-shadow .18s, opacity .18s;
+  flex-shrink:0;
+}
+.btn-next:hover:not(:disabled) { transform:translateY(-2px); box-shadow:0 6px 28px rgba(142,45,226,0.48); }
+.btn-next:active:not(:disabled) { transform:translateY(0); }
+.btn-next:disabled { opacity:0.36; cursor:not-allowed; }
+.btn-next svg { width:14px; height:14px; }
+
+/* ════════════════════════════════════════════════════════
+   COMPLETION SCREEN
+════════════════════════════════════════════════════════ */
+.screen-complete { display:flex; flex-direction:column; align-items:center; padding-top:20px; }
+.complete-card { width:100%; text-align:center; animation:fadeUp .5s cubic-bezier(.22,1,.36,1) both; }
+
+.complete-icon {
+  width:76px; height:76px; border-radius:50%;
+  background:linear-gradient(135deg, rgba(142,45,226,0.22), rgba(74,0,224,0.18));
+  border:1px solid rgba(142,45,226,0.38);
+  display:flex; align-items:center; justify-content:center;
+  margin:0 auto 32px;
+  box-shadow:0 0 40px rgba(142,45,226,0.22);
+  animation:iconPop .55s cubic-bezier(.22,1,.36,1) both;
+}
+@keyframes iconPop {
+  from { opacity:0; transform:scale(0.7); }
+  to   { opacity:1; transform:scale(1); }
+}
+.complete-icon svg { width:34px; height:34px; color:rgba(167,139,250,0.92); }
+
+.complete-title { font-size:clamp(28px,5vw,40px); font-weight:700; color:var(--text-h); margin-bottom:16px; }
+.complete-sub {
+  font-size:16px; color:var(--text-m);
+  max-width:480px; margin-inline:auto; line-height:1.7; margin-bottom:44px;
+}
+
+.complete-grid {
+  display:grid; grid-template-columns:repeat(3,1fr);
+  gap:14px; margin-bottom:40px; text-align:left;
+}
+.complete-stat {
+  background:rgba(255,255,255,0.03);
+  border:1px solid rgba(255,255,255,0.08);
+  border-radius:12px; padding:18px 20px;
+}
+.complete-stat-label {
+  font-size:10.5px; font-weight:700; letter-spacing:.09em; text-transform:uppercase;
+  color:var(--text-dim); margin-bottom:6px;
+}
+.complete-stat-val { font-size:15px; font-weight:600; color:var(--text-h); }
+
+.complete-note { font-size:13px; color:var(--text-dim); line-height:1.6; }
+.complete-note strong { color:var(--text-m); font-weight:600; }
+
+/* ─── KEYFRAMES ───────────────────────────────────────── */
+@keyframes fadeUp {
+  from { opacity:0; transform:translateY(18px); }
+  to   { opacity:1; transform:translateY(0); }
+}
+
+/* ─── REDUCED MOTION ──────────────────────────────────── */
+@media (prefers-reduced-motion:reduce) {
+  *,*::before,*::after { animation:none !important; transition:none !important; }
+}
+
+/* ─── RESPONSIVE ──────────────────────────────────────── */
+@media (max-width:700px) {
+  .glass-card { padding:28px 22px; }
+  .form-grid { grid-template-columns:1fr; }
+  .field-full { grid-column:1; }
+  .intro-stats { flex-direction:column; gap:0; width:100%; }
+  .intro-stat + .intro-stat { border-left:none; border-top:1px solid rgba(255,255,255,0.08); }
+  .scale-num { font-size:17px; }
+  .scale-label { font-size:8.5px; }
+  .scale-btn { padding:12px 4px 10px; gap:5px; min-height:72px; }
+  .complete-grid { grid-template-columns:1fr; }
+  .nav-hint { display:none; }
+  .quiz-nav { flex-wrap:wrap; }
+  .btn-next, .btn-back { flex:1; justify-content:center; }
+}
+@media (max-width:400px) {
+  #app { padding:24px 12px 60px; }
+  .scale-row { gap:5px; }
+}
+
+  </style>
+</head>
+<body>
+
+<div id="static-bg" aria-hidden="true"><div id="bg-glow"></div></div>
+
+<nav class="nav" aria-label="Snowfox AI">
+  <div class="nav-inner">
+    <a href="/" class="nav-logo" aria-label="Snowfox AI">
+      <img src="logo-dark.png" alt="Snowfox AI" width="120" height="28">
+    </a>
+    <button class="nav-save" id="btn-save" aria-label="Save progress">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M13 14.5H3a1 1 0 01-1-1V2.5a1 1 0 011-1h8l3 3v9.5a1 1 0 01-1 1z"/>
+        <path d="M10.5 1.5V5.5H4V1.5M4 14.5v-5h8v5"/>
+      </svg>
+      <span id="save-label">Save progress</span>
+    </button>
+  </div>
+</nav>
+
+<div class="page">
+  <div id="app"></div>
+</div>
+
+<script>
+/* ─── DATA ────────────────────────────────────────────── */
+var SCALE = {
+  1: 'Not started',
+  2: 'Early / informal',
+  3: 'Partially structured',
+  4: 'Mostly mature',
+  5: 'Advanced / optimized'
+};
+
+var SECTIONS = [
+  {
+    id: 'strategy', pillar: 1,
+    title: 'Strategy & Business Alignment',
+    desc: 'How AI is positioned within your organization\'s vision, leadership priorities, and strategic goals.',
+    questions: [
+      { id: 'q1',  text: 'How clearly has your organization defined its AI vision and ambition?' },
+      { id: 'q2',  text: 'How well is AI connected to your company\'s broader business strategy and growth priorities?' },
+      { id: 'q3',  text: 'To what extent does leadership understand the economic potential and organizational impact of AI?' },
+      { id: 'q4',  text: 'Has your organization identified and prioritized the business areas where AI could create the most value?' }
+    ]
+  },
+  {
+    id: 'people', pillar: 2,
+    title: 'People & Culture',
+    desc: 'Your team\'s readiness, skill availability, and cross-functional collaboration capacity for AI adoption.',
+    questions: [
+      { id: 'q5',  text: 'How prepared are your teams to understand, adopt, and work with AI solutions?' },
+      { id: 'q6',  text: 'Does your organization have the necessary AI, data, and technical skills internally, or a clear plan to access them externally?' },
+      { id: 'q7',  text: 'How well do business, data, technology, and operations teams collaborate on AI-related initiatives?' }
+    ]
+  },
+  {
+    id: 'processes', pillar: 3,
+    title: 'Processes, Governance & Risk',
+    desc: 'Your frameworks for managing AI initiatives responsibly, at scale, and with clear accountability.',
+    questions: [
+      { id: 'q8',  text: 'How clearly are your core business processes documented and standardized across the organization?' },
+      { id: 'q9',  text: 'Does your organization have a clear governance model for selecting, approving, and managing AI initiatives?' },
+      { id: 'q10', text: 'Are decision rights clear for AI projects, including who approves priorities, budgets, risks, and implementation decisions?' },
+      { id: 'q11', text: 'Are there clear policies for responsible AI use, including privacy, security, compliance, and ethical risk?' }
+    ]
+  },
+  {
+    id: 'data', pillar: 4,
+    title: 'Data Readiness',
+    desc: 'The completeness, quality, accessibility, and governance of your organization\'s data assets.',
+    questions: [
+      { id: 'q12', text: 'How complete and relevant is the data your organization collects for potential AI use cases?' },
+      { id: 'q13', text: 'How accessible is your data to the teams or systems that need it for analytics and AI?' },
+      { id: 'q14', text: 'How structured, clean, and reliable is your data for AI model development or automation?' },
+      { id: 'q15', text: 'How mature is your data governance, including ownership, quality monitoring, security, and access control?' },
+      { id: 'q16', text: 'To what extent are your data collection and preparation processes automated and integrated across systems?' }
+    ]
+  },
+  {
+    id: 'technology', pillar: 5,
+    title: 'Technology & Infrastructure',
+    desc: 'Your technical capabilities to build, deploy, monitor, and integrate AI solutions at scale.',
+    questions: [
+      { id: 'q17', text: 'Does your organization have the infrastructure needed to experiment with, develop, and deploy AI solutions?' },
+      { id: 'q18', text: 'How standardized is your technology stack for AI, data engineering, and analytics projects?' },
+      { id: 'q19', text: 'How mature are your deployment practices for AI solutions, including DevOps, MLOps, CI/CD, and monitoring?' },
+      { id: 'q20', text: 'Can your AI systems integrate with core business systems such as CRM, ERP, databases, cloud platforms, or internal tools?' }
+    ]
+  }
+];
+
+var TOTAL_Q = SECTIONS.reduce(function(n, s) { return n + s.questions.length; }, 0);
+
+/* ─── STATE ───────────────────────────────────────────── */
+var state = {
+  screen: 'intro',
+  section: 0,
+  info: { name:'', company:'', email:'', role:'', industry:'', size:'' },
+  answers: {}
+};
+
+/* ─── HELPERS ─────────────────────────────────────────── */
+function esc(s) {
+  return String(s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function answeredTotal() { return Object.keys(state.answers).length; }
+function sectionDone(i) {
+  return SECTIONS[i].questions.every(function(q){ return state.answers[q.id] !== undefined; });
+}
+function globalQNum(si, qi) {
+  var n = qi + 1;
+  for (var i = 0; i < si; i++) n += SECTIONS[i].questions.length;
+  return n;
+}
+
+/* ─── RENDER ENGINE ───────────────────────────────────── */
+var app = document.getElementById('app');
+
+function navigate(renderFn) {
+  app.classList.remove('visible');
+  setTimeout(function() {
+    app.innerHTML = renderFn();
+    bind();
+    window.scrollTo({ top:0, behavior:'smooth' });
+    requestAnimationFrame(function(){ app.classList.add('visible'); });
+  }, 220);
+  syncNav();
+}
+
+function syncNav() {
+  var btn = document.getElementById('btn-save');
+  if (btn) btn.style.display = state.screen === 'quiz' ? 'flex' : 'none';
+}
+
+/* ─── SCREENS ─────────────────────────────────────────── */
+function renderIntro() {
+  return '<div class="screen-intro">' +
+    '<div class="glass-card intro-card">' +
+      '<div class="intro-eyebrow">' +
+        '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><circle cx="8" cy="8" r="7"/><path d="M8 5v3l2 2"/></svg>' +
+        'Snowfox AI' +
+      '</div>' +
+      '<h1 class="intro-title">AI Readiness<br><span class="gt">Assessment</span></h1>' +
+      '<p class="intro-sub">Evaluate how prepared your organization is to adopt, scale, and generate measurable business value from AI.</p>' +
+      '<div class="intro-stats">' +
+        '<div class="intro-stat"><span class="intro-stat-val gt">20</span><span class="intro-stat-label">Questions</span></div>' +
+        '<div class="intro-stat"><span class="intro-stat-val gt">5</span><span class="intro-stat-label">Pillars</span></div>' +
+        '<div class="intro-stat"><span class="intro-stat-val gt">~15</span><span class="intro-stat-label">Minutes</span></div>' +
+      '</div>' +
+      '<div class="intro-pillars" style="margin-top:32px">' +
+        SECTIONS.map(function(s){ return '<span class="intro-pillar-tag">' + esc(s.title) + '</span>'; }).join('') +
+      '</div>' +
+      '<button class="btn-primary" id="btn-begin" style="margin-top:8px">' +
+        'Begin Assessment' +
+        '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4"/></svg>' +
+      '</button>' +
+    '</div>' +
+  '</div>';
+}
+
+function renderInfo() {
+  var i = state.info;
+  var industryOpts = ['Technology','Financial Services','Healthcare & Life Sciences','Retail & Consumer Goods','Manufacturing','Energy & Utilities','Professional Services','Media & Entertainment','Government & Public Sector','Other'];
+  var sizeOpts = ['1–50 employees','51–200 employees','201–1,000 employees','1,001–5,000 employees','5,000+ employees'];
+  return '<div class="screen-info">' +
+    '<div class="glass-card">' +
+      '<div id="err-banner" class="error-banner">Please fill in all required fields to continue.</div>' +
+      '<div class="screen-header">' +
+        '<div class="screen-eyebrow">Before we begin</div>' +
+        '<h2 class="screen-title">Tell us about yourself</h2>' +
+        '<p class="screen-sub">This helps contextualize your results and tailor the assessment to your organization.</p>' +
+      '</div>' +
+      '<div class="form-grid">' +
+        '<div class="field">' +
+          '<label for="f-name">Full name <span class="req">*</span></label>' +
+          '<input id="f-name" type="text" placeholder="Your full name" value="' + esc(i.name) + '" autocomplete="name">' +
+          '<span class="field-error" id="err-name">Please enter your name.</span>' +
+        '</div>' +
+        '<div class="field">' +
+          '<label for="f-company">Company <span class="req">*</span></label>' +
+          '<input id="f-company" type="text" placeholder="Your company name" value="' + esc(i.company) + '" autocomplete="organization">' +
+          '<span class="field-error" id="err-company">Please enter your company name.</span>' +
+        '</div>' +
+        '<div class="field field-full">' +
+          '<label for="f-email">Work email <span class="req">*</span></label>' +
+          '<input id="f-email" type="email" placeholder="you@company.com" value="' + esc(i.email) + '" autocomplete="email">' +
+          '<span class="field-error" id="err-email">Please enter a valid work email.</span>' +
+        '</div>' +
+        '<div class="field">' +
+          '<label for="f-role">Role / Title</label>' +
+          '<input id="f-role" type="text" placeholder="e.g. CTO, VP of Data" value="' + esc(i.role) + '" autocomplete="organization-title">' +
+        '</div>' +
+        '<div class="field">' +
+          '<label for="f-industry">Industry</label>' +
+          '<select id="f-industry">' +
+            '<option value="">Select industry</option>' +
+            industryOpts.map(function(o){ return '<option value="' + esc(o) + '"' + (i.industry===o?' selected':'') + '>' + esc(o) + '</option>'; }).join('') +
+          '</select>' +
+        '</div>' +
+        '<div class="field field-full">' +
+          '<label for="f-size">Company size</label>' +
+          '<select id="f-size">' +
+            '<option value="">Select company size</option>' +
+            sizeOpts.map(function(o){ return '<option value="' + esc(o) + '"' + (i.size===o?' selected':'') + '>' + esc(o) + '</option>'; }).join('') +
+          '</select>' +
+        '</div>' +
+      '</div>' +
+      '<div class="quiz-nav">' +
+        '<button class="btn-back" id="btn-info-back">' +
+          '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M13 8H3M7 4L3 8l4 4"/></svg>' +
+          'Back' +
+        '</button>' +
+        '<span class="nav-hint">Required fields marked with <span style="color:rgba(167,139,250,0.80)">*</span></span>' +
+        '<button class="btn-next" id="btn-info-next">' +
+          'Start Assessment' +
+          '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4"/></svg>' +
+        '</button>' +
+      '</div>' +
+    '</div>' +
+  '</div>';
+}
+
+function renderQuiz() {
+  var si = state.section;
+  var sec = SECTIONS[si];
+  var done = sectionDone(si);
+  var isLast = si === SECTIONS.length - 1;
+
+  var segs = SECTIONS.map(function(s, i) {
+    var cls = 'progress-seg';
+    if (i < si) cls += ' done';
+    else if (i === si) cls += ' active';
+    return '<div class="' + cls + '" role="presentation"></div>';
+  }).join('');
+
+  var questions = sec.questions.map(function(q, qi) {
+    var num = globalQNum(si, qi);
+    var sel = state.answers[q.id];
+    var btns = [1,2,3,4,5].map(function(v) {
+      var isSel = sel === v;
+      return '<button class="scale-btn' + (isSel ? ' selected' : '') + '" ' +
+        'data-qid="' + q.id + '" data-val="' + v + '" ' +
+        'aria-label="' + v + ' – ' + esc(SCALE[v]) + '" ' +
+        'aria-pressed="' + isSel + '" ' +
+        'type="button">' +
+        '<span class="scale-num">' + v + '</span>' +
+        '<span class="scale-label">' + esc(SCALE[v]) + '</span>' +
+      '</button>';
+    }).join('');
+    return '<div class="question-block" data-qid="' + q.id + '">' +
+      '<div class="question-num">Question ' + num + ' of ' + TOTAL_Q + '</div>' +
+      '<p class="question-text">' + esc(q.text) + '</p>' +
+      '<div class="scale-row" role="group" aria-label="Maturity score for question ' + num + '">' + btns + '</div>' +
+    '</div>';
+  }).join('');
+
+  var backLabel = si === 0 ? 'Your Info' : 'Back';
+  var nextLabel = isLast ? 'Complete Assessment' : 'Next Section';
+  var hint = done
+    ? '<span class="nav-hint all-good">All questions answered &mdash; ready to continue</span>'
+    : '<span class="nav-hint">Answer all questions to continue</span>';
+
+  return '<div class="screen-quiz">' +
+    '<div class="glass-card">' +
+      '<div class="progress-wrap" role="status" aria-live="polite" aria-label="Progress: Pillar ' + sec.pillar + ' of ' + SECTIONS.length + ', ' + answeredTotal() + ' of ' + TOTAL_Q + ' answered">' +
+        '<div class="progress-segments">' + segs + '</div>' +
+        '<div class="progress-meta">' +
+          '<span class="progress-section-name">Pillar ' + sec.pillar + ' / ' + SECTIONS.length + ' &mdash; ' + esc(sec.title) + '</span>' +
+          '<span class="progress-count" id="answered-count">' + answeredTotal() + ' / ' + TOTAL_Q + ' answered</span>' +
+        '</div>' +
+      '</div>' +
+      '<div class="section-header">' +
+        '<div class="section-pillar-label">Pillar ' + sec.pillar + ' of ' + SECTIONS.length + '</div>' +
+        '<h2 class="section-title"><span class="gt">' + esc(sec.title) + '</span></h2>' +
+        '<p class="section-desc">' + esc(sec.desc) + '</p>' +
+      '</div>' +
+      '<div class="questions-wrap">' + questions + '</div>' +
+      '<div class="quiz-nav">' +
+        '<button class="btn-back" id="btn-quiz-back">' +
+          '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M13 8H3M7 4L3 8l4 4"/></svg>' +
+          esc(backLabel) +
+        '</button>' +
+        hint +
+        '<button class="btn-next" id="btn-quiz-next"' + (done ? '' : ' disabled') + '>' +
+          esc(nextLabel) +
+          '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4"/></svg>' +
+        '</button>' +
+      '</div>' +
+    '</div>' +
+  '</div>';
+}
+
+function renderComplete() {
+  return '<div class="screen-complete">' +
+    '<div class="glass-card complete-card">' +
+      '<div class="complete-icon">' +
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+          '<path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>' +
+        '</svg>' +
+      '</div>' +
+      '<h2 class="complete-title">Assessment <span class="gt">Complete</span></h2>' +
+      '<p class="complete-sub">Your responses have been captured. The AI Readiness Score and strategic recommendations will be generated in the next step.</p>' +
+      '<div class="complete-grid">' +
+        '<div class="complete-stat">' +
+          '<div class="complete-stat-label">Respondent</div>' +
+          '<div class="complete-stat-val">' + esc(state.info.name || '—') + '</div>' +
+        '</div>' +
+        '<div class="complete-stat">' +
+          '<div class="complete-stat-label">Organization</div>' +
+          '<div class="complete-stat-val">' + esc(state.info.company || '—') + '</div>' +
+        '</div>' +
+        '<div class="complete-stat">' +
+          '<div class="complete-stat-label">Questions answered</div>' +
+          '<div class="complete-stat-val">' + answeredTotal() + ' / ' + TOTAL_Q + '</div>' +
+        '</div>' +
+      '</div>' +
+      '<p class="complete-note">Your detailed AI Readiness Report will be sent to <strong>' + esc(state.info.email || 'your email') + '</strong>.</p>' +
+    '</div>' +
+  '</div>';
+}
+
+/* ─── EVENT BINDING ───────────────────────────────────── */
+function bind() {
+  var el;
+
+  /* Intro */
+  el = document.getElementById('btn-begin');
+  if (el) el.onclick = function() { state.screen = 'info'; navigate(renderInfo); };
+
+  /* Info — back */
+  el = document.getElementById('btn-info-back');
+  if (el) el.onclick = function() { saveInfo(); state.screen = 'intro'; navigate(renderIntro); };
+
+  /* Info — next */
+  el = document.getElementById('btn-info-next');
+  if (el) el.onclick = function() {
+    saveInfo();
+    var ok = validateInfo();
+    if (!ok) return;
+    state.screen = 'quiz'; state.section = 0; navigate(renderQuiz);
+  };
+
+  /* Scale buttons — no full re-render, update in-place */
+  document.querySelectorAll('.scale-btn').forEach(function(btn) {
+    btn.onclick = function() {
+      var qid = btn.dataset.qid;
+      var val = parseInt(btn.dataset.val, 10);
+      state.answers[qid] = val;
+
+      var row = btn.closest('.scale-row');
+      row.querySelectorAll('.scale-btn').forEach(function(b) {
+        var isSel = b === btn;
+        b.classList.toggle('selected', isSel);
+        b.setAttribute('aria-pressed', isSel ? 'true' : 'false');
+      });
+
+      /* Update next button + hint + count without re-render */
+      var done = sectionDone(state.section);
+      var nextBtn = document.getElementById('btn-quiz-next');
+      if (nextBtn) nextBtn.disabled = !done;
+
+      var hint = document.querySelector('.nav-hint');
+      if (hint) {
+        hint.textContent = done ? 'All questions answered — ready to continue' : 'Answer all questions to continue';
+        hint.classList.toggle('all-good', done);
+      }
+
+      var countEl = document.getElementById('answered-count');
+      if (countEl) countEl.textContent = answeredTotal() + ' / ' + TOTAL_Q + ' answered';
+    };
+  });
+
+  /* Quiz — back */
+  el = document.getElementById('btn-quiz-back');
+  if (el) el.onclick = function() {
+    if (state.section === 0) { state.screen = 'info'; navigate(renderInfo); }
+    else { state.section--; navigate(renderQuiz); }
+  };
+
+  /* Quiz — next */
+  el = document.getElementById('btn-quiz-next');
+  if (el) el.onclick = function() {
+    if (!sectionDone(state.section)) return;
+    if (state.section === SECTIONS.length - 1) {
+      state.screen = 'complete'; navigate(renderComplete);
+    } else {
+      state.section++; navigate(renderQuiz);
+    }
+  };
+}
+
+/* ─── FORM HELPERS ────────────────────────────────────── */
+function saveInfo() {
+  var fields = ['name','company','email','role','industry','size'];
+  fields.forEach(function(k) {
+    var el = document.getElementById('f-' + k);
+    if (el) state.info[k] = el.value.trim();
+  });
+}
+
+function validateInfo() {
+  var valid = true;
+  function check(id, errId, test) {
+    var el = document.getElementById(id);
+    var err = document.getElementById(errId);
+    var pass = el && test(el.value.trim());
+    if (el) el.classList.toggle('error-field', !pass);
+    if (err) err.classList.toggle('visible', !pass);
+    if (!pass) valid = false;
+  }
+  check('f-name',    'err-name',    function(v){ return v.length > 0; });
+  check('f-company', 'err-company', function(v){ return v.length > 0; });
+  check('f-email',   'err-email',   function(v){ return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v); });
+
+  var banner = document.getElementById('err-banner');
+  if (banner) banner.classList.toggle('visible', !valid);
+
+  if (!valid) {
+    var firstErr = document.querySelector('.error-field');
+    if (firstErr) firstErr.focus();
+  }
+  return valid;
+}
+
+/* ─── SAVE BUTTON ─────────────────────────────────────── */
+document.getElementById('btn-save').addEventListener('click', function() {
+  var label = document.getElementById('save-label');
+  var btn = document.getElementById('btn-save');
+  btn.classList.add('saved');
+  label.textContent = 'Saved';
+  setTimeout(function() {
+    btn.classList.remove('saved');
+    label.textContent = 'Save progress';
+  }, 2200);
+});
+
+/* ─── INIT ────────────────────────────────────────────── */
+syncNav();
+app.innerHTML = renderIntro();
+bind();
+requestAnimationFrame(function(){ app.classList.add('visible'); });
+
+</script>
+</body>
+</html>
