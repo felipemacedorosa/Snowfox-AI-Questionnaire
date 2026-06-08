@@ -83,18 +83,115 @@ input,select { font-family:inherit; }
 .nav {
   position:fixed; inset-inline:0; top:0;
   height:var(--nav-h); z-index:200;
-  display:flex; align-items:center; padding:0 24px;
-  background:rgba(5,1,22,0.82);
-  backdrop-filter:blur(20px);
-  -webkit-backdrop-filter:blur(20px);
-  border-bottom:1px solid rgba(255,255,255,0.07);
+  transition:background .25s, backdrop-filter .25s, box-shadow .25s;
 }
-.nav-inner {
-  width:100%; max-width:var(--max-w);
-  margin-inline:auto;
+.nav.solid {
+  background:rgba(5,1,22,0.86);
+  backdrop-filter:blur(28px);
+  -webkit-backdrop-filter:blur(28px);
+  box-shadow:0 1px 0 rgba(255,255,255,0.06);
+}
+.nav .wrap { max-width:100%; padding-inline:clamp(20px,4vw,72px); }
+.nav-row {
   display:flex; align-items:center; justify-content:space-between;
+  height:var(--nav-h);
 }
 .nav-logo img { height:28px; width:auto; }
+
+.nav-links {
+  display:flex; align-items:center; list-style:none; gap:2px;
+}
+.nav-link {
+  display:flex; align-items:center; gap:4px;
+  padding:8px 14px;
+  font-size:14.5px; font-weight:500;
+  color:rgba(255,255,255,0.76);
+  text-decoration:none; border-radius:8px;
+  transition:color .18s, background .18s; white-space:nowrap;
+}
+.nav-link:hover { color:#fff; background:rgba(255,255,255,0.06); }
+.nav-link svg { opacity:.5; transition:opacity .18s; }
+.nav-link:hover svg { opacity:.9; }
+.nav-vdivider { width:1px; height:18px; background:rgba(255,255,255,0.13); margin:0 6px; flex-shrink:0; }
+
+.nav-lang-wrap { position:relative; margin-left:2px; }
+.nav-lang {
+  display:flex; align-items:center; gap:5px;
+  padding:7px 10px; background:none; border:none;
+  border-radius:8px; cursor:pointer;
+  color:rgba(255,255,255,0.76); font-family:inherit;
+  transition:color .18s, background .18s;
+}
+.nav-lang:hover { color:#fff; background:rgba(255,255,255,0.06); }
+.nav-lang-wrap.open .nav-lang { color:#fff; background:rgba(255,255,255,0.06); }
+.nav-lang-code { font-size:13px; font-weight:600; letter-spacing:.04em; }
+.nav-lang svg { transition:transform .2s ease; }
+.nav-lang-wrap.open .nav-lang svg { transform:rotate(180deg); }
+
+.lang-dropdown {
+  position:absolute; top:calc(100% + 8px); right:0; min-width:148px;
+  list-style:none;
+  background:rgba(5,1,22,0.97);
+  backdrop-filter:blur(28px); -webkit-backdrop-filter:blur(28px);
+  border:1px solid rgba(255,255,255,0.12); border-radius:10px;
+  padding:5px; display:flex; flex-direction:column; gap:2px;
+  z-index:300; opacity:0; pointer-events:none;
+  transform:translateY(-6px);
+  transition:opacity .18s ease, transform .18s ease;
+  box-shadow:0 12px 40px rgba(0,0,0,0.45);
+}
+.nav-lang-wrap.open .lang-dropdown { opacity:1; pointer-events:auto; transform:translateY(0); }
+.lang-option {
+  display:flex; align-items:center; gap:9px;
+  padding:9px 12px; border-radius:7px;
+  font-size:13.5px; font-weight:500; color:rgba(255,255,255,0.72);
+  cursor:pointer; transition:background .15s, color .15s; white-space:nowrap;
+}
+.lang-option:hover { background:rgba(255,255,255,0.07); color:#fff; }
+.lang-option--active { color:rgba(167,139,250,0.95); }
+.lang-option--active:hover { background:rgba(142,45,226,0.12); }
+
+.nav-hamburger {
+  display:none; flex-direction:column; justify-content:center;
+  gap:5px; width:40px; height:40px;
+  background:none; border:none; cursor:pointer;
+  padding:6px; border-radius:8px; transition:background .18s;
+}
+.nav-hamburger:hover { background:rgba(255,255,255,0.06); }
+.nav-hamburger span {
+  display:block; height:2px;
+  background:rgba(255,255,255,0.80); border-radius:2px;
+  transition:transform .22s ease, opacity .18s ease, width .18s ease;
+  transform-origin:center;
+}
+.nav-hamburger span:nth-child(1) { width:22px; }
+.nav-hamburger span:nth-child(2) { width:16px; }
+.nav-hamburger span:nth-child(3) { width:22px; }
+.nav.menu-open .nav-hamburger span:nth-child(1) { transform:translateY(7px) rotate(45deg); width:22px; }
+.nav.menu-open .nav-hamburger span:nth-child(2) { opacity:0; }
+.nav.menu-open .nav-hamburger span:nth-child(3) { transform:translateY(-7px) rotate(-45deg); width:22px; }
+
+@media(max-width:899px) {
+  .nav-hamburger { display:flex; }
+  .nav-links {
+    flex-direction:column; gap:2px;
+    position:absolute; top:var(--nav-h); left:0; right:0;
+    background:rgba(5,1,22,0.97);
+    backdrop-filter:blur(28px); -webkit-backdrop-filter:blur(28px);
+    border-bottom:1px solid rgba(255,255,255,0.08);
+    padding:10px 16px 16px; list-style:none;
+    opacity:0; pointer-events:none; transform:translateY(-8px);
+    transition:opacity .2s ease, transform .2s ease; z-index:199;
+  }
+  .nav.menu-open .nav-links { opacity:1; pointer-events:auto; transform:translateY(0); }
+  .nav-link { padding:12px 14px; font-size:15px; border-radius:8px; }
+  .nav-lang-wrap { margin-left:0; }
+  .nav-lang { padding:12px 14px; font-size:15px; width:100%; justify-content:flex-start; gap:8px; }
+  .lang-dropdown { position:static; opacity:1; pointer-events:auto; transform:none; box-shadow:none; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08); margin-top:4px; display:none; }
+  .nav-lang-wrap.open .lang-dropdown { display:flex; }
+}
+
+/* Save progress pill — shown during quiz */
 .nav-save {
   display:none; align-items:center; gap:7px;
   font-size:12px; font-weight:500; color:var(--text-m);
@@ -107,6 +204,11 @@ input,select { font-family:inherit; }
 .nav-save:hover { border-color:var(--pa-40); color:#fff; }
 .nav-save.saved { color:#6ee7b7; border-color:rgba(110,231,183,0.35); background:rgba(110,231,183,0.06); }
 .nav-save svg { width:13px; height:13px; flex-shrink:0; }
+
+/* ─── WRAP ────────────────────────────────────────────── */
+.wrap { width:100%; max-width:var(--max-w); margin-inline:auto; padding-inline:20px; }
+@media(min-width:640px)  { .wrap { padding-inline:24px; } }
+@media(min-width:1024px) { .wrap { padding-inline:36px; } }
 
 /* ─── LAYOUT ──────────────────────────────────────────── */
 .page {
@@ -494,18 +596,58 @@ input,select { font-family:inherit; }
 
 <div id="static-bg" aria-hidden="true"><div id="bg-glow"></div></div>
 
-<nav class="nav" aria-label="Snowfox AI">
-  <div class="nav-inner">
-    <a href="/" class="nav-logo" aria-label="Snowfox AI">
-      <img src="logo-dark.png" alt="Snowfox AI" width="120" height="28">
-    </a>
-    <button class="nav-save" id="btn-save" aria-label="Save progress">
-      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-        <path d="M13 14.5H3a1 1 0 01-1-1V2.5a1 1 0 011-1h8l3 3v9.5a1 1 0 01-1 1z"/>
-        <path d="M10.5 1.5V5.5H4V1.5M4 14.5v-5h8v5"/>
-      </svg>
-      <span id="save-label">Save progress</span>
-    </button>
+<nav class="nav solid" id="nav" aria-label="Main navigation">
+  <div class="wrap">
+    <div class="nav-row">
+      <a href="/" class="nav-logo" aria-label="Snowfox AI">
+        <img src="logo-dark.png" alt="Snowfox AI" height="28">
+      </a>
+
+      <button class="nav-hamburger" id="nav-hamburger" aria-label="Open menu" aria-expanded="false" aria-controls="nav-links">
+        <span></span><span></span><span></span>
+      </button>
+
+      <ul class="nav-links" id="nav-links" role="list">
+        <li><a href="#" class="nav-link">About</a></li>
+        <li>
+          <a href="#" class="nav-link">Services
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M3 4.5L6 7.5L9 4.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </a>
+        </li>
+        <li>
+          <a href="#" class="nav-link">Solutions
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M3 4.5L6 7.5L9 4.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </a>
+        </li>
+        <li><a href="#" class="nav-link">Success Cases</a></li>
+        <li><a href="#" class="nav-link">Talk to a specialist</a></li>
+        <li>
+          <div class="nav-vdivider"></div>
+        </li>
+        <li>
+          <button class="nav-save" id="btn-save" aria-label="Save progress">
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M13 14.5H3a1 1 0 01-1-1V2.5a1 1 0 011-1h8l3 3v9.5a1 1 0 01-1 1z"/>
+              <path d="M10.5 1.5V5.5H4V1.5M4 14.5v-5h8v5"/>
+            </svg>
+            <span id="save-label">Save progress</span>
+          </button>
+        </li>
+        <li>
+          <div class="nav-lang-wrap">
+            <button class="nav-lang" aria-haspopup="listbox" aria-expanded="false" aria-label="Select language">
+              <span class="nav-lang-code">EN</span>
+              <svg width="11" height="11" viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M3 4.5L6 7.5L9 4.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+            <ul class="lang-dropdown" role="listbox" aria-label="Language">
+              <li class="lang-option lang-option--active" data-lang="en" role="option" aria-selected="true">English</li>
+              <li class="lang-option" data-lang="pt" role="option" aria-selected="false">Português</li>
+              <li class="lang-option" data-lang="es" role="option" aria-selected="false">Español</li>
+            </ul>
+          </div>
+        </li>
+      </ul>
+    </div>
   </div>
 </nav>
 
@@ -915,6 +1057,20 @@ document.getElementById('btn-save').addEventListener('click', function() {
     label.textContent = 'Save progress';
   }, 2200);
 });
+
+/* ─── NAV HAMBURGER ───────────────────────────────────── */
+(function() {
+  var nav = document.getElementById('nav');
+  var hamburger = document.getElementById('nav-hamburger');
+  var navLinks = document.getElementById('nav-links');
+  if (!hamburger || !navLinks) return;
+  function openMenu() { nav.classList.add('menu-open'); hamburger.setAttribute('aria-expanded','true'); hamburger.setAttribute('aria-label','Close menu'); }
+  function closeMenu() { nav.classList.remove('menu-open'); hamburger.setAttribute('aria-expanded','false'); hamburger.setAttribute('aria-label','Open menu'); }
+  hamburger.addEventListener('click', function(e) { e.stopPropagation(); nav.classList.contains('menu-open') ? closeMenu() : openMenu(); });
+  navLinks.querySelectorAll('.nav-link').forEach(function(l){ l.addEventListener('click', closeMenu); });
+  document.addEventListener('click', function(e){ if (!nav.contains(e.target)) closeMenu(); });
+  window.addEventListener('resize', function(){ if (window.innerWidth > 899) closeMenu(); }, { passive:true });
+}());
 
 /* ─── INIT ────────────────────────────────────────────── */
 syncNav();
