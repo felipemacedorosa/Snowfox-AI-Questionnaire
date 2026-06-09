@@ -8,7 +8,7 @@ import {
   calculatePillarScores, calculateWeightedScore, applyBlockerRules, getPillarTier,
 } from "./data";
 
-type Screen = "intro" | "quiz" | "results";
+type Screen = "quiz" | "results";
 
 interface InfoFields {
   name: string; company: string; email: string;
@@ -358,7 +358,7 @@ function QuizScreen({ section, answers, onAnswer, onBack, onNext }: {
 
         {/* Navigation */}
         <div className="flex items-center justify-between gap-4 pt-8 mt-8" style={{ borderTop: "1px solid rgba(255,255,255,0.07)" }}>
-          <NavBtn variant="back" onClick={onBack}>Back</NavBtn>
+          {section > 0 ? <NavBtn variant="back" onClick={onBack}>Back</NavBtn> : <span />}
           <span className={`text-[12px] flex-1 text-center${sectionDone ? " text-[rgba(110,231,183,0.80)]" : ""}`}
             style={{ color: sectionDone ? undefined : "rgba(190,175,245,0.50)" }}>
             {sectionDone ? "All questions answered — ready to continue" : "Answer all questions to continue"}
@@ -614,7 +614,7 @@ function NavBtn({ variant, disabled, onClick, children }: {
 
 // ─── Root app ─────────────────────────────────────────────────────────────────
 export default function Home() {
-  const [screen, setScreen] = useState<Screen>("intro");
+  const [screen, setScreen] = useState<Screen>("quiz");
   const [section, setSection] = useState(0);
   const [info, setInfo] = useState<InfoFields>({ name: "", company: "", email: "", role: "", industry: "", size: "" });
   const [answers, setAnswers] = useState<Record<string, number>>({});
@@ -658,16 +658,13 @@ export default function Home() {
 
         <div className="flex justify-center pt-16">
           <div className="w-full px-5 py-9 pb-[72px]" style={{ maxWidth: "1100px" }}>
-            {screen === "intro" && (
-              <IntroScreen onBegin={() => { setSection(0); goTo("quiz"); }} />
-            )}
             {screen === "quiz" && (
               <QuizScreen
                 key={section}
                 section={section}
                 answers={answers}
                 onAnswer={handleAnswer}
-                onBack={() => section === 0 ? goTo("intro") : setSection(s => s - 1)}
+                onBack={() => section === 0 ? undefined : setSection(s => s - 1)}
                 onNext={() => {
                   if (section === SECTIONS.length - 1) goTo("results");
                   else setSection(s => s + 1);
@@ -678,7 +675,7 @@ export default function Home() {
               <ResultsScreen
                 answers={answers}
                 info={info}
-                onRestart={() => { setAnswers({}); setSection(0); goTo("intro"); }}
+                onRestart={() => { setAnswers({}); setSection(0); goTo("quiz"); }}
               />
             )}
           </div>
