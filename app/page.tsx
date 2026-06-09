@@ -130,8 +130,8 @@ function IntroScreen({ onBegin }: { onBegin: () => void }) {
           {[{ val: "20", label: "Questions" }, { val: "5", label: "Pillars" }, { val: "~15", label: "Minutes" }].map((s, i) => (
             <div key={s.label} className="flex flex-col items-center px-9 py-[18px] gap-1"
               style={{ borderLeft: i > 0 ? "1px solid rgba(255,255,255,0.08)" : undefined }}>
-              <span className="text-[26px] font-bold leading-none gt">{s.val}</span>
-              <span className="text-[11px] uppercase tracking-[0.08em]" style={{ color: "rgba(190,175,245,0.50)" }}>{s.label}</span>
+              <span className="text-[26px] font-bold leading-none" style={{ color: "#ffffff" }}>{s.val}</span>
+              <span className="text-[11px] uppercase tracking-[0.08em]" style={{ color: "rgba(255,255,255,0.55)" }}>{s.label}</span>
             </div>
           ))}
         </div>
