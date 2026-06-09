@@ -142,7 +142,7 @@ input, select { font-family: inherit; }
   pointer-events: none;
 }
 .rpt-body {}
-.rpt-section { padding: 34px 48px 36px; border-bottom: 1px solid #E7E4F0; }
+.rpt-section { background: #ffffff; padding: 34px 48px 36px; border-bottom: 1px solid #E7E4F0; }
 .rpt-section:last-child { border-bottom: none; }
 .rpt-sechead { display: flex; align-items: baseline; gap: 14px; border-bottom: 2px solid #171221; padding-bottom: 12px; margin-bottom: 22px; }
 .rpt-kpis { display: flex; gap: 0; border: 1px solid #E7E4F0; border-radius: 10px; overflow: hidden; }
