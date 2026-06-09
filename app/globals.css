@@ -127,7 +127,7 @@ input, select { font-family: inherit; }
 /* ── Report (results) styles */
 .report-wrap {
   width: 100%; max-width: 780px;
-  background: #ffffff;
+  background: #0d0535;
   border-radius: 16px; overflow: hidden;
   box-shadow: 0 28px 70px rgba(0,0,0,0.40), 0 4px 18px rgba(0,0,0,0.22);
   animation: fadeUp .5s cubic-bezier(.22,1,.36,1) both;
