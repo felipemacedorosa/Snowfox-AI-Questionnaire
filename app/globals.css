@@ -199,3 +199,40 @@ input, select { font-family: inherit; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
+
+/* ── Print / PDF export */
+@media print {
+  @page { margin: 0; size: A4; }
+
+  .no-print { display: none !important; }
+
+  nav,
+  [aria-hidden="true"] { display: none !important; }
+
+  html, body {
+    background: #fff !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* isolate only the report */
+  .print-root { all: unset; display: block; }
+
+  .report-wrap {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    animation: none !important;
+    background: transparent !important;
+    overflow: visible !important;
+  }
+
+  .rpt-cover {
+    border-radius: 0 !important;
+  }
+
+  .rpt-section, .rpt-cover, .rpt-kpis, li { page-break-inside: avoid; break-inside: avoid; }
+  .rpt-pillar-bar-fill { transition: none !important; }
+}
