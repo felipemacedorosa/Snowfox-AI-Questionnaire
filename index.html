@@ -1311,7 +1311,7 @@ function animateResults(targetScore) {
 
 /* ─── STATE ───────────────────────────────────────────── */
 var state = {
-  screen: 'intro',
+  screen: 'quiz',
   section: 0,
   info: { name:'', company:'', email:'', role:'', industry:'', size:'' },
   answers: {}
@@ -1710,7 +1710,7 @@ function bind() {
   /* Quiz — back */
   el = document.getElementById('btn-quiz-back');
   if (el) el.onclick = function() {
-    if (state.section === 0) { state.screen = 'intro'; navigate(renderIntro); }
+    if (state.section === 0) { return; }
     else { state.section--; navigate(renderQuiz); }
   };
 
@@ -1728,8 +1728,8 @@ function bind() {
   /* Results */
   el = document.getElementById('btn-restart');
   if (el) el.onclick = function() {
-    state.answers = {}; state.section = 0; state.screen = 'intro';
-    navigate(renderIntro);
+    state.answers = {}; state.section = 0; state.screen = 'quiz';
+    navigate(renderQuiz);
   };
 
   if (state.screen === 'results') {
@@ -1799,7 +1799,7 @@ document.getElementById('btn-save').addEventListener('click', function() {
 
 /* ─── INIT ────────────────────────────────────────────── */
 syncNav();
-app.innerHTML = renderIntro();
+app.innerHTML = renderQuiz();
 bind();
 requestAnimationFrame(function(){ app.classList.add('visible'); });
 
