@@ -3,6 +3,8 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import Image from "next/image";
 import { BeamsBackground } from "@/components/ui/beams-background";
+
+const BASE = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
 import {
   SECTIONS, TOTAL_Q, PILLAR_CONFIG, LEVEL_META, RECOMMENDATIONS,
   calculatePillarScores, calculateWeightedScore, applyBlockerRules, getPillarTier,
@@ -30,7 +32,7 @@ function Navbar({ screen, onSave }: { screen: Screen; onSave: () => void }) {
       <div style={{ maxWidth: "100%", paddingInline: "clamp(20px,4vw,72px)" }}>
         <div className="flex h-16 items-center justify-between">
           <a href="/" aria-label="Snowfox AI">
-            <Image src="/logo-dark.png" alt="Snowfox AI" width={120} height={28} style={{ height: 28, width: "auto" }} />
+            <Image src={`${BASE}/logo-dark.png`} alt="Snowfox AI" width={120} height={28} style={{ height: 28, width: "auto" }} />
           </a>
 
           <button
@@ -245,7 +247,7 @@ function ResultsScreen({ answers, onRestart }: {
         {/* Cover */}
         <div className="rpt-cover">
           <div className="flex items-center justify-between mb-9 relative z-[1]">
-            <Image src="/logo-dark.png" alt="Snowfox AI" width={88} height={22} style={{ height: 22, width: "auto" }} />
+            <Image src={`${BASE}/logo-dark.png`} alt="Snowfox AI" width={88} height={22} style={{ height: 22, width: "auto" }} />
             <div className="flex items-center gap-3">
               <span className="text-[9px] font-bold tracking-[0.20em] uppercase" style={{ color: "rgba(255,255,255,0.30)" }}>AI Readiness Assessment</span>
               <button
