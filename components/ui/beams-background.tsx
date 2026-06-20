@@ -71,7 +71,7 @@ export function BeamsBackground({
 
             const totalBeams = MINIMUM_BEAMS * 1.5;
             beamsRef.current = Array.from({ length: totalBeams }, () =>
-                createBeam(canvas.width, canvas.height)
+                createBeam(window.innerWidth, window.innerHeight)
             );
         };
 
@@ -82,10 +82,16 @@ export function BeamsBackground({
             if (!canvas) return beam;
 
             const column = index % 3;
-            const spacing = canvas.width / 3;
+            const cssWidth = window.innerWidth;
+            const cssHeight = window.innerHeight;
+            // Match createBeam's x range: -0.25W to 1.25W so left-side beams are maintained
+            const totalWidth = cssWidth * 1.5;
+            const startX = -cssWidth * 0.25;
+            const spacing = totalWidth / 3;
 
-            beam.y = canvas.height + 100;
+            beam.y = cssHeight + 100;
             beam.x =
+                startX +
                 column * spacing +
                 spacing / 2 +
                 (Math.random() - 0.5) * spacing * 0.5;
