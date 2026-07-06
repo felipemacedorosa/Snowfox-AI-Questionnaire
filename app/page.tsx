@@ -5,19 +5,25 @@ import { BeamsBackground } from "@/components/ui/beams-background";
 import { Navbar } from "@/components/Navbar";
 import { QuizScreen } from "@/components/quiz/QuizScreen";
 import { ResultsScreen } from "@/components/results/ResultsScreen";
-import { SECTIONS } from "./data";
+import { SECTIONS, AnswerRecord, clearDependentAnswers } from "./data";
 
 type Screen = "quiz" | "results";
 
 export default function Home() {
   const [screen, setScreen] = useState<Screen>("quiz");
   const [section, setSection] = useState(0);
-  const [answers, setAnswers] = useState<Record<string, number>>({});
+  const [answers, setAnswers] = useState<AnswerRecord>({});
 
-  const handleAnswer = useCallback((qid: string, val: number) => {
+  const handleAnswer = useCallback((qid: string, val: number | number[] | string | -1) => {
     setAnswers(prev => {
-      if (val === -1) { const next = { ...prev }; delete next[qid]; return next; }
-      return { ...prev, [qid]: val };
+      if (val === -1) {
+        const next = clearDependentAnswers(qid, prev);
+        delete next[qid];
+        return next;
+      }
+      const next = clearDependentAnswers(qid, prev);
+      next[qid] = val as number | number[] | string;
+      return next;
     });
   }, []);
 

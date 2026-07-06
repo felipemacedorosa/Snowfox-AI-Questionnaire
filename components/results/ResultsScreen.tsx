@@ -3,23 +3,23 @@
 import { useEffect, useRef } from "react";
 import Image from "next/image";
 import {
-  TOTAL_Q, LEVEL_META, RECOMMENDATIONS,
-  calculatePillarScores, calculateWeightedScore, applyBlockerRules, getPillarTier,
+  AnswerRecord, LEVEL_META, RECOMMENDATIONS,
+  calculatePillarScores, calculateOverallScore, applyBlockerRules, getPillarTier,
 } from "@/app/data";
 import { PillarBar } from "@/components/results/PillarBar";
 
 const BASE = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
 
 export function ResultsScreen({ answers, onRestart }: {
-  answers: Record<string, number>;
+  answers: AnswerRecord;
   onRestart: () => void;
 }) {
   const scoreNumRef = useRef<HTMLSpanElement>(null);
   const barRef = useRef<HTMLDivElement>(null);
 
   const pillarScores = calculatePillarScores(answers);
-  const weighted = calculateWeightedScore(pillarScores);
-  const result = applyBlockerRules(weighted, pillarScores);
+  const overallScore = calculateOverallScore(answers);
+  const result = applyBlockerRules(overallScore, pillarScores);
   const strongest = pillarScores.reduce((a, b) => b.score > a.score ? b : a);
   const weakest = pillarScores.reduce((a, b) => b.score < a.score ? b : a);
   const rec = RECOMMENDATIONS[weakest.id] || "";
@@ -36,12 +36,12 @@ export function ResultsScreen({ answers, onRestart }: {
       if (!start) start = ts;
       const t = Math.min((ts - start) / duration, 1);
       const ease = 1 - Math.pow(1 - t, 3);
-      el!.textContent = String(Math.round(ease * weighted));
+      el!.textContent = String(Math.round(ease * overallScore));
       if (t < 1) requestAnimationFrame(step);
     }
     requestAnimationFrame(step);
-    if (bar) requestAnimationFrame(() => { bar.style.width = weighted + "%"; });
-  }, [weighted]);
+    if (bar) requestAnimationFrame(() => { bar.style.width = overallScore + "%"; });
+  }, [overallScore]);
 
   return (
     <div className="flex flex-col items-center pb-16">
@@ -109,7 +109,7 @@ export function ResultsScreen({ answers, onRestart }: {
             )}
             <div className="rpt-kpis">
               <div className="rpt-kpi">
-                <p style={{ fontFamily: "'Typo Grotesk', sans-serif", fontSize: 20, fontWeight: 800, letterSpacing: "-0.03em", color: "#6D28D9", whiteSpace: "nowrap" }}>{weighted} / 100</p>
+                <p style={{ fontFamily: "'Typo Grotesk', sans-serif", fontSize: 20, fontWeight: 800, letterSpacing: "-0.03em", color: "#6D28D9", whiteSpace: "nowrap" }}>{overallScore} / 100</p>
                 <p className="text-[9.5px] uppercase tracking-[0.08em] font-semibold mt-1 leading-[1.4]" style={{ color: "#9A95AB" }}>AI Readiness Score</p>
               </div>
               <div className="rpt-kpi">
@@ -117,7 +117,9 @@ export function ResultsScreen({ answers, onRestart }: {
                 <p className="text-[9.5px] uppercase tracking-[0.08em] font-semibold mt-1 leading-[1.4]" style={{ color: "#9A95AB" }}>Readiness Level</p>
               </div>
               <div className="rpt-kpi">
-                <p style={{ fontFamily: "'Typo Grotesk', sans-serif", fontSize: 20, fontWeight: 800, letterSpacing: "-0.03em", color: "#171221" }}>{TOTAL_Q}</p>
+                <p style={{ fontFamily: "'Typo Grotesk', sans-serif", fontSize: 20, fontWeight: 800, letterSpacing: "-0.03em", color: "#171221" }}>
+                  {Object.keys(answers).filter(k => { const v = answers[k]; return typeof v === "number" || (Array.isArray(v) && (v as number[]).length > 0); }).length}
+                </p>
                 <p className="text-[9.5px] uppercase tracking-[0.08em] font-semibold mt-1 leading-[1.4]" style={{ color: "#9A95AB" }}>Questions Answered</p>
               </div>
             </div>

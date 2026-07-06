@@ -1,16 +1,49 @@
-export interface Option {
+export type AnswerRecord = Record<string, number | number[] | string>;
+
+export interface SingleOption {
   value: number;
   label: string;
-  description: string;
+  score: number;
 }
 
-export interface Question {
+export interface MultiOption {
+  value: number;
+  label: string;
+  score: number;
+  isNone?: boolean;
+}
+
+export interface ShowCondition {
+  qId: string;
+  values: number[];
+}
+
+interface BaseQuestion {
   id: string;
-  section: string;
   pillar: string;
   text: string;
-  options: Option[];
+  showIf?: ShowCondition;
+  /** Pillar this question's score should be counted under, if different from `pillar` (used for display placement). */
+  scorePillar?: string;
 }
+
+export interface SingleQuestion extends BaseQuestion {
+  type: "single";
+  options: SingleOption[];
+  riskFlag?: boolean;
+}
+
+export interface MultiQuestion extends BaseQuestion {
+  type: "multi";
+  options: MultiOption[];
+}
+
+export interface TextQuestion extends BaseQuestion {
+  type: "text";
+  placeholder?: string;
+}
+
+export type Question = SingleQuestion | MultiQuestion | TextQuestion;
 
 export interface Section {
   id: string;
@@ -24,7 +57,6 @@ export interface PillarConfig {
   id: string;
   title: string;
   weight: number;
-  qIds: string[];
 }
 
 export interface PillarScore {
@@ -42,193 +74,458 @@ export interface AssessmentResult {
 
 export const SECTIONS: Section[] = [
   {
-    id: "strategy", pillar: 1,
-    title: "Strategy & Business Alignment",
-    desc: "How AI is positioned within your organization's vision, leadership priorities, and strategic goals.",
+    id: "dados", pillar: 1,
+    title: "Dados",
+    desc: "Avalia a qualidade, acessibilidade e disponibilidade dos dados da organização para suportar iniciativas de IA.",
     questions: [
-      { id: "q4", section: "Strategy & Business Alignment", pillar: "strategy", text: "Has your organization identified and prioritized the workflows where AI could create the most value?", options: [
-        { value: 1, label: "Not identified",       description: "We have not identified where AI could create value." },
-        { value: 2, label: "Ideas only",           description: "We have discussed possible AI use cases, but have not ranked them." },
-        { value: 3, label: "Initial priorities",   description: "We have selected some promising workflows, but prioritization is still informal." },
-        { value: 4, label: "Clear priorities",     description: "We have prioritized workflows using clear business value criteria." },
-        { value: 5, label: "Value-driven roadmap", description: "We have a prioritized AI roadmap with owners, expected impact, and next steps." },
-      ]},
-      { id: "q1", section: "Strategy & Business Alignment", pillar: "strategy", text: "How clearly has your organization defined its AI vision and ambition?", options: [
-        { value: 1, label: "No vision",              description: "No AI vision has been defined." },
-        { value: 2, label: "Informal interest",      description: "AI is discussed, but there is no defined direction." },
-        { value: 3, label: "Partially defined",      description: "An AI vision exists, but it is not fully communicated." },
-        { value: 4, label: "Clearly defined",        description: "The AI vision is formalized and connected to business priorities." },
-        { value: 5, label: "Strategically embedded", description: "The AI vision actively guides planning and investment." },
-      ]},
-      { id: "q2", section: "Strategy & Business Alignment", pillar: "strategy", text: "How well is AI connected to your company's broader business strategy and growth priorities?", options: [
-        { value: 1, label: "Not connected",    description: "AI is not linked to business strategy." },
-        { value: 2, label: "Loosely related",  description: "AI is seen as useful, but remains separate from strategic planning." },
-        { value: 3, label: "Partially aligned",description: "Some AI initiatives support business goals." },
-        { value: 4, label: "Clearly aligned",  description: "Most AI initiatives are tied to strategic priorities." },
-        { value: 5, label: "Fully integrated", description: "AI is embedded into strategic planning and investment decisions." },
-      ]},
-      { id: "q3", section: "Strategy & Business Alignment", pillar: "strategy", text: "To what extent does leadership understand AI's economic and operational impact?", options: [
-        { value: 1, label: "Limited awareness",      description: "Leadership has limited understanding of AI's business potential." },
-        { value: 2, label: "Uneven interest",        description: "Some leaders understand AI, but knowledge is inconsistent." },
-        { value: 3, label: "Basic understanding",    description: "Leadership understands common AI opportunities and risks." },
-        { value: 4, label: "Strong support",         description: "Leadership supports AI with clear business expectations." },
-        { value: 5, label: "Driving transformation", description: "Leadership actively drives AI transformation across the organization." },
-      ]},
+      {
+        id: "dados_q1", pillar: "dados", type: "single",
+        text: "Os dados que a empresa coleta hoje são suficientes e relevantes para apoiar as decisões e iniciativas mais importantes do negócio?",
+        options: [
+          { value: 1, label: "A empresa não sabe claramente se os dados que coleta são suficientes ou relevantes para apoiar suas decisões mais importantes.", score: 0 },
+          { value: 2, label: "A empresa coleta alguns dados relevantes, mas decisões importantes ainda são tomadas com informações incompletas, análises manuais ou suposições.", score: 2.5 },
+          { value: 3, label: "A empresa coleta dados claramente relevantes e suficientes para apoiar suas decisões e iniciativas mais importantes.", score: 5 },
+        ],
+      },
+      {
+        id: "dados_q2", pillar: "dados", type: "single",
+        text: "Quão acessíveis são os dados para as equipes ou sistemas que precisam deles?",
+        options: [
+          { value: 1, label: "Os dados estão armazenados em sistemas ou arquivos isolados, e as equipes não conseguem acessá-los facilmente sem apoio manual ou solicitações especiais.", score: 0 },
+          { value: 2, label: "Alguns dados estão disponíveis, mas o acesso é lento, inconsistente ou depende de pessoas ou ferramentas específicas.", score: 1.25 },
+          { value: 3, label: "As principais equipes conseguem acessar parte dos dados de que precisam, mas fontes importantes ainda estão fragmentadas ou são difíceis de usar.", score: 2.5 },
+          { value: 4, label: "A maioria dos dados relevantes está disponível para as equipes e sistemas certos, com apenas pequenas lacunas ou etapas manuais.", score: 3.75 },
+          { value: 5, label: "Os dados estão facilmente disponíveis para equipes e sistemas autorizados.", score: 5 },
+        ],
+      },
+      {
+        id: "dados_q3", pillar: "dados", type: "single",
+        text: "É possível crescer a capacidade operacional sem necessariamente aumentar o quadro de pessoas na mesma proporção?",
+        options: [
+          { value: 1, label: "Não", score: 0 },
+          { value: 2, label: "Depende da área", score: 1.5 },
+          { value: 3, label: "Sim", score: 3 },
+        ],
+      },
+      {
+        id: "dados_q4", pillar: "dados", type: "single",
+        text: "Em geral, até que ponto a organização possui dados históricos?",
+        options: [
+          { value: 1, label: "Os dados não são armazenados, não são confiáveis ou existem apenas em arquivos e sistemas espalhados.", score: 0 },
+          { value: 2, label: "A organização possui dados utilizáveis dos últimos meses, mas não o suficiente para identificar padrões de longo prazo.", score: 1.33 },
+          { value: 3, label: "A organização possui de um a três anos de dados históricos utilizáveis para algumas áreas-chave do negócio.", score: 2.67 },
+          { value: 4, label: "A organização possui vários anos de dados históricos confiáveis nas áreas mais importantes do negócio.", score: 4 },
+        ],
+      },
+      {
+        id: "dados_q5", pillar: "dados", type: "single",
+        text: "Quando você precisa tomar uma decisão, consegue acessar os dados necessários na velocidade desejada?",
+        options: [
+          { value: 1, label: "Raramente", score: 0 },
+          { value: 2, label: "Às vezes", score: 1.33 },
+          { value: 3, label: "Na maioria das vezes", score: 2.67 },
+          { value: 4, label: "Sim, sempre", score: 4 },
+        ],
+      },
+      {
+        id: "dados_q6", pillar: "dados", type: "single",
+        riskFlag: true,
+        text: "Qual seria o impacto provável de um vazamento de dados na empresa?",
+        options: [
+          { value: 1, label: "Um vazamento poderia interromper gravemente o negócio, gerar grande exposição regulatória, prejudicar a confiança dos clientes e causar danos financeiros ou reputacionais de longo prazo.", score: 0 },
+          { value: 2, label: "Um vazamento poderia expor dados sensíveis do negócio, de clientes ou de colaboradores, gerando consequências financeiras, legais ou reputacionais significativas.", score: 1.33 },
+          { value: 3, label: "Um vazamento poderia afetar operações internas, a confiança dos clientes ou obrigações de compliance, mas provavelmente seria gerenciável.", score: 2.66 },
+          { value: 4, label: "Um vazamento afetaria informações não críticas e causaria impacto operacional, financeiro ou reputacional mínimo.", score: 5 },
+        ],
+      },
+      {
+        id: "dados_q7", pillar: "dados", type: "single",
+        text: "Quão confortável você se sente em tomar decisões com base nos dados fornecidos pela empresa?",
+        options: [
+          { value: 1, label: "Nada confortável", score: 0 },
+          { value: 2, label: "Hesitante", score: 1 },
+          { value: 3, label: "Um pouco confortável", score: 2 },
+          { value: 4, label: "Confortável", score: 3 },
+          { value: 5, label: "Muito confortável", score: 4 },
+        ],
+      },
     ],
   },
   {
-    id: "people", pillar: 2,
-    title: "People & Culture",
-    desc: "Your team's readiness, skill availability, and cross-functional collaboration capacity for AI adoption.",
+    id: "estrategia", pillar: 2,
+    title: "Estratégia",
+    desc: "Avalia como a IA está posicionada dentro da visão, prioridades de liderança e objetivos estratégicos da organização.",
     questions: [
-      { id: "q5", section: "People & Culture", pillar: "people", text: "How prepared are your teams to understand, adopt, and work with AI solutions?", options: [
-        { value: 1, label: "Not prepared",     description: "Teams are not prepared to use AI." },
-        { value: 2, label: "Limited awareness",description: "Some employees are curious, but usage is informal." },
-        { value: 3, label: "Early adoption",   description: "Some teams are beginning to use AI in their work." },
-        { value: 4, label: "Trained users",    description: "Teams have training and use AI in defined workflows." },
-        { value: 5, label: "Embedded adoption",description: "AI is widely used as part of normal work." },
-      ]},
-      { id: "q6", section: "People & Culture", pillar: "people", text: "Does your organization have the necessary AI, data, process, and technical skills internally, or a clear plan to access them externally?", options: [
-        { value: 1, label: "Skills gap",          description: "The organization lacks the skills needed for AI initiatives." },
-        { value: 2, label: "Isolated expertise",  description: "A few individuals have relevant skills, but capability is not structured." },
-        { value: 3, label: "Partial capability",  description: "Some capability exists, but important gaps remain." },
-        { value: 4, label: "Reliable capability", description: "The organization can support most AI initiatives through internal or external expertise." },
-        { value: 5, label: "Scalable capability", description: "AI-related skills are mature, scalable, and aligned to the roadmap." },
-      ]},
-      { id: "q7", section: "People & Culture", pillar: "people", text: "How well do business, data, technology, operations, and risk teams collaborate on AI-related initiatives?", options: [
-        { value: 1, label: "Siloed",                   description: "Teams work separately on AI-related topics." },
-        { value: 2, label: "Occasional contact",        description: "Collaboration happens informally when needed." },
-        { value: 3, label: "Project-based collaboration",description: "Teams collaborate on selected AI initiatives." },
-        { value: 4, label: "Structured collaboration",  description: "Cross-functional collaboration is consistent across AI projects." },
-        { value: 5, label: "Integrated delivery",       description: "Business, data, technology, operations, and risk teams work as one delivery model." },
-      ]},
+      {
+        id: "est_q1", pillar: "estrategia", type: "single",
+        text: "A organização definiu uma visão clara de como a IA pode gerar valor para o negócio?",
+        options: [
+          { value: 1, label: "Sim", score: 3 },
+          { value: 2, label: "Parcialmente", score: 1 },
+          { value: 3, label: "Não", score: 0 },
+        ],
+      },
+      {
+        id: "est_q1a", pillar: "estrategia", type: "single",
+        text: "A liderança já mapeou quais áreas e processos têm maior potencial de retorno com IA?",
+        showIf: { qId: "est_q1", values: [1] },
+        options: [
+          { value: 1, label: "Sim", score: 2 },
+          { value: 2, label: "Não", score: 0 },
+        ],
+      },
+      {
+        id: "est_q1a1", pillar: "estrategia", type: "single",
+        text: "Existe um roadmap de IA documentado para os próximos 12 a 24 meses?",
+        showIf: { qId: "est_q1a", values: [1] },
+        options: [
+          { value: 1, label: "Sim", score: 2.5 },
+          { value: 2, label: "Não", score: 0 },
+        ],
+      },
+      {
+        id: "est_q1a1a", pillar: "estrategia", type: "single",
+        text: "Com que frequência esse roadmap é revisado e atualizado?",
+        showIf: { qId: "est_q1a1", values: [1] },
+        options: [
+          { value: 1, label: "Nunca", score: 0 },
+          { value: 2, label: "Anualmente", score: 0.33 },
+          { value: 3, label: "Trimestralmente", score: 0.67 },
+          { value: 4, label: "Mensalmente ou mais", score: 1 },
+        ],
+      },
+      {
+        id: "est_q1b", pillar: "estrategia", type: "single",
+        text: "A liderança conhece o potencial ou valor econômico da IA?",
+        showIf: { qId: "est_q1", values: [2, 3] },
+        options: [
+          { value: 1, label: "Sim", score: 1 },
+          { value: 2, label: "Parcialmente", score: 0.5 },
+          { value: 3, label: "Não", score: 0 },
+        ],
+      },
+      {
+        id: "est_q2", pillar: "estrategia", type: "single",
+        text: "Como a IA é vista hoje dentro da organização?",
+        options: [
+          { value: 1, label: "Experimentação: A empresa testa IA de forma pontual ou isolada, sem uma estratégia definida, responsáveis claros ou métricas consistentes para medir resultados.", score: 0 },
+          { value: 2, label: "Melhoria de produtividade: A empresa usa IA para fazer o que já faz com mais velocidade e menos custos, sem mudar a forma como o negócio funciona.", score: 2.33 },
+          { value: 3, label: "Transformação de negócio: A empresa usa IA para mudar a forma como opera, decide ou entrega valor, não apenas para otimizar, mas para fazer diferente.", score: 4.66 },
+          { value: 4, label: "Vantagem competitiva central: IA é parte estrutural da proposta de valor da empresa, um ativo estratégico que a diferencia de forma que concorrentes sem essa capacidade dificilmente conseguem replicar.", score: 7 },
+        ],
+      },
+      {
+        id: "est_q3", pillar: "estrategia", type: "single",
+        text: "Os executivos patrocinam ativamente as iniciativas de IA?",
+        options: [
+          { value: 1, label: "De forma nenhuma", score: 0 },
+          { value: 2, label: "Raramente", score: 1.75 },
+          { value: 3, label: "Às vezes", score: 3.5 },
+          { value: 4, label: "Regularmente", score: 5.25 },
+          { value: 5, label: "De forma consistente e visível", score: 7 },
+        ],
+      },
+      {
+        id: "est_q3a", pillar: "estrategia", type: "single",
+        scorePillar: "governanca",
+        text: "Com que frequência as iniciativas de IA sofrem atrasos?",
+        showIf: { qId: "est_q3", values: [1, 2, 3, 4, 5] },
+        options: [
+          { value: 1, label: "Quase sempre", score: 0 },
+          { value: 2, label: "Frequentemente", score: 1.33 },
+          { value: 3, label: "Ocasionalmente", score: 2.66 },
+          { value: 4, label: "Raramente", score: 4 },
+        ],
+      },
+      {
+        id: "est_q3a1", pillar: "estrategia", type: "text",
+        scorePillar: "governanca",
+        text: "Qual você diria que é o principal motivo desses atrasos?",
+        showIf: { qId: "est_q3a", values: [1, 2, 3] },
+        placeholder: "Descreva o principal motivo dos atrasos...",
+      },
     ],
   },
   {
-    id: "processes", pillar: 3,
-    title: "Processes, Governance & Risk",
-    desc: "Your frameworks for managing AI initiatives responsibly, at scale, and with clear accountability.",
+    id: "pessoas", pillar: 3,
+    title: "Pessoas e Cultura",
+    desc: "Avalia a prontidão das equipes, disponibilidade de habilidades e capacidade de colaboração para adoção de IA.",
     questions: [
-      { id: "q8", section: "Processes, Governance & Risk", pillar: "processes", text: "How clearly are your core business processes documented and standardized across the organization?", options: [
-        { value: 1, label: "Undocumented",          description: "Core processes are not documented." },
-        { value: 2, label: "Mostly informal",        description: "Processes are known by teams, but not consistently written down." },
-        { value: 3, label: "Partially documented",   description: "Key processes are documented in some areas." },
-        { value: 4, label: "Standardized",           description: "Most core processes follow a consistent documented structure." },
-        { value: 5, label: "Measured and optimized", description: "Core processes are documented, measured, and regularly improved." },
-      ]},
-      { id: "q9", section: "Processes, Governance & Risk", pillar: "processes", text: "Does your organization have a clear governance model for selecting, approving, and managing AI initiatives?", options: [
-        { value: 1, label: "No governance",        description: "No AI governance model exists." },
-        { value: 2, label: "Ad hoc decisions",     description: "AI decisions are made informally." },
-        { value: 3, label: "Partial governance",   description: "Some governance exists, but roles are unclear." },
-        { value: 4, label: "Defined governance",   description: "AI governance is defined for selected initiatives." },
-        { value: 5, label: "Enforced governance",  description: "AI governance is consistently applied across the organization." },
-      ]},
-      { id: "q10", section: "Processes, Governance & Risk", pillar: "processes", text: "Are decision rights clear for AI projects, including who approves priorities, budgets, risks, deployment, and human escalation?", options: [
-        { value: 1, label: "No clear ownership",           description: "It is unclear who owns AI decisions." },
-        { value: 2, label: "Partial ownership",            description: "Some people are involved, but responsibilities are not clearly assigned." },
-        { value: 3, label: "Basic decision structure",     description: "Most approvals are known, but escalation paths are unclear." },
-        { value: 4, label: "Clear decision rights",        description: "AI ownership, approvals, and escalation paths are clearly assigned." },
-        { value: 5, label: "Accountable operating model",  description: "Every AI initiative has clear owners, approval steps, escalation rules, and outcome accountability." },
-      ]},
-      { id: "q11", section: "Processes, Governance & Risk", pillar: "processes", text: "Are there documented policies for responsible AI use and acceptable levels of AI autonomy?", options: [
-        { value: 1, label: "No AI policies",           description: "We do not have documented rules for AI use." },
-        { value: 2, label: "Informal expectations",    description: "We have general expectations, but they are not documented." },
-        { value: 3, label: "Basic documented policies",description: "We have documented responsible AI policies, but they do not fully address autonomy." },
-        { value: 4, label: "Documented AI controls",   description: "We have documented rules for what AI can access, what it can do, and when humans must approve decisions." },
-        { value: 5, label: "Mature AI governance",     description: "We have documented policies, guardrails, auditability, human-in-the-loop rules, and clear limits on AI autonomy." },
-      ]},
+      {
+        id: "pess_q1", pillar: "pessoas", type: "single",
+        text: "A liderança comunica expectativas claras sobre a adoção de IA e os resultados esperados?",
+        options: [
+          { value: 1, label: "Não há comunicação", score: 0 },
+          { value: 2, label: "Comunicação inconsistente", score: 0.5 },
+          { value: 3, label: "Um pouco clara", score: 1 },
+          { value: 4, label: "Em grande parte clara", score: 1.5 },
+          { value: 5, label: "Clara e regular", score: 2 },
+        ],
+      },
+      {
+        id: "pess_q2", pillar: "pessoas", type: "single",
+        text: "Com que frequência as equipes experimentam novas capacidades de IA?",
+        options: [
+          { value: 1, label: "Nunca", score: 0 },
+          { value: 2, label: "Raramente", score: 0.625 },
+          { value: 3, label: "Ocasionalmente", score: 1.25 },
+          { value: 4, label: "Frequentemente", score: 1.875 },
+          { value: 5, label: "Continuamente", score: 2.5 },
+        ],
+      },
+      {
+        id: "pess_q2a", pillar: "pessoas", type: "single",
+        text: "Como a organização atualmente testa e avalia novas capacidades de IA?",
+        showIf: { qId: "pess_q2", values: [1, 2, 3, 4, 5] },
+        options: [
+          { value: 1, label: "A organização não está testando ativamente capacidades de IA nem explorando casos de uso.", score: 0.25 },
+          { value: 2, label: "Algumas pessoas ou equipes experimentam ferramentas de IA por conta própria, mas não há processo formal, responsável definido ou aprendizado compartilhado.", score: 0.5 },
+          { value: 3, label: "A organização realiza pilotos ocasionais de IA ligados a problemas específicos de negócio, mas os resultados nem sempre são medidos ou escalados.", score: 0.75 },
+          { value: 4, label: "Os experimentos de IA são priorizados, medidos, revisados e conectados a objetivos claros de negócio, com um processo para decidir o que escalar, melhorar ou interromper.", score: 1 },
+        ],
+      },
+      {
+        id: "pess_q3", pillar: "pessoas", type: "multi",
+        text: "Em quais das seguintes áreas a organização possui expertise interna? Selecione todas as opções aplicáveis.",
+        options: [
+          { value: 1, label: "Engenharia de Dados: Responsável por coletar, organizar e garantir a qualidade dos dados da empresa, é a base sem a qual nenhuma solução de IA funciona bem.", score: 0.9 },
+          { value: 2, label: "Engenharia de IA generativa: Responsável por construir soluções que geram conteúdo, respondem perguntas e automatizam comunicação, como assistentes virtuais, resumos automáticos e geração de texto ou imagem.", score: 0.7 },
+          { value: 3, label: "Engenharia de IA tradicional: Responsável por criar modelos que aprendem com dados históricos para prever comportamentos, detectar padrões e automatizar decisões complexas.", score: 0.7 },
+          { value: 4, label: "Engenharia de Cloud / Segurança: Responsável por criar modelos que aprendem com dados históricos para prever comportamentos, detectar padrões e automatizar decisões complexas.", score: 0.7 },
+          { value: 5, label: "Nenhuma das anteriores", score: 0, isNone: true },
+        ],
+      },
+      {
+        id: "pess_q4", pillar: "pessoas", type: "single",
+        text: "Quão receptivos são os colaboradores a mudanças em processos e tecnologias?",
+        options: [
+          { value: 1, label: "Resistentes", score: 0 },
+          { value: 2, label: "Em sua maioria resistentes", score: 0.5 },
+          { value: 3, label: "Parcialmente receptivos", score: 1 },
+          { value: 4, label: "Geralmente receptivos", score: 1.5 },
+          { value: 5, label: "Altamente receptivos", score: 2 },
+        ],
+      },
+      {
+        id: "pess_q5", pillar: "pessoas", type: "single",
+        text: "A organização aplica critérios claros para determinar quando a IA é, ou não é, a solução certa para um problema?",
+        options: [
+          { value: 1, label: "Não há conhecimento suficiente para avaliar se IA é a ferramenta adequada.", score: 0 },
+          { value: 2, label: "A organização avalia casos do mercado e incorpora aprendizados de empresas que já implementaram soluções semelhantes.", score: 0.75 },
+          { value: 3, label: "A organização possui entendimento técnico dessas soluções e avalia adequadamente se a equipe tem capacidade para entregá-las.", score: 1.25 },
+          { value: 4, label: "A organização realiza uma avaliação completa, incluindo plano de negócio, ROI, análise de requisitos e critérios de sucesso.", score: 2 },
+        ],
+      },
+      {
+        id: "pess_q5a", pillar: "pessoas", type: "single",
+        text: "A organização possui um processo claro para priorizar iniciativas de IA?",
+        showIf: { qId: "pess_q5", values: [1, 2, 3, 4] },
+        options: [
+          { value: 1, label: "Não", score: 0 },
+          { value: 2, label: "Informal", score: 1 },
+          { value: 3, label: "Formal", score: 2 },
+        ],
+      },
+      {
+        id: "pess_q6", pillar: "pessoas", type: "single",
+        text: "A empresa está investindo ativamente em preparar seus colaboradores para entender e trabalhar com IA, seja por meio de treinamentos, programas internos ou contratação de profissionais especializados?",
+        options: [
+          { value: 1, label: "Não existem programas formais de treinamento em IA, iniciativas internas ou contratações especializadas em IA.", score: 0 },
+          { value: 2, label: "Alguns colaboradores estão experimentando ferramentas de IA, mas o treinamento e o suporte são majoritariamente informais ou opcionais.", score: 0.83 },
+          { value: 3, label: "A empresa oferece treinamentos em IA, programas internos ou está contratando especialistas para desenvolver capacidade em IA.", score: 1.67 },
+          { value: 4, label: "A capacitação em IA faz parte de uma estratégia formal de desenvolvimento da força de trabalho, com orçamento dedicado, apoio da liderança e metas mensuráveis de adoção.", score: 2.5 },
+        ],
+      },
     ],
   },
   {
-    id: "data", pillar: 4,
-    title: "Data Readiness",
-    desc: "The completeness, quality, accessibility, and governance of your organization's data assets.",
+    id: "governanca", pillar: 4,
+    title: "Governança e Processo",
+    desc: "Avalia os frameworks da organização para gerenciar iniciativas de IA de forma responsável e com clara responsabilização.",
     questions: [
-      { id: "q12", section: "Data Readiness", pillar: "data", text: "How complete and relevant is the data your organization collects for priority AI use cases?", options: [
-        { value: 1, label: "Not collected",         description: "Relevant data is not collected." },
-        { value: 2, label: "Limited coverage",      description: "Some useful data exists, but coverage is limited." },
-        { value: 3, label: "Partial coverage",      description: "Data exists for selected use cases, but important gaps remain." },
-        { value: 4, label: "Mostly complete",       description: "Most relevant data is collected for priority AI use cases." },
-        { value: 5, label: "Purpose-built collection",description: "Data collection is designed around priority AI use cases." },
-      ]},
-      { id: "q13", section: "Data Readiness", pillar: "data", text: "How accessible is your data to the teams, systems, and approved AI tools that need it?", options: [
-        { value: 1, label: "Mostly inaccessible",description: "Important data is hard to find or locked in disconnected systems." },
-        { value: 2, label: "Manual access",      description: "Teams usually need manual exports or approvals to use data." },
-        { value: 3, label: "Partial access",     description: "Key data is available in some systems, but access is inconsistent." },
-        { value: 4, label: "Controlled access",  description: "Most important data is available through governed access." },
-        { value: 5, label: "Seamless access",    description: "Approved users and AI tools can access the right data through secure permissions." },
-      ]},
-      { id: "q14", section: "Data Readiness", pillar: "data", text: "How AI-ready is the format, structure, and context of your data?", options: [
-        { value: 1, label: "Unstructured files",   description: "Important data mainly lives in PDFs, emails, scanned documents, or free-text files." },
-        { value: 2, label: "Manual tables",        description: "Important data mainly lives in spreadsheets, exports, or copied tables with inconsistent formats." },
-        { value: 3, label: "Business system data", description: "Important data exists in CRMs, ERPs, databases, or internal systems, but structure varies across teams." },
-        { value: 4, label: "Structured data",      description: "Core data is stored in consistent systems with clear fields, definitions, and business context." },
-        { value: 5, label: "AI-ready data layer",  description: "Core data is structured, documented, searchable, and available for approved AI workflows." },
-      ]},
-      { id: "q15", section: "Data Readiness", pillar: "data", text: "How mature is your data governance, including ownership, quality monitoring, security, and access control?", options: [
-        { value: 1, label: "No governance",      description: "No clear data ownership exists." },
-        { value: 2, label: "Informal policies",  description: "Some data rules exist, but they are informal." },
-        { value: 3, label: "Partial governance", description: "Data governance exists in selected areas." },
-        { value: 4, label: "Mostly defined",     description: "Ownership, quality rules, security, and access controls are mostly defined." },
-        { value: 5, label: "Mature governance",  description: "Data governance is monitored and consistently enforced." },
-      ]},
-      { id: "q16", section: "Data Readiness", pillar: "data", text: "To what extent are your data collection and preparation processes automated and integrated across systems?", options: [
-        { value: 1, label: "Mostly manual",      description: "Data collection and preparation are mostly manual." },
-        { value: 2, label: "Partial automation", description: "Some tasks are automated, but systems remain disconnected." },
-        { value: 3, label: "Partial integration",description: "Some systems are connected, but manual preparation is still common." },
-        { value: 4, label: "Mostly automated",   description: "Data pipelines are mostly automated across key systems." },
-        { value: 5, label: "Scalable data flows",description: "Data flows are automated, reliable, and ready for AI at scale." },
-      ]},
+      {
+        id: "gov_q1", pillar: "governanca", type: "single",
+        text: "Quão bem os processos críticos de negócio estão documentados?",
+        options: [
+          { value: 1, label: "Não documentados", score: 0 },
+          { value: 2, label: "Parcialmente documentados", score: 1.67 },
+          { value: 3, label: "Em sua maioria documentados", score: 3.33 },
+          { value: 4, label: "Totalmente documentados", score: 5 },
+        ],
+      },
+      {
+        id: "gov_q2", pillar: "governanca", type: "single",
+        text: "A empresa possui diretrizes claras sobre como gerenciar os riscos de segurança e privacidade específicos de iniciativas de IA, como uso indevido de dados, vazamentos ou decisões automatizadas sem supervisão?",
+        options: [
+          { value: 1, label: "Não existem diretrizes, controles ou responsáveis definidos para gerenciar riscos de segurança relacionados à IA.", score: 0 },
+          { value: 2, label: "Os riscos de segurança de IA são tratados pelos processos existentes de TI e segurança, mas não há uma abordagem específica para IA.", score: 3 },
+          { value: 3, label: "Responsabilidades, controles e processos de revisão de segurança estão claramente definidos e adaptados aos riscos específicos de IA.", score: 6 },
+        ],
+      },
     ],
   },
   {
-    id: "technology", pillar: 5,
-    title: "Technology & Infrastructure",
-    desc: "Your technical capabilities to build, deploy, monitor, and integrate AI solutions at scale.",
+    id: "tecnologia", pillar: 5,
+    title: "Tecnologia",
+    desc: "Avalia as capacidades técnicas da organização para construir, implantar, monitorar e integrar soluções de IA.",
     questions: [
-      { id: "q17", section: "Technology & Infrastructure", pillar: "technology", text: "Does your organization have the infrastructure needed to experiment with, develop, deploy, and safely run AI solutions?", options: [
-        { value: 1, label: "No infrastructure",     description: "No infrastructure exists for AI experimentation." },
-        { value: 2, label: "Basic tools only",       description: "Basic tools exist, but infrastructure is limited." },
-        { value: 3, label: "Pilot-ready",            description: "Infrastructure supports AI pilots." },
-        { value: 4, label: "Production-ready",       description: "Infrastructure supports selected production AI use cases." },
-        { value: 5, label: "Scalable infrastructure",description: "Infrastructure can support AI initiatives at scale." },
-      ]},
-      { id: "q18", section: "Technology & Infrastructure", pillar: "technology", text: "How standardized is your technology stack for AI, data engineering, analytics, and workflow automation projects?", options: [
-        { value: 1, label: "Fragmented",         description: "Tools are fragmented across teams." },
-        { value: 2, label: "No standards",        description: "Teams use different tools without shared standards." },
-        { value: 3, label: "Partial standards",   description: "Some standards exist, but adoption is inconsistent." },
-        { value: 4, label: "Mostly standardized", description: "The AI and data stack is mostly standardized." },
-        { value: 5, label: "Actively managed",    description: "The technology stack is standardized, scalable, and actively managed." },
-      ]},
-      { id: "q19", section: "Technology & Infrastructure", pillar: "technology", text: "How mature are your deployment practices for AI solutions, including DevOps, MLOps, monitoring, evaluation, and rollback?", options: [
-        { value: 1, label: "No deployment process",     description: "We do not have a clear process for deploying AI solutions." },
-        { value: 2, label: "Manual deployment",         description: "AI solutions are deployed manually with limited testing." },
-        { value: 3, label: "Basic deployment practices",description: "Some testing, deployment, and monitoring practices exist." },
-        { value: 4, label: "Controlled deployment",     description: "AI solutions use structured deployment, monitoring, evaluation, and rollback processes." },
-        { value: 5, label: "Production-grade operations",description: "AI systems are managed with mature operations, monitoring, incident response, and clear ownership." },
-      ]},
-      { id: "q20", section: "Technology & Infrastructure", pillar: "technology", text: "Can your AI systems integrate securely with core business systems such as CRM, ERP, databases, cloud platforms, communication tools, or internal applications?", options: [
-        { value: 1, label: "No integration",              description: "AI tools do not connect to core business systems." },
-        { value: 2, label: "Manual integration",          description: "AI tools rely mostly on exports, uploads, or copy-paste." },
-        { value: 3, label: "Basic connections",           description: "Some AI tools connect to business systems, but integrations are limited." },
-        { value: 4, label: "Secure integrations",         description: "AI systems connect to important business systems through secure APIs and permissions." },
-        { value: 5, label: "Enterprise-ready integration",description: "AI systems can work across core systems with identity controls, access logging, and governance." },
-      ]},
+      {
+        id: "tec_q1", pillar: "tecnologia", type: "single",
+        text: "Quantos projetos de IA já foram/estão sendo executados na empresa?",
+        options: [
+          { value: 1, label: "Ainda não existem projetos de IA", score: 0 },
+          { value: 2, label: "1 a 4", score: 2 },
+          { value: 3, label: "5 ou mais", score: 4 },
+        ],
+      },
+      // Branch: no projects yet
+      {
+        id: "tec_q1a", pillar: "tecnologia", type: "single",
+        text: "A empresa possui uma base técnica aprovada para testar soluções de IA com segurança?",
+        showIf: { qId: "tec_q1", values: [1] },
+        options: [
+          { value: 1, label: "Não, não existe ambiente, ferramenta ou processo técnico definido para testes de IA.", score: 0 },
+          { value: 2, label: "Parcialmente, alguns testes poderiam ser feitos com ferramentas existentes, mas sem ambiente específico, padronização ou aprovação clara.", score: 1.75 },
+          { value: 3, label: "Sim, a empresa possui ambiente, ferramentas ou provedores aprovados para testar IA com segurança.", score: 3.5 },
+        ],
+      },
+      {
+        id: "tec_q1b", pillar: "tecnologia", type: "single",
+        text: "Se uma oportunidade de IA fosse priorizada hoje, a empresa conseguiria conectar os dados/sistemas necessários e lançar um primeiro piloto técnico em prazo razoável?",
+        showIf: { qId: "tec_q1", values: [1] },
+        options: [
+          { value: 1, label: "Não, seria necessário começar praticamente do zero, incluindo dados, integrações, equipe e aprovações.", score: 0 },
+          { value: 2, label: "Parcialmente, seria possível iniciar, mas ainda haveria dependências importantes de dados, integrações, equipe técnica ou aprovações.", score: 1.75 },
+          { value: 3, label: "Sim, a empresa conseguiria conectar os dados/sistemas necessários e iniciar um piloto técnico com os recursos atuais.", score: 3.5 },
+        ],
+      },
+      // Branch: 1 a 4 projects
+      {
+        id: "tec_q1c", pillar: "tecnologia", type: "single",
+        text: "A maioria desses projetos está em desenvolvimento ativo, em manutenção ou parada?",
+        showIf: { qId: "tec_q1", values: [2] },
+        options: [
+          { value: 1, label: "Parados", score: 0 },
+          { value: 2, label: "Manutenção", score: 1 },
+          { value: 3, label: "Desenvolvimento ativo", score: 2 },
+        ],
+      },
+      {
+        id: "tec_q1d", pillar: "tecnologia", type: "single",
+        text: "Os projetos existentes são baseados em IA tradicional, LLMs/IA generativa ou uma combinação dos dois?",
+        showIf: { qId: "tec_q1", values: [2] },
+        options: [
+          { value: 1, label: "Não sei", score: 0 },
+          { value: 2, label: "Apenas IA tradicional", score: 1 },
+          { value: 3, label: "Apenas LLM / IA generativa", score: 1 },
+          { value: 4, label: "Misto", score: 2 },
+        ],
+      },
+      {
+        id: "tec_q1e", pillar: "tecnologia", type: "single",
+        text: "Esses projetos se integram a sistemas internos, como CRM, Slack, ERP ou outras ferramentas da empresa?",
+        showIf: { qId: "tec_q1", values: [2] },
+        options: [
+          { value: 1, label: "Não", score: 0 },
+          { value: 2, label: "Alguns", score: 1 },
+          { value: 3, label: "Sim", score: 2 },
+        ],
+      },
+      {
+        id: "tec_q1f", pillar: "tecnologia", type: "single",
+        text: "Algum projeto de IA já entregou resultado concreto e mensurável para o negócio, como redução de custo, ganho de tempo ou aumento de receita?",
+        showIf: { qId: "tec_q1", values: [2] },
+        options: [
+          { value: 1, label: "Não", score: 0 },
+          { value: 2, label: "Sim", score: 1 },
+        ],
+      },
+      {
+        id: "tec_q1g", pillar: "tecnologia", type: "single",
+        text: "Quando um projeto de IA funciona bem em uma área, a empresa consegue expandir essa solução para outras áreas sem precisar reconstruir tudo do zero?",
+        showIf: { qId: "tec_q1", values: [2] },
+        options: [
+          { value: 1, label: "Não, as soluções de IA geralmente são construídas para uma área específica e precisam ser reconstruídas para outras.", score: 0 },
+          { value: 2, label: "Parcialmente, algumas partes podem ser reutilizadas, mas a expansão ainda exige retrabalho significativo.", score: 1 },
+          { value: 3, label: "Sim, as soluções de IA são projetadas para serem reutilizáveis e escaláveis em diferentes áreas da empresa.", score: 2 },
+        ],
+      },
+      // Branch: 5 or more projects
+      {
+        id: "tec_q2a", pillar: "tecnologia", type: "single",
+        text: "Esses projetos são atualizados com frequência?",
+        showIf: { qId: "tec_q1", values: [3] },
+        options: [
+          { value: 1, label: "Não", score: 0 },
+          { value: 2, label: "Às vezes", score: 1 },
+          { value: 3, label: "Sim", score: 2 },
+        ],
+      },
+      {
+        id: "tec_q2b", pillar: "tecnologia", type: "single",
+        text: "As soluções de IA existentes são iniciativas pontuais ou já fazem parte de um ecossistema integrado?",
+        showIf: { qId: "tec_q1", values: [3] },
+        options: [
+          { value: 1, label: "Iniciativas pontuais", score: 0 },
+          { value: 2, label: "Algumas conexões", score: 1 },
+          { value: 3, label: "Ecossistema integrado", score: 2 },
+        ],
+      },
+      {
+        id: "tec_q2c", pillar: "tecnologia", type: "single",
+        text: "Os projetos existentes são baseados em IA tradicional, LLMs/IA generativa ou uma combinação dos dois?",
+        showIf: { qId: "tec_q1", values: [3] },
+        options: [
+          { value: 1, label: "Não sei", score: 0 },
+          { value: 2, label: "Apenas LLM / IA generativa", score: 1 },
+          { value: 3, label: "Apenas IA tradicional", score: 1 },
+          { value: 4, label: "Misto", score: 2 },
+        ],
+      },
+      {
+        id: "tec_q2d", pillar: "tecnologia", type: "single",
+        text: "Esses projetos se integram a sistemas internos, como CRM, Slack, ERP ou outras ferramentas da empresa?",
+        showIf: { qId: "tec_q1", values: [3] },
+        options: [
+          { value: 1, label: "Não", score: 0 },
+          { value: 2, label: "Alguns", score: 1 },
+          { value: 3, label: "Sim", score: 2 },
+        ],
+      },
+      {
+        id: "tec_q2e", pillar: "tecnologia", type: "single",
+        text: "Algum projeto de IA já entregou resultado concreto e mensurável para o negócio, como redução de custo, ganho de tempo ou aumento de receita?",
+        showIf: { qId: "tec_q1", values: [3] },
+        options: [
+          { value: 1, label: "Não", score: 0 },
+          { value: 2, label: "Sim", score: 1 },
+        ],
+      },
+      {
+        id: "tec_q2f", pillar: "tecnologia", type: "single",
+        text: "Quando um projeto de IA funciona bem em uma área, a empresa consegue expandir essa solução para outras áreas sem precisar reconstruir tudo do zero?",
+        showIf: { qId: "tec_q1", values: [3] },
+        options: [
+          { value: 1, label: "Não, as soluções de IA geralmente são construídas para uma área específica e precisam ser reconstruídas para outras.", score: 0 },
+          { value: 2, label: "Parcialmente, algumas partes podem ser reutilizadas, mas a expansão ainda exige retrabalho significativo.", score: 1 },
+          { value: 3, label: "Sim, as soluções de IA são projetadas para serem reutilizáveis e escaláveis em diferentes áreas da empresa.", score: 2 },
+        ],
+      },
     ],
   },
 ];
 
-export const TOTAL_Q = SECTIONS.reduce((n, s) => n + s.questions.length, 0);
+export const ALL_QUESTIONS: Question[] = SECTIONS.flatMap(s => s.questions);
 
 export const PILLAR_CONFIG: PillarConfig[] = [
-  { id: "strategy",   title: "Strategy & Business Alignment", weight: 0.20, qIds: ["q1","q2","q3","q4"] },
-  { id: "people",     title: "People & Culture",              weight: 0.15, qIds: ["q5","q6","q7"] },
-  { id: "processes",  title: "Processes, Governance & Risk",  weight: 0.20, qIds: ["q8","q9","q10","q11"] },
-  { id: "data",       title: "Data Readiness",                weight: 0.25, qIds: ["q12","q13","q14","q15","q16"] },
-  { id: "technology", title: "Technology & Infrastructure",   weight: 0.20, qIds: ["q17","q18","q19","q20"] },
+  { id: "dados",      title: "Dados",                weight: 0.25 },
+  { id: "estrategia", title: "Estratégia",            weight: 0.20 },
+  { id: "pessoas",    title: "Pessoas e Cultura",     weight: 0.15 },
+  { id: "governanca", title: "Governança e Processo", weight: 0.15 },
+  { id: "tecnologia", title: "Tecnologia",            weight: 0.25 },
 ];
 
-export const LEVEL_ORDER = ["Low Readiness","Emerging Readiness","Moderate Readiness","High Readiness","Advanced Readiness"];
+export const LEVEL_ORDER = ["Low Readiness", "Emerging Readiness", "Moderate Readiness", "High Readiness", "Advanced Readiness"];
 
 export const LEVEL_META: Record<string, { key: string; desc: string }> = {
   "Low Readiness":      { key: "low",      desc: "Your organization is still building the foundations needed for AI. Before scaling AI initiatives, focus on strategy, data, governance, and technical readiness." },
@@ -239,23 +536,83 @@ export const LEVEL_META: Record<string, { key: string; desc: string }> = {
 };
 
 export const RECOMMENDATIONS: Record<string, string> = {
-  strategy:   "Clarify the AI vision, prioritize use cases, and define a roadmap linked to business value.",
-  people:     "Invest in AI literacy, cross-functional collaboration, and change management to support adoption.",
-  processes:  "Define governance, decision rights, responsible AI policies, and clear ownership for AI initiatives.",
-  data:       "Strengthen data quality, accessibility, governance, and integration before scaling AI solutions.",
-  technology: "Improve infrastructure, system integration, deployment practices, and monitoring before moving beyond pilots.",
+  dados:      "Fortaleça a qualidade, acessibilidade, governança e integração dos dados antes de escalar soluções de IA.",
+  estrategia: "Defina a visão de IA, priorize casos de uso e estabeleça um roadmap vinculado ao valor do negócio.",
+  pessoas:    "Invista em capacitação em IA, colaboração multifuncional e gestão de mudanças para apoiar a adoção.",
+  governanca: "Defina governança, políticas de IA responsável e responsabilidades claras para iniciativas de IA.",
+  tecnologia: "Melhore a infraestrutura, integração de sistemas e práticas de implantação antes de ir além dos pilotos.",
 };
 
-export function calculatePillarScores(answers: Record<string, number>): PillarScore[] {
+export function isQuestionVisible(q: Question, sectionQuestions: Question[], answers: AnswerRecord): boolean {
+  if (!q.showIf) return true;
+  const parentAnswer = answers[q.showIf.qId];
+  if (typeof parentAnswer !== "number") return false;
+  const parentQ = sectionQuestions.find(p => p.id === q.showIf!.qId);
+  if (parentQ && !isQuestionVisible(parentQ, sectionQuestions, answers)) return false;
+  return q.showIf.values.includes(parentAnswer);
+}
+
+function getQuestionScore(q: Question, answers: AnswerRecord): number | null {
+  if (q.type === "text") return null;
+  const answer = answers[q.id];
+  if (answer === undefined || answer === null) return null;
+  if (q.type === "multi") {
+    const selected = Array.isArray(answer) ? (answer as number[]) : [];
+    const noneValues = (q as MultiQuestion).options.filter(o => o.isNone).map(o => o.value);
+    if (selected.some(v => noneValues.includes(v))) return 0;
+    return (q as MultiQuestion).options
+      .filter(o => !o.isNone && selected.includes(o.value))
+      .reduce((sum, o) => sum + o.score, 0);
+  }
+  if (q.type === "single") {
+    const opt = (q as SingleQuestion).options.find(o => o.value === (answer as number));
+    return opt ? opt.score : null;
+  }
+  return null;
+}
+
+function getQuestionMax(q: Question): number {
+  if (q.type === "single") return Math.max(...q.options.map(o => o.score));
+  if (q.type === "multi") return q.options.filter(o => !o.isNone).reduce((sum, o) => sum + o.score, 0);
+  return 0;
+}
+
+export function calculatePillarScores(answers: AnswerRecord): PillarScore[] {
+  const totals: Record<string, { achieved: number; max: number }> = {};
+  for (const p of PILLAR_CONFIG) totals[p.id] = { achieved: 0, max: 0 };
+
+  for (const section of SECTIONS) {
+    const visibleQs = section.questions.filter(q => isQuestionVisible(q, section.questions, answers));
+    for (const q of visibleQs) {
+      if (q.type === "text") continue;
+      const score = getQuestionScore(q, answers);
+      if (score === null) continue;
+      const key = q.scorePillar ?? q.pillar;
+      if (!totals[key]) continue;
+      totals[key].achieved += score;
+      totals[key].max += getQuestionMax(q);
+    }
+  }
+
   return PILLAR_CONFIG.map(p => {
-    const max = p.qIds.length * 5;
-    const raw = p.qIds.reduce((sum, id) => sum + (answers[id] || 0), 0);
-    return { id: p.id, title: p.title, weight: p.weight, score: Math.round((raw / max) * 100) };
+    const t = totals[p.id];
+    const score = t.max > 0 ? Math.round((t.achieved / t.max) * 100) : 0;
+    return { id: p.id, title: p.title, weight: p.weight, score };
   });
 }
 
-export function calculateWeightedScore(pillarScores: PillarScore[]): number {
-  return Math.round(pillarScores.reduce((sum, p) => sum + p.score * p.weight, 0));
+export function calculateOverallScore(answers: AnswerRecord): number {
+  let achieved = 0;
+  for (const section of SECTIONS) {
+    const visibleQs = section.questions.filter(q => isQuestionVisible(q, section.questions, answers));
+    for (const q of visibleQs) {
+      if (q.type === "text") continue;
+      const score = getQuestionScore(q, answers);
+      if (score === null) continue;
+      achieved += score;
+    }
+  }
+  return Math.max(0, Math.min(100, Math.round(achieved)));
 }
 
 export function getReadinessLevel(score: number): string {
@@ -278,9 +635,9 @@ export function applyBlockerRules(weightedScore: number, pillarScores: PillarSco
     }
   }
 
-  if (byId.technology.score < 40) capAt("Moderate Readiness", "your Technology & Infrastructure score limits your current ability to deploy AI beyond pilots.");
-  if (byId.data.score      < 40) capAt("Emerging Readiness",  "your Data Readiness score limits your current ability to scale AI reliably.");
-  if (byId.processes.score < 40) capAt("Emerging Readiness",  "your Processes & Governance score limits your current ability to manage AI responsibly at scale.");
+  if (byId.tecnologia?.score < 40) capAt("Moderate Readiness", "your Technology score limits your current ability to deploy AI beyond pilots.");
+  if (byId.dados?.score      < 40) capAt("Emerging Readiness",  "your Data score limits your current ability to scale AI reliably.");
+  if (byId.governanca?.score < 40) capAt("Emerging Readiness",  "your Governance & Process score limits your current ability to manage AI responsibly at scale.");
 
   return { score: weightedScore, level, blocker };
 }
@@ -291,4 +648,23 @@ export function getPillarTier(score: number) {
   if (score >= 60) return { key: "moderate", label: "Moderate",         barClass: "rpt-bar-moderate", pctClass: "rpt-pct-moderate" };
   if (score >= 40) return { key: "emerging", label: "Developing",       barClass: "rpt-bar-emerging", pctClass: "rpt-pct-emerging" };
   return             { key: "low",     label: "Foundational gaps", barClass: "rpt-bar-low",      pctClass: "rpt-pct-low" };
+}
+
+export function clearDependentAnswers(qId: string, answers: AnswerRecord): AnswerRecord {
+  const next = { ...answers };
+  function clear(parentId: string) {
+    for (const q of ALL_QUESTIONS) {
+      if (q.showIf?.qId === parentId && q.id in next) {
+        delete next[q.id];
+        clear(q.id);
+      }
+    }
+  }
+  clear(qId);
+  return next;
+}
+
+export function getDataRiskFlag(answers: AnswerRecord): boolean {
+  const val = answers["dados_q6"];
+  return typeof val === "number" && val <= 2;
 }
