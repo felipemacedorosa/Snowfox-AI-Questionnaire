@@ -7,6 +7,7 @@ import {
   calculatePillarScores, calculateOverallScore, applyBlockerRules, getPillarTier,
 } from "@/app/data";
 import { PillarBar } from "@/components/results/PillarBar";
+import { InsightsSection } from "@/components/results/InsightsSection";
 
 const BASE = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
 
@@ -176,10 +177,13 @@ export function ResultsScreen({ answers, onRestart }: {
             </ol>
           </div>
 
-          {/* 04 Recommended Action */}
+          {/* 04 Principais Insights (personalized, data-driven) */}
+          <InsightsSection answers={answers} pillarScores={pillarScores} />
+
+          {/* 05 Recommended Action */}
           <div className="rpt-section">
             <div className="rpt-sechead">
-              <span style={{ fontFamily: "'Typo Grotesk', sans-serif", fontSize: 17, fontWeight: 800, letterSpacing: "-0.02em", color: "#6D28D9" }}>04</span>
+              <span style={{ fontFamily: "'Typo Grotesk', sans-serif", fontSize: 17, fontWeight: 800, letterSpacing: "-0.02em", color: "#6D28D9" }}>05</span>
               <span style={{ fontFamily: "'Typo Grotesk', sans-serif", fontSize: 19, fontWeight: 700, letterSpacing: "-0.02em", color: "#171221" }}>Recommended Next Step</span>
             </div>
             <div className="rounded-[10px] p-5" style={{ background: "#FAF9FD", border: "1px solid #E7E4F0" }}>
