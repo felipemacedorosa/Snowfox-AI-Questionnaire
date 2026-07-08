@@ -8,6 +8,7 @@ import {
 } from "@/app/data";
 import { PillarBar } from "@/components/results/PillarBar";
 import { InsightsSection } from "@/components/results/InsightsSection";
+import { buildExecutiveSummary } from "@/app/resultInsights";
 
 const BASE = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
 
@@ -25,6 +26,7 @@ export function ResultsScreen({ answers, onRestart }: {
   const weakest = pillarScores.reduce((a, b) => b.score < a.score ? b : a);
   const rec = RECOMMENDATIONS[weakest.id] || "";
   const meta = LEVEL_META[result.level];
+  const executiveSummary = buildExecutiveSummary({ answers, pillarScores, result, strongest, weakest, recommendation: rec });
   const dateStr = new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
 
   useEffect(() => {
@@ -100,7 +102,11 @@ export function ResultsScreen({ answers, onRestart }: {
               <span style={{ fontFamily: "'Typo Grotesk', sans-serif", fontSize: 17, fontWeight: 800, letterSpacing: "-0.02em", color: "#6D28D9" }}>01</span>
               <span style={{ fontFamily: "'Typo Grotesk', sans-serif", fontSize: 19, fontWeight: 700, letterSpacing: "-0.02em", color: "#171221" }}>Executive Summary</span>
             </div>
-            <p className="text-[14.5px] leading-[1.72] mb-4" style={{ fontFamily: "Poppins, sans-serif", color: "#56516A" }}>{meta.desc}</p>
+            {executiveSummary.map((paragraph, i) => (
+              <p key={i} className="text-[14.5px] leading-[1.72] mb-4" style={{ fontFamily: "Poppins, sans-serif", color: "#56516A" }}>
+                {paragraph}
+              </p>
+            ))}
             {result.blocker && (
               <div className="flex items-start gap-2.5 rounded-lg px-4 py-3 mb-4 text-[12.5px] leading-[1.55]"
                 style={{ background: "#FFFBEF", border: "1px solid rgba(168,120,15,0.40)", color: "#7A5A0C", fontFamily: "Poppins, sans-serif" }}>

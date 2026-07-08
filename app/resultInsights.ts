@@ -18,7 +18,7 @@
 // `theme` groups insights that make a similar point, so the selector never
 // shows two near-duplicates side by side.
 
-import { AnswerRecord, PillarScore, PILLAR_CONFIG, RECOMMENDATIONS } from "@/app/data";
+import { AnswerRecord, AssessmentResult, PillarScore, PILLAR_CONFIG, RECOMMENDATIONS } from "@/app/data";
 
 export type InsightPillarId = "dados" | "estrategia" | "pessoas" | "governanca" | "tecnologia";
 
@@ -98,6 +98,19 @@ export const RESULT_INSIGHTS: ResultInsight[] = [
     theme: "dados-suficiencia",
     title: "Dados prontos para aplicar casos de uso",
     insight: "A organização já parece ter uma base de dados relevante para decisões de negócio. Isso reduz uma das principais incertezas de projetos de IA e permite avançar para casos de uso aplicados, como segmentação, previsão, recomendação ou otimização de processos, desde que haja critérios claros de impacto e governança.",
+  },
+  {
+    id: "dados-12",
+    pillar: "dados",
+    questionId: "dados_q1",
+    trigger: "dados_q1 = 2 (alguns dados relevantes, mas ainda incompletos)",
+    scoreCondition: "2.5/5",
+    answerMatch: [eq("dados_q1", 2)],
+    priority: 2,
+    type: "oportunidade",
+    theme: "dados-suficiencia",
+    title: "Dados parcialmente úteis, ainda com lacunas",
+    insight: "A empresa já coleta alguns dados relevantes, mas decisões importantes ainda dependem de informações incompletas, análises manuais ou suposições. Antes de avançar para casos de IA mais complexos, vale identificar quais lacunas afetam as decisões prioritárias e resolver primeiro as fontes mais críticas.",
   },
   {
     id: "dados-03",
@@ -882,4 +895,51 @@ export function selectResultInsights(
   }
 
   return selected.slice(0, max);
+}
+
+const READINESS_SUMMARY_PT: Record<string, string> = {
+  "Low Readiness": "que a empresa ainda está formando as bases necessárias para adotar IA de forma consistente",
+  "Emerging Readiness": "que a empresa já começou a se preparar para IA, mas ainda possui lacunas relevantes antes de escalar",
+  "Moderate Readiness": "que a empresa tem uma base razoável para pilotos e iniciativas seletivas, desde que fortaleça os pontos fracos",
+  "High Readiness": "que a empresa está bem posicionada para implementar e escalar iniciativas selecionadas de IA",
+  "Advanced Readiness": "que a empresa possui uma base forte para escalar e melhorar iniciativas de IA continuamente",
+};
+
+function lowerFirst(text: string) {
+  if (!text) return text;
+  return text.charAt(0).toLowerCase() + text.slice(1);
+}
+
+export function buildExecutiveSummary({
+  answers,
+  pillarScores,
+  result,
+  strongest,
+  weakest,
+  recommendation,
+}: {
+  answers: AnswerRecord;
+  pillarScores: PillarScore[];
+  result: AssessmentResult;
+  strongest: PillarScore;
+  weakest: PillarScore;
+  recommendation: string;
+}): string[] {
+  const levelMeaning = READINESS_SUMMARY_PT[result.level] ?? "que a leitura precisa ser feita a partir dos pilares abaixo";
+  const insights = selectResultInsights(answers, pillarScores);
+  const attention = insights.find(i => i.priority <= 2) ?? insights.find(i => i.pillar === weakest.id);
+  const strength = insights.find(i => i.priority === 3);
+
+  const paragraphOne = `A organização obteve ${result.score}/100, ${levelMeaning}. O pilar mais forte foi ${strongest.title} (${strongest.score}%), enquanto o principal ponto de atenção foi ${weakest.title} (${weakest.score}%). Essa combinação ajuda a separar o que já pode ser aproveitado do que precisa ser estabilizado antes de iniciativas mais amplas.`;
+
+  const attentionSentence = attention
+    ? `Entre os insights personalizados, o principal sinal de atenção é "${attention.title}", ligado ao pilar de ${PILLAR_LABEL[attention.pillar]}.`
+    : `Entre os insights personalizados, o principal foco deve ser reduzir a lacuna em ${weakest.title}.`;
+  const strengthSentence = strength
+    ? `Ao mesmo tempo, "${strength.title}" aparece como uma força a preservar.`
+    : "";
+  const recommendationText = recommendation.endsWith(".") ? recommendation : `${recommendation}.`;
+  const paragraphTwo = `${attentionSentence} ${strengthSentence} Como próximo passo, ${lowerFirst(recommendationText)}`.replace(/\s+/g, " ").trim();
+
+  return [paragraphOne, paragraphTwo];
 }
