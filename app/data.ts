@@ -536,11 +536,11 @@ export const LEVEL_META: Record<string, { key: string; desc: string }> = {
 };
 
 export const RECOMMENDATIONS: Record<string, string> = {
-  dados:      "Fortaleça a qualidade, acessibilidade, governança e integração dos dados antes de escalar soluções de IA.",
-  estrategia: "Defina a visão de IA, priorize casos de uso e estabeleça um roadmap vinculado ao valor do negócio.",
-  pessoas:    "Invista em capacitação em IA, colaboração multifuncional e gestão de mudanças para apoiar a adoção.",
-  governanca: "Defina governança, políticas de IA responsável e responsabilidades claras para iniciativas de IA.",
-  tecnologia: "Melhore a infraestrutura, integração de sistemas e práticas de implantação antes de ir além dos pilotos.",
+  dados:      "Mapeie as fontes de dados críticas, resolva lacunas de qualidade e acesso, e defina responsáveis antes de escalar iniciativas de IA.",
+  estrategia: "Transforme a visão de IA em um roadmap priorizado, com casos de uso, responsáveis, métricas de valor e horizonte de execução claro.",
+  pessoas:    "Combine capacitação, comunicação e gestão de mudança para que as equipes entendam onde usar IA e como incorporar novas soluções ao trabalho.",
+  governanca: "Defina políticas, controles e responsabilidades para segurança, privacidade, revisão humana e acompanhamento de iniciativas de IA.",
+  tecnologia: "Estabeleça uma base técnica para conectar dados, integrar sistemas, monitorar modelos e levar pilotos para produção com menor retrabalho.",
 };
 
 export function isQuestionVisible(q: Question, sectionQuestions: Question[], answers: AnswerRecord): boolean {

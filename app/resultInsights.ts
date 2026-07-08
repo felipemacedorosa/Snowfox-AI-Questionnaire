@@ -25,7 +25,7 @@ export type InsightPillarId = "dados" | "estrategia" | "pessoas" | "governanca" 
 export type InsightBadge = "risco-critico" | "oportunidade" | "proximo-passo" | "forca-existente";
 
 export const INSIGHT_BADGE_LABEL: Record<InsightBadge, string> = {
-  "risco-critico": "Risco crítico",
+  "risco-critico": "Risco prioritário",
   "oportunidade": "Oportunidade",
   "proximo-passo": "Próximo passo",
   "forca-existente": "Força existente",
@@ -84,7 +84,7 @@ export const RESULT_INSIGHTS: ResultInsight[] = [
     type: "risco-critico",
     theme: "dados-suficiencia",
     title: "Base de dados ainda não validada",
-    insight: "Sua empresa ainda não consegue saber com clareza se está coletando os dados certos. Isso significa que qualquer modelo de IA construído hoje partiria de uma base não validada. Antes de qualquer outra coisa, vocês se beneficiariam de um projeto de Estratégia Orientada a Dados, para mapear o que existe hoje em relação ao que as decisões do negócio realmente precisam.",
+    insight: "A empresa ainda não tem clareza se coleta os dados certos para apoiar as decisões mais importantes. Isso torna qualquer iniciativa de IA mais frágil, porque o modelo pode partir de uma base incompleta ou pouco representativa. O próximo passo é mapear quais decisões críticas dependem de dados e comparar essa necessidade com as fontes disponíveis hoje.",
   },
   {
     id: "dados-02",
@@ -97,7 +97,7 @@ export const RESULT_INSIGHTS: ResultInsight[] = [
     type: "forca-existente",
     theme: "dados-suficiencia",
     title: "Dados prontos para aplicar casos de uso",
-    insight: "Uma base de dados sólida e validada é o maior fator isolado de retorno em projetos de IA. Essa organização já superou a etapa de coleta e está pronta para aplicar casos de uso diretamente: segmentação (segMENTOR), precificação (priceGURU) ou modelos sob medida via MLaaS.",
+    insight: "A organização já parece ter uma base de dados relevante para decisões de negócio. Isso reduz uma das principais incertezas de projetos de IA e permite avançar para casos de uso aplicados, como segmentação, previsão, recomendação ou otimização de processos, desde que haja critérios claros de impacto e governança.",
   },
   {
     id: "dados-03",
@@ -110,7 +110,7 @@ export const RESULT_INSIGHTS: ResultInsight[] = [
     type: "risco-critico",
     theme: "dados-acesso",
     title: "Dados isolados travam produção",
-    insight: "Dados isolados e de difícil acesso são a principal razão pela qual pilotos de IA travam logo após a prova de conceito: o modelo funciona na demonstração, mas não consegue ser alimentado em produção. Esse é um problema clássico de Engenharia de Dados, não de IA, e precisa ser resolvido antes de qualquer novo investimento em modelagem.",
+    insight: "Dados isolados e de difícil acesso costumam impedir que pilotos cheguem à produção. O modelo pode funcionar em uma demonstração, mas não consegue ser alimentado de forma confiável no dia a dia. Antes de investir em novas modelagens, vale resolver integrações, permissões e disponibilidade das fontes críticas.",
   },
   {
     id: "dados-04",
@@ -122,8 +122,8 @@ export const RESULT_INSIGHTS: ResultInsight[] = [
     priority: 3,
     type: "forca-existente",
     theme: "dados-acesso",
-    title: "Acesso a dados pronto para MLOps",
-    insight: "Acesso fácil e governado aos dados é exatamente a infraestrutura que um pipeline de MLOps pressupõe existir. Essa empresa pode pular a discussão de \"encanamento\" e ir direto para o deploy e o monitoramento de modelos.",
+    title: "Acesso a dados pronto para operação",
+    insight: "Acesso fácil e governado aos dados é uma base importante para colocar modelos em operação. Com esse fundamento, a organização pode concentrar energia em priorização, monitoramento e adoção, em vez de gastar os primeiros ciclos apenas desbloqueando fontes de dados.",
   },
   {
     id: "dados-05",
@@ -136,7 +136,7 @@ export const RESULT_INSIGHTS: ResultInsight[] = [
     type: "oportunidade",
     theme: "dados-escalabilidade",
     title: "Crescimento ainda depende de mais pessoas",
-    insight: "O crescimento ainda escala de forma linear com o número de pessoas, sinal de que pouco da operação está automatizado. Essa é uma abertura direta para IA Generativa (automação de processos, agentes inteligentes), o tipo de caso de uso que mostra ROI mais rápido justamente por partir de uma base majoritariamente manual.",
+    insight: "O crescimento ainda parece depender de aumentar o quadro na mesma proporção, sinal de que há processos manuais ou pouco padronizados. Esse é um bom ponto para investigar automações de alto impacto, especialmente em tarefas repetitivas, triagem, atendimento, análise ou geração de documentos.",
   },
   {
     id: "dados-06",
@@ -149,7 +149,7 @@ export const RESULT_INSIGHTS: ResultInsight[] = [
     type: "risco-critico",
     theme: "dados-historico",
     title: "Sem histórico, sem previsão confiável",
-    insight: "Sem histórico de dados confiável, casos de uso preditivos (previsão de demanda, churn, precificação dinâmica) simplesmente não são viáveis ainda, pois não há padrão a ser aprendido. O pré-requisito aqui é Engenharia de Dados, para começar a capturar e armazenar histórico desde já, antes mesmo de qualquer conversa sobre IA.",
+    insight: "Sem histórico confiável, casos de uso preditivos, como previsão de demanda, churn ou precificação, ainda terão baixa sustentação. O foco inicial deve ser capturar, organizar e preservar histórico nas áreas críticas, para que a empresa crie uma base de aprendizado antes de depender de previsões automatizadas.",
   },
   {
     id: "dados-07",
@@ -162,7 +162,7 @@ export const RESULT_INSIGHTS: ResultInsight[] = [
     type: "forca-existente",
     theme: "dados-historico",
     title: "Histórico de dados como ativo diferenciado",
-    insight: "Anos de dados históricos confiáveis são exatamente o que alimenta produtos baseados em padrões, como priceGURU (padrões de precificação) e segMENTOR (segmentação comportamental). Esse é um ativo diferenciado que a maioria dos concorrentes não tem, vale a pena explorá-lo rapidamente.",
+    insight: "Anos de dados históricos confiáveis são um ativo importante para identificar padrões, testar hipóteses e construir modelos preditivos. Essa vantagem tende a ser difícil de copiar rapidamente, então vale transformar esse histórico em casos de uso mensuráveis antes que ele fique subutilizado.",
   },
   {
     id: "dados-08",
@@ -175,7 +175,7 @@ export const RESULT_INSIGHTS: ResultInsight[] = [
     type: "risco-critico",
     theme: "dados-latencia",
     title: "Decisões mais rápidas que os dados",
-    insight: "Se demora muito para puxar os números, as decisões acabam sendo tomadas por intuição, independentemente de quanto dado exista armazenado. Isso é um problema de latência e arquitetura, melhor resolvido com trabalho de Engenharia de Dados na camada de acesso, não com mais um dashboard.",
+    insight: "Quando os dados chegam tarde, as decisões acabam voltando para intuição, mesmo que exista bastante informação armazenada. O problema parece menos relacionado à quantidade de dados e mais à velocidade de acesso, arquitetura e clareza sobre a fonte oficial de cada indicador.",
   },
   {
     id: "dados-09",
@@ -188,7 +188,33 @@ export const RESULT_INSIGHTS: ResultInsight[] = [
     type: "risco-critico",
     theme: "dados-confianca",
     title: "Baixa confiança trava a adoção de IA",
-    insight: "Baixa confiança nos dados costuma ser um bloqueio maior à adoção de IA do que a própria tecnologia: mesmo um modelo perfeito é ignorado se a liderança não confia nos números por trás dele. Isso pede uma etapa de qualidade e transparência dos dados (Consultoria de Big Data) antes de introduzir recomendações orientadas por IA, ou elas serão descartadas do mesmo jeito.",
+    insight: "Baixa confiança nos dados pode bloquear a adoção de IA mesmo quando a solução técnica funciona. Se as pessoas não confiam nos números de origem, tendem a ignorar recomendações automatizadas. O foco deve ser qualidade, rastreabilidade e transparência dos dados antes de escalar decisões orientadas por IA.",
+  },
+  {
+    id: "dados-10",
+    pillar: "dados",
+    questionId: "dados_q6",
+    trigger: "dados_q6 = 1 ou 2 (impacto alto ou muito alto de vazamento)",
+    scoreCondition: "0 a 1.33/5",
+    answerMatch: [eq("dados_q6", 1, 2)],
+    priority: 1,
+    type: "risco-critico",
+    theme: "dados-seguranca",
+    title: "Exposição de dados exige controle antes de escalar",
+    insight: "Se um vazamento teria impacto financeiro, regulatório ou reputacional relevante, iniciativas de IA precisam nascer com controles de acesso, privacidade e revisão bem definidos. O risco não impede a adoção, mas muda a ordem das prioridades: governança e segurança devem vir antes de uso amplo de dados sensíveis.",
+  },
+  {
+    id: "dados-11",
+    pillar: "dados",
+    questionId: "dados_q6",
+    trigger: "dados_q6 = 4 (impacto mínimo de vazamento)",
+    scoreCondition: "5/5",
+    answerMatch: [eq("dados_q6", 4)],
+    priority: 3,
+    type: "forca-existente",
+    theme: "dados-seguranca",
+    title: "Baixa exposição facilita primeiros casos de uso",
+    insight: "Quando o impacto provável de um vazamento é limitado, a empresa tem mais espaço para começar por casos de uso de menor risco. Ainda assim, é importante manter controles proporcionais, porque a exposição pode aumentar conforme novas fontes de dados e integrações entram no escopo.",
   },
 
   // ---------------------------------------------------------------------
@@ -205,7 +231,7 @@ export const RESULT_INSIGHTS: ResultInsight[] = [
     type: "risco-critico",
     theme: "estrategia-visao",
     title: "Sem visão nem patrocínio para IA",
-    insight: "Essa é a combinação de maior risco em todo o assessment: nenhuma visão estratégica e a liderança não entende o valor econômico da IA. Um investimento em tecnologia aqui provavelmente estagnaria por falta de patrocínio. O primeiro passo correto é uma sessão de Consultoria de IA em nível executivo, focada em caso de negócio e ROI, não um piloto técnico.",
+    insight: "Essa combinação indica alto risco organizacional: não há visão estratégica clara e a liderança ainda não compreende bem o valor econômico da IA. Um piloto técnico iniciado nesse contexto pode perder força por falta de prioridade executiva. O próximo passo deve ser alinhar tese de valor, objetivos de negócio e critérios de decisão antes de escolher uma solução.",
   },
   {
     id: "estrategia-02",
@@ -217,8 +243,8 @@ export const RESULT_INSIGHTS: ResultInsight[] = [
     priority: 3,
     type: "forca-existente",
     theme: "estrategia-roadmap",
-    title: "Governança de IA em nível de conselho",
-    insight: "Visão, casos de uso priorizados, roadmap documentado e cadência mensal de revisão: isso é governança de IA em nível de conselho, algo raro mesmo em empresas maiores. Essa organização está pronta para uma abordagem de portfólio (várias iniciativas em paralelo via MLOps), não para um piloto isolado.",
+    title: "Governança estratégica bem definida",
+    insight: "Visão, áreas priorizadas, roadmap documentado e revisão frequente formam uma base estratégica madura. A organização provavelmente já pode tratar IA como um portfólio de iniciativas, com critérios de prioridade, responsáveis e acompanhamento de valor, em vez de depender apenas de pilotos isolados.",
   },
   {
     id: "estrategia-03",
@@ -231,7 +257,7 @@ export const RESULT_INSIGHTS: ResultInsight[] = [
     type: "oportunidade",
     theme: "estrategia-roadmap",
     title: "Falta transformar análise em roadmap",
-    insight: "A análise já foi feita (a liderança sabe onde está o retorno), mas ainda não virou um plano com datas e responsáveis, um gap comum de \"sabemos o que fazer, só não colocamos no papel\". Um workshop curto de Consultoria de IA para desenhar o roadmap transforma isso em um plano executável de 12 a 24 meses, provavelmente a ação de ROI mais rápido disponível para essa empresa.",
+    insight: "A liderança já identificou onde a IA pode gerar retorno, mas isso ainda não virou um plano executável. Esse é um gap de tradução entre intenção e execução. O próximo passo é transformar as oportunidades em roadmap, com prioridades, responsáveis, dependências, métricas e horizonte de 12 a 24 meses.",
   },
   {
     id: "estrategia-04",
@@ -244,7 +270,7 @@ export const RESULT_INSIGHTS: ResultInsight[] = [
     type: "proximo-passo",
     theme: "estrategia-maturidade",
     title: "Experimentação pontual, sem estratégia",
-    insight: "É onde a maioria das empresas começa, e não é um lugar ruim de se estar: só significa que o próximo passo deve ser um piloto único e bem delimitado, com métrica de sucesso clara, em vez de um programa amplo. Uma prova de conceito contida (por exemplo, segMENTOR ou um caso de uso pequeno de IA Generativa) constrói o argumento interno para investimentos futuros.",
+    insight: "Esse é um estágio comum de entrada: a empresa testa IA, mas ainda sem direção consistente. O próximo passo não precisa ser um programa amplo; tende a ser mais efetivo escolher um caso de uso bem delimitado, com métrica de sucesso clara, dono definido e critério objetivo para decidir se a iniciativa deve escalar.",
   },
   {
     id: "estrategia-05",
@@ -257,7 +283,7 @@ export const RESULT_INSIGHTS: ResultInsight[] = [
     type: "forca-existente",
     theme: "estrategia-maturidade",
     title: "IA como vantagem competitiva estrutural",
-    insight: "Quando a IA está embutida na própria proposta de valor, a prioridade muda de \"adotar IA\" para \"proteger e ampliar a vantagem\": modelos proprietários, ativos de dados defensáveis e disciplina de MLOps para continuar lançando mais rápido do que os concorrentes conseguem copiar.",
+    insight: "Quando a IA já faz parte da proposta de valor, a prioridade muda de adoção para sustentação da vantagem. Isso exige proteger ativos de dados, acompanhar desempenho dos modelos, manter cadência de melhoria e garantir que a capacidade não dependa de iniciativas isoladas ou pessoas específicas.",
   },
   {
     id: "estrategia-06",
@@ -270,7 +296,7 @@ export const RESULT_INSIGHTS: ResultInsight[] = [
     type: "risco-critico",
     theme: "estrategia-patrocinio",
     title: "Sem patrocínio executivo",
-    insight: "Falta de patrocínio executivo é um dos preditores mais confiáveis de projetos de IA que não conseguem escalar além do piloto, independentemente de quão boa seja a tecnologia. Recomenda-se começar com uma sessão de Consultoria de IA orientada a caso de negócio, com foco específico em conseguir um patrocinador executivo, em vez de uma proposta técnica mais ampla.",
+    insight: "Sem patrocínio executivo, projetos de IA tendem a ficar restritos a experimentos locais, mesmo quando a tecnologia funciona. Antes de ampliar o escopo, é importante definir quem será responsável por priorizar, remover bloqueios e defender o investimento com base em valor de negócio.",
   },
   {
     id: "estrategia-07",
@@ -283,7 +309,7 @@ export const RESULT_INSIGHTS: ResultInsight[] = [
     type: "forca-existente",
     theme: "estrategia-patrocinio",
     title: "Patrocínio executivo forte e visível",
-    insight: "Patrocínio forte e visível é o sinal verde para apostas maiores: essa empresa pode justificar um contrato contínuo de MLOps ou MLaaS em vez de projetos pontuais, já que o risco organizacional de escalar já está mitigado.",
+    insight: "Patrocínio forte e visível reduz o risco organizacional de escalar IA. Com apoio executivo, a empresa tende a ter mais capacidade de priorizar recursos, resolver dependências entre áreas e sustentar iniciativas que exigem mudança de processo, não apenas desenvolvimento técnico.",
   },
   {
     id: "estrategia-08",
@@ -301,7 +327,7 @@ export const RESULT_INSIGHTS: ResultInsight[] = [
     type: "risco-critico",
     theme: "estrategia-entrega",
     title: "Atrasos recorrentes apesar do patrocínio",
-    insight: "O patrocínio existe, mas a entrega atrasa cronicamente, o que costuma ser um problema de capacidade técnica, não de estratégia. É exatamente a lacuna que o MLaaS foi desenhado para fechar: ele tira o risco de entrega das mãos do time interno em vez de pedir que ele construa uma capacidade que ainda não tem.",
+    insight: "Quando as iniciativas atrasam com frequência, o problema pode estar menos na estratégia e mais na capacidade de execução: disponibilidade técnica, dependências de dados, governança de aprovação ou escopo pouco claro. Vale identificar o gargalo dominante antes de iniciar novas frentes, para não acumular mais iniciativas paradas.",
   },
   {
     id: "estrategia-09",
@@ -319,7 +345,7 @@ export const RESULT_INSIGHTS: ResultInsight[] = [
     type: "forca-existente",
     theme: "pessoas-experimentacao",
     title: "Pipeline de inovação já em prática",
-    insight: "Experimentação contínua e medida, com um processo claro de escalar ou encerrar, é um pipeline de inovação que a maioria das empresas nunca chega a construir. O próximo passo natural é formalizar isso em MLOps, para que experimentos bem-sucedidos vão para produção automaticamente, em vez de ficarem pilotos para sempre.",
+    insight: "Experimentação contínua e medida, com critérios para escalar ou encerrar, indica uma boa disciplina de inovação. O próximo passo é garantir que os aprendizados virem ativos reutilizáveis: documentação, métricas, padrões técnicos e um caminho claro para levar experimentos bem-sucedidos à produção.",
   },
 
   // ---------------------------------------------------------------------
@@ -336,7 +362,7 @@ export const RESULT_INSIGHTS: ResultInsight[] = [
     type: "risco-critico",
     theme: "pessoas-capacidade",
     title: "Nenhuma capacidade interna em dados ou IA",
-    insight: "Zero capacidade interna em dados ou IA é exatamente a lacuna que o MLaaS existe para resolver: permite que a empresa consuma resultados de machine learning sem antes precisar contratar e montar um time interno, processo que pode levar mais de 12 meses até gerar qualquer valor.",
+    insight: "A ausência de capacidade interna em dados ou IA aumenta o risco de depender demais de fornecedores, ferramentas soltas ou iniciativas sem dono técnico. A empresa pode começar com apoio externo, mas precisa definir quem internamente será capaz de priorizar, validar resultados e absorver conhecimento ao longo do tempo.",
   },
   {
     id: "pessoas-02",
@@ -349,7 +375,7 @@ export const RESULT_INSIGHTS: ResultInsight[] = [
     type: "oportunidade",
     theme: "pessoas-capacidade",
     title: "Base de dados sem capacidade de IA",
-    insight: "Uma base de dados sólida sem capacidade de construir IA é uma combinação muito comum e muito fácil de resolver: a empresa não precisa contratar engenheiros de ML, precisa de um parceiro que faça a ponte dos dados até os modelos. Consultoria de IA combinada com MLaaS é o encaixe natural aqui.",
+    insight: "Ter engenharia de dados sem capacidade de IA é uma posição melhor do que parece: a fundação já existe, mas ainda falta transformar dados em modelos, automações ou recomendações. O caminho mais eficiente tende a ser começar por casos de uso pequenos e formar capacidade interna enquanto os primeiros projetos avançam.",
   },
   {
     id: "pessoas-03",
@@ -362,7 +388,7 @@ export const RESULT_INSIGHTS: ResultInsight[] = [
     type: "forca-existente",
     theme: "pessoas-capacidade",
     title: "Capacidade dupla: IA preditiva e generativa",
-    insight: "Ter capacidade preditiva e generativa internamente ao mesmo tempo é relativamente raro e abre caminhos paralelos: casos de uso baseados em padrões (priceGURU, segMENTOR) junto com casos generativos (IA Generativa, PLN), sem precisar escolher um caminho primeiro.",
+    insight: "Ter capacidade interna tanto em IA preditiva quanto generativa abre caminhos complementares: modelos baseados em padrões, automações com linguagem natural, assistentes internos e melhorias em decisões operacionais. A prioridade passa a ser coordenação, reutilização e escolha dos casos de maior valor, não apenas aquisição de capacidade.",
   },
   {
     id: "pessoas-04",
@@ -375,7 +401,7 @@ export const RESULT_INSIGHTS: ResultInsight[] = [
     type: "risco-critico",
     theme: "pessoas-cultura",
     title: "Resistência cultural à mudança",
-    insight: "Resistência cultural é, de forma consistente, uma causa maior de fracasso em projetos de IA do que a escolha da tecnologia. Isso deveria reordenar a sequência: gestão de mudança e vitórias pequenas e visíveis antes de qualquer implantação ampla de ferramentas, independentemente de quão pronta esteja a base de dados ou os sistemas.",
+    insight: "Resistência cultural pode comprometer projetos de IA mesmo quando a solução técnica é adequada. Isso sugere começar com casos de uso mais visíveis, de baixo atrito e com benefícios claros para os colaboradores, antes de propor mudanças amplas em processos ou ferramentas.",
   },
   {
     id: "pessoas-05",
@@ -388,7 +414,7 @@ export const RESULT_INSIGHTS: ResultInsight[] = [
     type: "forca-existente",
     theme: "pessoas-cultura",
     title: "Equipe altamente receptiva à IA",
-    insight: "Alta receptividade é um acelerador genuíno: essa empresa provavelmente consegue comprimir os prazos típicos de adoção e deveria ser mais ambiciosa no escopo do que um primeiro piloto \"seguro\" sugeriria.",
+    insight: "Alta receptividade reduz o risco de adoção lenta e aumenta a chance de aprendizado rápido. A organização pode ser um pouco mais ambiciosa no desenho dos pilotos, desde que mantenha métricas claras, comunicação transparente e suporte para as equipes afetadas.",
   },
   {
     id: "pessoas-06",
@@ -401,7 +427,7 @@ export const RESULT_INSIGHTS: ResultInsight[] = [
     type: "oportunidade",
     theme: "pessoas-avaliacao",
     title: "Sem critério para avaliar onde usar IA",
-    insight: "Sem uma forma de avaliar se a IA é sequer a ferramenta certa para um problema específico, as organizações tendem a investir demais em casos de uso vistosos mas de baixo valor, ou a descartar a IA onde ela ajudaria de verdade. Um workshop curto de avaliação de oportunidades com a Consultoria de IA (horas, não meses) fecha essa lacuna a baixo custo antes de qualquer gasto técnico.",
+    insight: "Sem critérios claros para decidir quando IA é adequada, a organização pode priorizar casos de uso chamativos, mas pouco relevantes, ou ignorar oportunidades com alto impacto. Vale criar uma matriz simples de avaliação, combinando valor esperado, viabilidade de dados, risco, esforço e dependência operacional.",
   },
   {
     id: "pessoas-07",
@@ -414,7 +440,7 @@ export const RESULT_INSIGHTS: ResultInsight[] = [
     type: "oportunidade",
     theme: "pessoas-capacitacao",
     title: "Falta capacitação formal em IA",
-    insight: "Independentemente da tecnologia implementada, a ausência de capacitação faz com que a adoção fique sempre atrás da implementação: as ferramentas são construídas, mas ninguém as usa. Qualquer projeto de entrega da SnowFox (Consultoria de IA, MLOps) deveria ser escopado com uma trilha de capacitação e transferência de conhecimento, não apenas com um entregável técnico.",
+    insight: "Sem capacitação formal, a adoção pode ficar atrás da implementação: ferramentas são disponibilizadas, mas o uso real permanece baixo. Iniciativas de IA devem incluir treinamento, comunicação, transferência de conhecimento e responsáveis internos, não apenas entregáveis técnicos.",
   },
 
   // ---------------------------------------------------------------------
@@ -431,7 +457,7 @@ export const RESULT_INSIGHTS: ResultInsight[] = [
     type: "risco-critico",
     theme: "governanca-documentacao",
     title: "Processos críticos não documentados",
-    insight: "Não dá para automatizar de forma confiável um processo que ninguém colocou no papel; processos não documentados são a razão mais comum de projetos de automação \"simples\" levarem o triplo do tempo previsto. Um mapeamento de processos (parte de Estratégia Orientada a Dados) deveria vir antes de qualquer compromisso de automação, não depois.",
+    insight: "É difícil automatizar de forma confiável um processo que não está documentado. A falta de clareza sobre etapas, exceções e responsáveis aumenta escopo, retrabalho e risco operacional. Antes de automatizar, vale mapear os processos críticos e identificar onde há variação real versus apenas falta de padronização.",
   },
   {
     id: "governanca-02",
@@ -444,7 +470,7 @@ export const RESULT_INSIGHTS: ResultInsight[] = [
     type: "forca-existente",
     theme: "governanca-documentacao",
     title: "Processos prontos para automação",
-    insight: "Processos totalmente documentados já estão prontos para automação como estão: essa empresa pode ir direto da decisão à construção com IA Generativa ou automação de fluxo de trabalho, com risco de escopo muito menor do que a maioria.",
+    insight: "Processos bem documentados reduzem bastante o risco de automação, porque etapas, entradas, saídas e exceções já estão explícitas. A empresa pode avaliar automações com mais precisão e estimar impacto com menos incerteza do que organizações que ainda precisam descobrir como o trabalho acontece.",
   },
   {
     id: "governanca-03",
@@ -457,7 +483,7 @@ export const RESULT_INSIGHTS: ResultInsight[] = [
     type: "risco-critico",
     theme: "governanca-seguranca",
     title: "Sem diretrizes de segurança para IA",
-    insight: "Essa é a resposta de maior risco em todo o assessment do ponto de vista de exposição negativa: implantar IA (especialmente IA generativa, que lida diretamente com dados sensíveis) sem controles de segurança ou privacidade é exatamente como acontecem vazamentos de dados e incidentes de compliance. Isso deveria ser um portão de entrada para qualquer nova iniciativa de IA: o trabalho de governança precisa acontecer antes do primeiro deploy em produção, não depois.",
+    insight: "A ausência de diretrizes, controles e responsáveis para riscos de IA cria exposição relevante, especialmente quando há dados sensíveis, decisões automatizadas ou ferramentas generativas. Governança de segurança e privacidade deve ser definida antes de qualquer uso em produção, para evitar que o controle venha apenas depois de um incidente.",
   },
   {
     id: "governanca-04",
@@ -470,7 +496,7 @@ export const RESULT_INSIGHTS: ResultInsight[] = [
     type: "oportunidade",
     theme: "governanca-seguranca",
     title: "Segurança de TI genérica, não específica de IA",
-    insight: "Segurança de TI genérica não cobre riscos específicos de IA, como injeção de prompt, vazamento de dados pelo modelo ou decisões automatizadas sem revisão humana. É uma lacuna parcial que vale a pena fechar com uma revisão de risco específica para IA antes de escalar além do piloto, um seguro barato perto do custo de um incidente.",
+    insight: "Processos gerais de TI e segurança ajudam, mas podem não cobrir riscos específicos de IA, como exposição de dados em prompts, uso indevido de modelos, decisões sem revisão humana ou falta de rastreabilidade. Antes de escalar, vale adaptar controles existentes para o contexto de IA.",
   },
   {
     id: "governanca-05",
@@ -483,7 +509,7 @@ export const RESULT_INSIGHTS: ResultInsight[] = [
     type: "forca-existente",
     theme: "governanca-seguranca",
     title: "Governança de IA madura e específica",
-    insight: "Governança madura e específica para IA é uma vantagem competitiva real em setores regulados ou que lidam com dados sensíveis: essa empresa pode buscar casos de uso de maior risco (decisão financeira, saúde, dados pessoais) com muito menos atrito de compliance do que a maioria dos concorrentes.",
+    insight: "Governança específica para IA é uma vantagem importante, especialmente em setores regulados ou com dados sensíveis. Com responsabilidades e controles claros, a empresa pode avaliar casos de uso mais complexos com menos atrito, mantendo segurança, privacidade e supervisão como parte do desenho desde o início.",
   },
 
   // ---------------------------------------------------------------------
@@ -500,7 +526,7 @@ export const RESULT_INSIGHTS: ResultInsight[] = [
     type: "oportunidade",
     theme: "tecnologia-maturidade-inicial",
     title: "Ponto de partida limpo, sem legado",
-    insight: "Estar do zero, tanto no lado estratégico quanto no técnico, é na verdade a posição de partida mais simples para acertar o desenho, já que não há ferramentas legadas para contornar. Recomenda-se um piloto único e bem delimitado, de 60 a 90 dias (por exemplo, segMENTOR ou um caso de uso contido de IA Generativa), em vez de um programa de grande escala, justamente porque não há infraestrutura existente limitando a escolha.",
+    insight: "Ainda não ter projetos de IA pode ser uma vantagem se a empresa usar esse momento para desenhar bem a base. Sem legado técnico para contornar, o melhor caminho tende a ser um piloto único, bem delimitado e com duração curta, em vez de um programa amplo antes de validar dados, integrações e governança.",
   },
   {
     id: "tecnologia-02",
@@ -513,7 +539,7 @@ export const RESULT_INSIGHTS: ResultInsight[] = [
     type: "forca-existente",
     theme: "tecnologia-maturidade-inicial",
     title: "Base técnica pronta, sem projetos ainda",
-    insight: "Esse é um achado importante: a base técnica já está pronta mesmo sem nenhum projeto de IA iniciado, o que significa que a barreira aqui é organizacional e estratégica, não de infraestrutura. Essa empresa pode chegar a um piloto mais rápido do que a maioria, já que a etapa típica de 3 a 6 meses de preparação de dados provavelmente pode ser pulada.",
+    insight: "A empresa ainda não iniciou projetos de IA, mas já parece ter condições técnicas para conectar dados e sistemas. Isso sugere que a barreira principal pode ser prioridade, caso de uso ou patrocínio, não infraestrutura. Um piloto bem escolhido tende a começar mais rápido do que em organizações que ainda precisam preparar a base técnica.",
   },
   {
     id: "tecnologia-03",
@@ -526,7 +552,7 @@ export const RESULT_INSIGHTS: ResultInsight[] = [
     type: "risco-critico",
     theme: "tecnologia-execucao",
     title: "Projetos de IA parados",
-    insight: "Projetos de IA parados são extremamente comuns e raramente indicam falha da tecnologia; geralmente é uma questão de dono do projeto, escopo ou saída de quem liderava a iniciativa. Um projeto externo de MLOps costuma reviver um projeto parado de forma mais rápida e barata do que recomeçar do zero, assumindo diretamente a dívida técnica existente.",
+    insight: "Projetos de IA parados nem sempre indicam que a tecnologia falhou. Muitas vezes o problema está em dono indefinido, escopo amplo demais, dependências de dados ou falta de critério de sucesso. Antes de recomeçar do zero, vale diagnosticar o que travou e decidir se o projeto deve ser retomado, simplificado ou encerrado.",
   },
   {
     id: "tecnologia-04",
@@ -539,7 +565,7 @@ export const RESULT_INSIGHTS: ResultInsight[] = [
     type: "proximo-passo",
     theme: "tecnologia-arquitetura",
     title: "IA tradicional e generativa em paralelo",
-    insight: "Rodar IA tradicional e IA generativa em paralelo é uma diversificação saudável, mas adiciona uma sobrecarga real de integração e manutenção se não for padronizada. Esse é o ponto em que MLOps deixa de ser opcional: sem ele, cada novo projeto adiciona atrito operacional em vez de somar valor.",
+    insight: "Rodar IA tradicional e generativa em paralelo pode ser saudável, mas aumenta a complexidade de integração, manutenção e governança. A empresa deve padronizar práticas de versionamento, monitoramento, documentação e responsabilidade operacional para evitar que cada novo projeto crie um modelo próprio de trabalho.",
   },
   {
     id: "tecnologia-05",
@@ -552,7 +578,7 @@ export const RESULT_INSIGHTS: ResultInsight[] = [
     type: "risco-critico",
     theme: "tecnologia-integracao",
     title: "IA isolada dos sistemas centrais",
-    insight: "Projetos de IA que vivem fora dos sistemas centrais (CRM, ERP, Slack) tendem a permanecer como \"IA invisível\": úteis para poucas pessoas, invisíveis para o negócio e os primeiros a serem cortados em uma revisão de orçamento. Priorizar o trabalho de integração agora é o que transforma uma prova de conceito em algo do qual a empresa realmente passa a depender.",
+    insight: "Projetos de IA desconectados dos sistemas centrais tendem a ficar restritos a poucos usuários e gerar pouco impacto operacional. A integração com ferramentas de trabalho, dados e fluxos de decisão é o que transforma uma prova de conceito em uma capacidade realmente usada pela empresa.",
   },
   {
     id: "tecnologia-06",
@@ -565,7 +591,7 @@ export const RESULT_INSIGHTS: ResultInsight[] = [
     type: "forca-existente",
     theme: "tecnologia-arquitetura",
     title: "Arquitetura pensada para reuso",
-    insight: "Construir pensando em reutilização desde o início (em vez de soluções pontuais por área) é a diferença entre ter 4 projetos e ter 40 mais adiante. Esse é exatamente o momento de formalizar práticas de MLOps: a disciplina de arquitetura já existe, só falta um processo em torno dela para escalar.",
+    insight: "Construir soluções reutilizáveis desde o início reduz retrabalho e cria uma base para escalar além de projetos pontuais. A próxima evolução é formalizar padrões técnicos e operacionais, para que novos casos de uso aproveitem componentes, integrações e aprendizados já existentes.",
   },
   {
     id: "tecnologia-07",
@@ -578,7 +604,7 @@ export const RESULT_INSIGHTS: ResultInsight[] = [
     type: "risco-critico",
     theme: "tecnologia-manutencao",
     title: "Portfólio de IA sem manutenção",
-    insight: "Volume sem cadência de manutenção é um risco silencioso: modelos perdem precisão com o tempo (model drift) sem que ninguém perceba, até que uma métrica do negócio piore discretamente. É um sinal forte para uma auditoria de saúde de MLOps em todo o portfólio existente antes de adicionar qualquer coisa nova.",
+    insight: "Ter vários projetos sem cadência de atualização cria um risco silencioso: modelos podem perder precisão com o tempo, integrações podem quebrar e métricas podem piorar sem alerta claro. Antes de adicionar novas iniciativas, vale revisar saúde, responsáveis, monitoramento e frequência de manutenção do portfólio existente.",
   },
   {
     id: "tecnologia-08",
@@ -591,7 +617,7 @@ export const RESULT_INSIGHTS: ResultInsight[] = [
     type: "forca-existente",
     theme: "tecnologia-integracao",
     title: "Ecossistema de IA já integrado",
-    insight: "Um ecossistema de IA de fato integrado (não apenas várias ferramentas desconectadas) coloca essa organização à frente da grande maioria das empresas, de qualquer porte. O próximo investimento certo costuma ser uma capacidade de plataforma dedicada, MLOps em escala ou uma parceria de MLaaS, para sustentar a velocidade conforme o portfólio continua crescendo, em vez de mais soluções pontuais.",
+    insight: "Um ecossistema de IA integrado indica que a organização já passou da fase de ferramentas isoladas. O próximo desafio é sustentar escala: governança de plataforma, padrões de integração, monitoramento, gestão de custos e critérios claros para adicionar novos casos de uso sem aumentar complexidade desnecessária.",
   },
   {
     id: "tecnologia-09",
@@ -604,7 +630,7 @@ export const RESULT_INSIGHTS: ResultInsight[] = [
     type: "risco-critico",
     theme: "tecnologia-resultados",
     title: "Volume de projetos sem resultado comprovado",
-    insight: "Cinco ou mais projetos sem nenhum resultado mensurável comprovado é uma armadilha comum e cara; geralmente significa que os critérios de sucesso nunca foram definidos previamente, não que os projetos falharam. Antes de construir mais, essa empresa precisa de um framework de mensuração de impacto aplicado retroativamente ao que já existe, ou o padrão simplesmente se repete em escala maior.",
+    insight: "Ter cinco ou mais projetos sem resultado mensurável é um sinal de alerta. Isso pode indicar que os critérios de sucesso não foram definidos antes da execução, ou que os resultados não estão sendo medidos de forma consistente. Antes de construir mais, a empresa deve revisar o impacto do que já existe e padronizar métricas de valor.",
   },
   {
     id: "tecnologia-10",
@@ -617,7 +643,7 @@ export const RESULT_INSIGHTS: ResultInsight[] = [
     type: "forca-existente",
     theme: "tecnologia-arquitetura",
     title: "Plataforma de IA pronta para escalar",
-    insight: "Com 5 ou mais projetos e arquitetura reutilizável e escalável, essa empresa opera mais como um time interno de plataforma de IA do que como uma série de experimentos. MLOps e, potencialmente, um arranjo de MLaaS cogerido passam a ser sobre sustentar e governar a escala, não sobre provar valor inicial, uma conversa diferente (e mais estratégica) da que a maioria das empresas está pronta para ter.",
+    insight: "Com cinco ou mais projetos e arquitetura reutilizável, a empresa já se aproxima de uma capacidade de plataforma, não apenas de experimentação. A prioridade passa a ser sustentar escala: governança, monitoramento, documentação, gestão de custos e mecanismos para reaproveitar componentes entre áreas.",
   },
   {
     id: "tecnologia-11",
@@ -632,8 +658,8 @@ export const RESULT_INSIGHTS: ResultInsight[] = [
     priority: 4,
     type: "proximo-passo",
     theme: "tecnologia-meta",
-    title: "Tecnologia é a dimensão mais decisiva",
-    insight: "A diferença entre \"ainda não existem projetos\" e \"5 ou mais\" é o maior intervalo de pontuação de todo o assessment. Tecnologia costuma ser a dimensão com maior variância entre respondentes, pois, diferente de Estratégia ou Cultura, é a única dimensão observável de forma binária, não uma questão de grau — o fator com maior potencial de definir o resultado final de maturidade.",
+    title: "Tecnologia merece leitura cuidadosa",
+    insight: "A dimensão de Tecnologia costuma concentrar diferenças grandes entre empresas: algumas ainda estão preparando a base, enquanto outras já operam vários projetos. Por isso, a leitura deste pilar deve considerar não apenas quantidade de iniciativas, mas também integração, manutenção, mensuração de valor e capacidade de escalar sem retrabalho.",
   },
 ];
 
@@ -641,14 +667,14 @@ export const RESULT_INSIGHTS: ResultInsight[] = [
 // Generic pillar-level fallback, used only when a pillar has no specific
 // branch insight matching the user's answers. Low-score text reuses the
 // existing RECOMMENDATIONS copy from app/data.ts; high-score text is a
-// short, generic filler (not part of the original 41 insights).
+// short, generic filler used only when specific answer-driven insights are sparse.
 // ---------------------------------------------------------------------
 const FALLBACK_HIGH_TEXT: Record<InsightPillarId, string> = {
-  dados: "A maturidade em Dados observada aqui está entre os fatores que mais aceleram projetos de IA — vale explorar casos de uso aplicados enquanto essa vantagem existe.",
-  estrategia: "A maturidade estratégica em IA observada aqui é o tipo de base que sustenta um portfólio de iniciativas, não apenas um piloto isolado.",
-  pessoas: "A maturidade cultural e de capacitação em IA observada aqui reduz o risco de adoção lenta ao introduzir novas soluções.",
-  governanca: "A maturidade de governança observada aqui permite avançar com iniciativas de IA de maior risco com menos atrito de compliance.",
-  tecnologia: "A maturidade técnica observada aqui permite ir além de pilotos isolados rumo a uma plataforma de IA em escala.",
+  dados: "A maturidade em Dados observada aqui reduz uma das principais incertezas de projetos de IA. Vale priorizar casos de uso com impacto mensurável enquanto essa base está disponível.",
+  estrategia: "A maturidade estratégica observada aqui permite tratar IA como um portfólio de iniciativas, com prioridades e acompanhamento de valor, não apenas como experimentos isolados.",
+  pessoas: "A maturidade cultural e de capacitação observada aqui reduz o risco de adoção lenta e favorece ciclos mais rápidos de teste, aprendizado e incorporação.",
+  governanca: "A maturidade de governança observada aqui permite avaliar iniciativas mais complexas com menos atrito, desde que controles e responsabilidades continuem claros.",
+  tecnologia: "A maturidade técnica observada aqui permite avançar além de pilotos isolados, com foco em integração, monitoramento, reutilização e escala.",
 };
 
 function buildFallbackInsight(pillar: InsightPillarId, tier: "low" | "high"): ResultInsight {
@@ -662,7 +688,7 @@ function buildFallbackInsight(pillar: InsightPillarId, tier: "low" | "high"): Re
     priority: 4,
     type: tier === "low" ? "proximo-passo" : "forca-existente",
     theme: `fallback-${pillar}`,
-    title: `${PILLAR_LABEL[pillar]}: próximo passo recomendado`,
+    title: tier === "low" ? `${PILLAR_LABEL[pillar]}: próximo passo recomendado` : `${PILLAR_LABEL[pillar]}: força identificada`,
     insight: tier === "low" ? RECOMMENDATIONS[pillar] : FALLBACK_HIGH_TEXT[pillar],
   };
 }
@@ -700,10 +726,10 @@ export interface SelectInsightsOptions {
 }
 
 /**
- * Picks 3-6 insights for the results page: critical blockers first, then
- * strengths, capped per pillar (2, or 3 for the clearly weakest/strongest
- * pillar) and deduped by theme. Falls back to generic pillar-level insights
- * if too few specific ones matched.
+ * Picks 3-6 insights for the results page. The selector favors specific,
+ * answer-driven diagnostics over generic observations, gives the weakest
+ * pillar a chance to appear, includes a strength when the answers support it,
+ * and dedupes nearby ideas by theme.
  */
 export function selectResultInsights(
   answers: AnswerRecord,
@@ -717,9 +743,19 @@ export function selectResultInsights(
   const weakestPillar = pillarScores.reduce((a, b) => (b.score < a.score ? b : a)).id as InsightPillarId;
   const strongestPillar = pillarScores.reduce((a, b) => (b.score > a.score ? b : a)).id as InsightPillarId;
 
+  function compareMatchedInsights(a: ResultInsight, b: ResultInsight) {
+    if (a.priority !== b.priority) return a.priority - b.priority;
+    const aScore = scoreById[a.pillar] ?? 0;
+    const bScore = scoreById[b.pillar] ?? 0;
+    if (a.priority === 3 && aScore !== bScore) return bScore - aScore;
+    if (a.priority !== 3 && aScore !== bScore) return aScore - bScore;
+    return PILLAR_ORDER.indexOf(a.pillar) - PILLAR_ORDER.indexOf(b.pillar);
+  }
+
   const matched = RESULT_INSIGHTS
     .filter(i => insightMatches(i, answers))
-    .sort((a, b) => a.priority - b.priority);
+    .sort(compareMatchedInsights);
+  const specificMatched = matched.filter(i => i.priority < 4);
 
   const selected: ResultInsight[] = [];
   const pillarCount: Partial<Record<InsightPillarId, number>> = {};
@@ -740,39 +776,87 @@ export function selectResultInsights(
     return true;
   }
 
-  // Pass 1: priority order (critical blockers first), respecting caps + theme dedup.
-  for (const insight of matched) {
+  function rebuildSelectionState() {
+    for (const pillar of PILLAR_ORDER) delete pillarCount[pillar];
+    usedThemes.clear();
+    for (const insight of selected) {
+      pillarCount[insight.pillar] = (pillarCount[insight.pillar] ?? 0) + 1;
+      usedThemes.add(insight.theme);
+    }
+  }
+
+  function removeSelectedAt(index: number) {
+    selected.splice(index, 1);
+    rebuildSelectionState();
+  }
+
+  function forceInclude(insight: ResultInsight) {
+    if (selected.some(s => s.id === insight.id)) return false;
+    if (selected.length < max) {
+      return tryAdd(insight, { ignorePillarCap: true, ignoreTheme: true });
+    }
+
+    let replaceIdx = -1;
+    for (let i = selected.length - 1; i >= 0; i--) {
+      if (selected[i].pillar !== insight.pillar && selected[i].priority > insight.priority) {
+        replaceIdx = i;
+        break;
+      }
+    }
+    if (replaceIdx === -1) {
+      for (let i = selected.length - 1; i >= 0; i--) {
+        const canLoseSlot = selected[i].pillar !== weakestPillar && selected[i].pillar !== strongestPillar;
+        if (canLoseSlot && selected[i].priority >= 3) {
+          replaceIdx = i;
+          break;
+        }
+      }
+    }
+    if (replaceIdx === -1 && insight.priority === 3) {
+      for (let i = selected.length - 1; i >= 0; i--) {
+        if (selected[i].pillar !== weakestPillar && selected[i].priority > 1) {
+          replaceIdx = i;
+          break;
+        }
+      }
+    }
+    if (replaceIdx === -1) return false;
+
+    removeSelectedAt(replaceIdx);
+    return tryAdd(insight, { ignorePillarCap: true, ignoreTheme: true });
+  }
+
+  // Pass 1: specific answer-driven insights first, respecting caps + theme dedup.
+  for (const insight of specificMatched) {
     if (selected.length >= max) break;
     tryAdd(insight);
+  }
+
+  // Make sure the weakest pillar is represented when a specific diagnostic
+  // exists. If not, add a generic next step only when there is still room.
+  if (!selected.some(i => i.pillar === weakestPillar)) {
+    const weakestSpecific = specificMatched.find(i => i.pillar === weakestPillar);
+    if (weakestSpecific) {
+      forceInclude(weakestSpecific);
+    } else if (selected.length < max) {
+      const tier = scoreById[weakestPillar] >= 60 ? "high" : "low";
+      tryAdd(FALLBACK_INSIGHTS[weakestPillar][tier], { ignorePillarCap: true, ignoreTheme: true });
+    }
   }
 
   // Make sure at least one strength insight appears when the user has mature
   // answers, even if the critical/gap insights already filled every slot.
   const hasStrength = selected.some(i => i.priority === 3);
   if (!hasStrength) {
-    const topStrength = matched.find(i => i.priority === 3);
+    const topStrength = specificMatched.find(i => i.priority === 3);
     if (topStrength) {
-      if (selected.length < max) {
-        tryAdd(topStrength, { ignorePillarCap: true, ignoreTheme: true });
-      } else {
-        let idx = -1;
-        for (let i = selected.length - 1; i >= 0; i--) {
-          if (selected[i].priority > 1) { idx = i; break; }
-        }
-        if (idx !== -1) {
-          const removed = selected[idx];
-          pillarCount[removed.pillar] = (pillarCount[removed.pillar] ?? 1) - 1;
-          usedThemes.delete(removed.theme);
-          selected.splice(idx, 1);
-          tryAdd(topStrength, { ignorePillarCap: true, ignoreTheme: true });
-        }
-      }
+      forceInclude(topStrength);
     }
   }
 
   // Pass 2: still short of the minimum -> relax the per-pillar cap.
   if (selected.length < min) {
-    for (const insight of matched) {
+    for (const insight of specificMatched) {
       if (selected.length >= min) break;
       tryAdd(insight, { ignorePillarCap: true });
     }
@@ -786,6 +870,14 @@ export function selectResultInsights(
       if (pillarCount[pillar]) continue;
       const tier = scoreById[pillar] >= 60 ? "high" : "low";
       tryAdd(FALLBACK_INSIGHTS[pillar][tier], { ignorePillarCap: true, ignoreTheme: true });
+    }
+  }
+
+  // Pass 4: only if still short, allow low-priority editorial observations.
+  if (selected.length < min) {
+    for (const insight of matched.filter(i => i.priority === 4)) {
+      if (selected.length >= min) break;
+      tryAdd(insight, { ignorePillarCap: true });
     }
   }
 
