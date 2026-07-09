@@ -7,7 +7,7 @@ import {
   calculatePillarScores, calculateOverallScore, applyBlockerRules, getPillarTier,
 } from "@/app/data";
 import { PillarBar } from "@/components/results/PillarBar";
-import { InsightsSection } from "@/components/results/InsightsSection";
+import { InsightsSection, insightSectionCount } from "@/components/results/InsightsSection";
 import { buildExecutiveSummary } from "@/app/resultInsights";
 
 const BASE = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
@@ -25,9 +25,11 @@ export function ResultsScreen({ answers, onRestart }: {
   const strongest = pillarScores.reduce((a, b) => b.score > a.score ? b : a);
   const weakest = pillarScores.reduce((a, b) => b.score < a.score ? b : a);
   const rec = RECOMMENDATIONS[weakest.id] || "";
+  const insightSections = insightSectionCount(answers, pillarScores);
+  const actionStepNumber = String(3 + insightSections).padStart(2, "0");
   const meta = LEVEL_META[result.level];
   const executiveSummary = buildExecutiveSummary({ answers, pillarScores, result, strongest, weakest, recommendation: rec });
-  const dateStr = new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
+  const dateStr = new Date().toLocaleDateString("pt-BR", { month: "long", day: "numeric", year: "numeric" });
 
   useEffect(() => {
     const el = scoreNumRef.current;
@@ -55,7 +57,7 @@ export function ResultsScreen({ answers, onRestart }: {
           <div className="flex items-center justify-between mb-9 relative z-[1]">
             <Image src={`${BASE}/logo-dark.png`} alt="Snowfox AI" width={88} height={22} style={{ height: 22, width: "auto" }} />
             <div className="flex items-center gap-3">
-              <span className="text-[9px] font-bold tracking-[0.20em] uppercase" style={{ color: "rgba(255,255,255,0.30)" }}>AI Readiness Assessment</span>
+              <span className="text-[9px] font-bold tracking-[0.20em] uppercase" style={{ color: "rgba(255,255,255,0.30)" }}>Avaliação de Prontidão para IA</span>
               <button
                 onClick={() => window.print()}
                 className="no-print inline-flex items-center gap-1.5 px-3.5 h-[30px] rounded-[7px] text-[11px] font-semibold tracking-[0.02em] transition-all"
@@ -67,11 +69,11 @@ export function ResultsScreen({ answers, onRestart }: {
                   <path d="M3 11v2a1 1 0 001 1h8a1 1 0 001-1v-2"/>
                   <path d="M8 2v7M5 6l3 3 3-3"/>
                 </svg>
-                Download PDF
+                Baixar PDF
               </button>
             </div>
           </div>
-          <p className="text-[10px] font-bold tracking-[0.20em] uppercase mb-3.5 relative z-[1]" style={{ color: "rgba(167,139,250,0.80)" }}>Readiness Score</p>
+          <p className="text-[10px] font-bold tracking-[0.20em] uppercase mb-3.5 relative z-[1]" style={{ color: "rgba(167,139,250,0.80)" }}>Pontuação de Prontidão</p>
           <div className="flex items-baseline gap-2 mb-4 relative z-[1]">
             <span ref={scoreNumRef} className="text-[76px] font-black leading-none tracking-[-0.04em] text-white" style={{ fontFamily: "'Typo Grotesk', sans-serif" }}>0</span>
             <span className="text-[20px] font-medium self-end pb-2.5" style={{ color: "rgba(255,255,255,0.35)" }}>/100</span>
@@ -88,7 +90,7 @@ export function ResultsScreen({ answers, onRestart }: {
           >{result.level}</span>
           <div className="flex gap-11 mt-6 relative z-[1]">
             <div>
-              <p className="text-[9px] font-bold tracking-[0.18em] uppercase mb-1" style={{ color: "rgba(167,139,250,0.70)" }}>Date</p>
+              <p className="text-[9px] font-bold tracking-[0.18em] uppercase mb-1" style={{ color: "rgba(167,139,250,0.70)" }}>Data</p>
               <p className="text-[13px]" style={{ color: "rgba(255,255,255,0.72)", fontFamily: "Poppins, sans-serif" }}>{dateStr}</p>
             </div>
           </div>
@@ -100,7 +102,7 @@ export function ResultsScreen({ answers, onRestart }: {
           <div className="rpt-section">
             <div className="rpt-sechead">
               <span style={{ fontFamily: "'Typo Grotesk', sans-serif", fontSize: 17, fontWeight: 800, letterSpacing: "-0.02em", color: "#6D28D9" }}>01</span>
-              <span style={{ fontFamily: "'Typo Grotesk', sans-serif", fontSize: 19, fontWeight: 700, letterSpacing: "-0.02em", color: "#171221" }}>Executive Summary</span>
+              <span style={{ fontFamily: "'Typo Grotesk', sans-serif", fontSize: 19, fontWeight: 700, letterSpacing: "-0.02em", color: "#171221" }}>Resumo Executivo</span>
             </div>
             {executiveSummary.map((paragraph, i) => (
               <p key={i} className="text-[14.5px] leading-[1.72] mb-4" style={{ fontFamily: "Poppins, sans-serif", color: "#56516A" }}>
@@ -117,17 +119,17 @@ export function ResultsScreen({ answers, onRestart }: {
             <div className="rpt-kpis">
               <div className="rpt-kpi">
                 <p style={{ fontFamily: "'Typo Grotesk', sans-serif", fontSize: 20, fontWeight: 800, letterSpacing: "-0.03em", color: "#6D28D9", whiteSpace: "nowrap" }}>{overallScore} / 100</p>
-                <p className="text-[9.5px] uppercase tracking-[0.08em] font-semibold mt-1 leading-[1.4]" style={{ color: "#9A95AB" }}>AI Readiness Score</p>
+                <p className="text-[9.5px] uppercase tracking-[0.08em] font-semibold mt-1 leading-[1.4]" style={{ color: "#9A95AB" }}>Pontuação de Prontidão</p>
               </div>
               <div className="rpt-kpi">
                 <p style={{ fontFamily: "'Typo Grotesk', sans-serif", fontSize: 20, fontWeight: 800, letterSpacing: "-0.03em", color: "#171221", whiteSpace: "nowrap" }}>{result.level}</p>
-                <p className="text-[9.5px] uppercase tracking-[0.08em] font-semibold mt-1 leading-[1.4]" style={{ color: "#9A95AB" }}>Readiness Level</p>
+                <p className="text-[9.5px] uppercase tracking-[0.08em] font-semibold mt-1 leading-[1.4]" style={{ color: "#9A95AB" }}>Nível de Prontidão</p>
               </div>
               <div className="rpt-kpi">
                 <p style={{ fontFamily: "'Typo Grotesk', sans-serif", fontSize: 20, fontWeight: 800, letterSpacing: "-0.03em", color: "#171221" }}>
                   {Object.keys(answers).filter(k => { const v = answers[k]; return typeof v === "number" || (Array.isArray(v) && (v as number[]).length > 0); }).length}
                 </p>
-                <p className="text-[9.5px] uppercase tracking-[0.08em] font-semibold mt-1 leading-[1.4]" style={{ color: "#9A95AB" }}>Questions Answered</p>
+                <p className="text-[9.5px] uppercase tracking-[0.08em] font-semibold mt-1 leading-[1.4]" style={{ color: "#9A95AB" }}>Perguntas Respondidas</p>
               </div>
             </div>
           </div>
@@ -136,8 +138,8 @@ export function ResultsScreen({ answers, onRestart }: {
           <div className="rpt-section">
             <div className="rpt-sechead">
               <span style={{ fontFamily: "'Typo Grotesk', sans-serif", fontSize: 17, fontWeight: 800, letterSpacing: "-0.02em", color: "#6D28D9" }}>02</span>
-              <span style={{ fontFamily: "'Typo Grotesk', sans-serif", fontSize: 19, fontWeight: 700, letterSpacing: "-0.02em", color: "#171221" }}>Pillar Breakdown</span>
-              <span className="ml-auto text-[9px] font-bold tracking-[0.14em] uppercase" style={{ color: "#9A95AB" }}>5 dimensions</span>
+              <span style={{ fontFamily: "'Typo Grotesk', sans-serif", fontSize: 19, fontWeight: 700, letterSpacing: "-0.02em", color: "#171221" }}>Detalhamento por Pilar</span>
+              <span className="ml-auto text-[9px] font-bold tracking-[0.14em] uppercase" style={{ color: "#9A95AB" }}>5 dimensões</span>
             </div>
             <div>
               {pillarScores.map((p, i) => {
@@ -160,40 +162,17 @@ export function ResultsScreen({ answers, onRestart }: {
             </div>
           </div>
 
-          {/* 03 Key Insights */}
+          {/* 03+ Lacunas / Oportunidades / Pontos Fortes (personalized, data-driven) */}
+          <InsightsSection answers={answers} pillarScores={pillarScores} startNumber={3} />
+
+          {/* Recommended Action */}
           <div className="rpt-section">
             <div className="rpt-sechead">
-              <span style={{ fontFamily: "'Typo Grotesk', sans-serif", fontSize: 17, fontWeight: 800, letterSpacing: "-0.02em", color: "#6D28D9" }}>03</span>
-              <span style={{ fontFamily: "'Typo Grotesk', sans-serif", fontSize: 19, fontWeight: 700, letterSpacing: "-0.02em", color: "#171221" }}>Key Insights</span>
-            </div>
-            <ol className="list-none">
-              {[
-                { sign: "+", type: "Strongest Area", typeColor: "#1F9D6B", numColor: "#1F9D6B", p: strongest, scoreNote: `Your organization's strongest AI readiness foundation, scoring ${strongest.score}%.` },
-                { sign: "−", type: "Biggest Gap",    typeColor: "#CF3F54", numColor: "#CF3F54", p: weakest,   scoreNote: `At ${weakest.score}%, this area should be addressed before scaling AI initiatives.` },
-              ].map((item, i) => (
-                <li key={i} className="flex gap-[22px] py-[18px]" style={{ borderTop: "1px solid #F1EFF7", borderBottom: i === 1 ? "1px solid #F1EFF7" : "none" }}>
-                  <span className="text-[20px] font-black leading-none min-w-[28px] tracking-[-0.04em]" style={{ fontFamily: "'Typo Grotesk', sans-serif", color: item.numColor }}>{item.sign}</span>
-                  <div>
-                    <p className="text-[9.5px] font-bold tracking-[0.16em] uppercase mb-1" style={{ color: item.typeColor }}>{item.type}</p>
-                    <p className="text-[14px] font-semibold mb-1" style={{ fontFamily: "Poppins, sans-serif", color: "#171221" }}>{item.p.title}</p>
-                    <p className="text-[12.5px] leading-[1.58]" style={{ color: "#56516A", fontFamily: "Poppins, sans-serif" }}>{item.scoreNote}</p>
-                  </div>
-                </li>
-              ))}
-            </ol>
-          </div>
-
-          {/* 04 Principais Insights (personalized, data-driven) */}
-          <InsightsSection answers={answers} pillarScores={pillarScores} />
-
-          {/* 05 Recommended Action */}
-          <div className="rpt-section">
-            <div className="rpt-sechead">
-              <span style={{ fontFamily: "'Typo Grotesk', sans-serif", fontSize: 17, fontWeight: 800, letterSpacing: "-0.02em", color: "#6D28D9" }}>05</span>
-              <span style={{ fontFamily: "'Typo Grotesk', sans-serif", fontSize: 19, fontWeight: 700, letterSpacing: "-0.02em", color: "#171221" }}>Recommended Next Step</span>
+              <span style={{ fontFamily: "'Typo Grotesk', sans-serif", fontSize: 17, fontWeight: 800, letterSpacing: "-0.02em", color: "#6D28D9" }}>{actionStepNumber}</span>
+              <span style={{ fontFamily: "'Typo Grotesk', sans-serif", fontSize: 19, fontWeight: 700, letterSpacing: "-0.02em", color: "#171221" }}>Próximo Passo Recomendado</span>
             </div>
             <div className="rounded-[10px] p-5" style={{ background: "#FAF9FD", border: "1px solid #E7E4F0" }}>
-              <p className="text-[9.5px] font-bold tracking-[0.16em] uppercase mb-2" style={{ color: "#6D28D9" }}>Priority Action</p>
+              <p className="text-[9.5px] font-bold tracking-[0.16em] uppercase mb-2" style={{ color: "#6D28D9" }}>Ação Prioritária</p>
               <p className="text-[13.5px] leading-[1.70]" style={{ fontFamily: "Poppins, sans-serif", color: "#56516A" }}>{rec}</p>
             </div>
           </div>
@@ -201,13 +180,13 @@ export function ResultsScreen({ answers, onRestart }: {
 
         {/* Footer CTA */}
         <div className="rpt-footer">
-          <p className="text-[13px] no-print" style={{ color: "#9A95AB" }}>Ready to turn these insights into a concrete AI roadmap?</p>
+          <p className="text-[13px] no-print" style={{ color: "#9A95AB" }}>Pronto para transformar esses insights em um roadmap de IA concreto?</p>
           <button className="no-print inline-flex items-center gap-2.5 px-9 h-[50px] rounded-[10px] text-[14px] font-semibold tracking-[0.03em] text-white cursor-pointer border-none transition-all"
             style={{ background: "linear-gradient(135deg,#6D28D9,#4A00E0)", boxShadow: "0 4px 20px rgba(109,40,217,0.36)", fontFamily: "Poppins, sans-serif" }}
             onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = "translateY(-2px)"; (e.currentTarget as HTMLElement).style.boxShadow = "0 8px 30px rgba(109,40,217,0.50)"; }}
             onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = ""; (e.currentTarget as HTMLElement).style.boxShadow = "0 4px 20px rgba(109,40,217,0.36)"; }}
           >
-            Talk to a Snowfox AI Specialist
+            Fale com um Especialista Snowfox AI
             <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4"/></svg>
           </button>
           <button onClick={onRestart} className="no-print inline-flex items-center gap-2 px-5 h-[38px] rounded-[8px] text-[12.5px] font-medium cursor-pointer transition-all"
@@ -216,7 +195,7 @@ export function ResultsScreen({ answers, onRestart }: {
             onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = "#E7E4F0"; (e.currentTarget as HTMLElement).style.color = "#9A95AB"; }}
           >
             <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" aria-hidden="true"><path d="M2 8a6 6 0 116 6"/><path d="M2 8V4M2 8H6"/></svg>
-            Retake Assessment
+            Refazer Avaliação
           </button>
           <p className="text-[9.5px] tracking-[0.08em] w-full pt-3.5 text-center" style={{ color: "#C0BBCF", borderTop: "1px solid #E7E4F0" }}>
             SnowFox AI · snowfox-ai.com

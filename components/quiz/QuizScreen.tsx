@@ -103,7 +103,7 @@ export function QuizScreen({ section, answers, onAnswer, onBack, onNext }: {
             {sectionDone ? "Todas as perguntas respondidas — pronto para continuar" : "Responda todas as perguntas para continuar"}
           </span>
           <NavBtn variant="next" disabled={!sectionDone} onClick={onNext}>
-            {isLast ? "Concluir Assessment" : "Próxima Seção"}
+            {isLast ? "Concluir Avaliação" : "Próxima Seção"}
           </NavBtn>
         </div>
       </div>
@@ -128,6 +128,7 @@ function SingleOptions({ q, answers, onAnswer }: {
             className={`option-card${isSel ? " selected" : ""}`}
             aria-pressed={isSel}
             onClick={() => onAnswer(q.id, isSel ? -1 : opt.value)}
+            style={opt.note ? { alignItems: "flex-start" } : undefined}
           >
             <span className="flex-shrink-0 w-[30px] h-[30px] rounded-[8px] flex items-center justify-center text-[13px] font-bold transition-all"
               style={isSel
@@ -138,6 +139,10 @@ function SingleOptions({ q, answers, onAnswer }: {
             <span className="flex-1 min-w-0">
               <span className="block text-[13px] font-semibold leading-[1.5] transition-colors"
                 style={{ color: isSel ? "var(--text-h)" : "var(--text-m)" }}>{opt.label}</span>
+              {opt.note && (
+                <span className="block text-[12px] leading-[1.5] mt-1 transition-colors"
+                  style={{ color: isSel ? "rgba(210,198,255,0.62)" : "rgba(190,175,245,0.42)" }}>{opt.note}</span>
+              )}
             </span>
           </button>
         );
@@ -163,6 +168,7 @@ function MultiOptions({ q, answers, onToggle }: {
             className={`option-card${isSel ? " selected" : ""}`}
             aria-pressed={isSel}
             onClick={() => onToggle(q, opt.value, !!opt.isNone)}
+            style={opt.note ? { alignItems: "flex-start" } : undefined}
           >
             <span className="flex-shrink-0 w-[30px] h-[30px] rounded-[8px] flex items-center justify-center transition-all"
               style={isSel
@@ -181,6 +187,10 @@ function MultiOptions({ q, answers, onToggle }: {
             <span className="flex-1 min-w-0">
               <span className="block text-[13px] font-semibold leading-[1.5] transition-colors"
                 style={{ color: isSel ? "var(--text-h)" : "var(--text-m)" }}>{opt.label}</span>
+              {opt.note && (
+                <span className="block text-[12px] leading-[1.5] mt-1 transition-colors"
+                  style={{ color: isSel ? "rgba(210,198,255,0.62)" : "rgba(190,175,245,0.42)" }}>{opt.note}</span>
+              )}
             </span>
           </button>
         );
