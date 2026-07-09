@@ -880,6 +880,11 @@ export function selectResultInsights(
 }
 
 const READINESS_SUMMARY_PT: Record<string, string> = {
+  "Prontidão Baixa": "que a empresa ainda está formando as bases necessárias para adotar IA de forma consistente",
+  "Prontidão Emergente": "que a empresa já começou a se preparar para IA, mas ainda possui lacunas relevantes antes de escalar",
+  "Prontidão Moderada": "que a empresa tem uma base razoável para pilotos e iniciativas seletivas, desde que fortaleça os pontos fracos",
+  "Prontidão Alta": "que a empresa está bem posicionada para implementar e escalar iniciativas selecionadas de IA",
+  "Prontidão Avançada": "que a empresa possui uma base forte para escalar e melhorar iniciativas de IA continuamente",
   "Low Readiness": "que a empresa ainda está formando as bases necessárias para adotar IA de forma consistente",
   "Emerging Readiness": "que a empresa já começou a se preparar para IA, mas ainda possui lacunas relevantes antes de escalar",
   "Moderate Readiness": "que a empresa tem uma base razoável para pilotos e iniciativas seletivas, desde que fortaleça os pontos fracos",
@@ -887,9 +892,122 @@ const READINESS_SUMMARY_PT: Record<string, string> = {
   "Advanced Readiness": "que a empresa possui uma base forte para escalar e melhorar iniciativas de IA continuamente",
 };
 
+function cleanText(text: string) {
+  return text.replace(/\s+/g, " ").trim();
+}
+
+function stripFinalPunctuation(text: string) {
+  return text.replace(/[.!?]\s*$/, "");
+}
+
+function ensurePeriod(text: string) {
+  const trimmed = cleanText(text);
+  return /[.!?]$/.test(trimmed) ? trimmed : `${trimmed}.`;
+}
+
+function firstSentence(text: string) {
+  const normalized = cleanText(text);
+  const match = normalized.match(/^.*?[.!?](?:\s|$)/);
+  return match ? match[0].trim() : normalized;
+}
+
 function lowerFirst(text: string) {
   if (!text) return text;
   return text.charAt(0).toLowerCase() + text.slice(1);
+}
+
+function insightSummary(insight: ResultInsight) {
+  return lowerFirst(stripFinalPunctuation(firstSentence(insight.insight)));
+}
+
+function paragraph(sentences: Array<string | false | null | undefined>) {
+  return sentences
+    .filter((sentence): sentence is string => Boolean(sentence && cleanText(sentence)))
+    .map(ensurePeriod)
+    .join(" ");
+}
+
+export interface QuarterlyRecommendation {
+  id: "q1" | "q2" | "q3";
+  period: string;
+  focus: string;
+  title: string;
+  action: string;
+  outcome: string;
+}
+
+interface QuarterlyPillarAction {
+  stabilizeTitle: string;
+  stabilizeAction: string;
+  stabilizeOutcome: string;
+  pilotTitle: string;
+  pilotAction: string;
+  pilotOutcome: string;
+  scaleTitle: string;
+  scaleAction: string;
+  scaleOutcome: string;
+}
+
+const QUARTERLY_PILLAR_ACTIONS: Record<InsightPillarId, QuarterlyPillarAction> = {
+  dados: {
+    stabilizeTitle: "Estabilizar a base de dados",
+    stabilizeAction: "mapear fontes críticas, responsáveis, qualidade, acesso e histórico necessário para os casos de uso mais importantes",
+    stabilizeOutcome: "uma base mínima confiável para escolher pilotos sem retrabalho de coleta e integração",
+    pilotTitle: "Transformar dados em caso de uso",
+    pilotAction: "escolher um fluxo em que dados disponíveis apoiem uma decisão relevante, definir métrica de valor e preparar o dataset governado",
+    pilotOutcome: "um caso priorizado com dados rastreáveis e critérios claros de viabilidade",
+    scaleTitle: "Criar rotina de dados para escala",
+    scaleAction: "documentar padrões de acesso, atualização, qualidade e monitoramento para reutilizar dados em novas iniciativas",
+    scaleOutcome: "menos dependência de coletas manuais e mais velocidade para novos casos de uso",
+  },
+  estrategia: {
+    stabilizeTitle: "Alinhar liderança e tese de valor",
+    stabilizeAction: "definir patrocinador, problema de negócio, métrica econômica e critérios para decidir quais oportunidades de IA merecem investimento",
+    stabilizeOutcome: "um ponto de vista executivo claro sobre onde IA deve gerar valor primeiro",
+    pilotTitle: "Converter intenção em roadmap",
+    pilotAction: "priorizar dois ou três casos de uso, atribuir donos, definir prazos e conectar cada iniciativa a uma métrica de resultado",
+    pilotOutcome: "um roadmap executável de curto prazo, com menos dependência de iniciativas isoladas",
+    scaleTitle: "Instalar cadência de portfólio",
+    scaleAction: "revisar mensalmente progresso, valor capturado, riscos e decisões de continuidade, pausa ou escala dos casos de uso",
+    scaleOutcome: "IA gerida como portfólio, não como coleção de experimentos desconectados",
+  },
+  pessoas: {
+    stabilizeTitle: "Preparar equipes para adoção",
+    stabilizeAction: "identificar usuários-chave, lacunas de conhecimento, resistências e rituais de comunicação antes de introduzir novas soluções",
+    stabilizeOutcome: "menos atrito de mudança e mais clareza sobre como a IA entra no trabalho real",
+    pilotTitle: "Rodar capacitação aplicada",
+    pilotAction: "treinar os times envolvidos no piloto, criar critérios simples de uso e coletar feedback semanal sobre adoção e barreiras",
+    pilotOutcome: "equipes capazes de testar IA com responsabilidade e transformar aprendizado em melhoria operacional",
+    scaleTitle: "Formalizar playbook de adoção",
+    scaleAction: "documentar práticas, exemplos, responsáveis e materiais de treinamento para replicar a adoção em novas áreas",
+    scaleOutcome: "capacidade interna mais consistente para absorver novas iniciativas de IA",
+  },
+  governanca: {
+    stabilizeTitle: "Definir controles mínimos de IA",
+    stabilizeAction: "estabelecer responsáveis, regras de uso, critérios de segurança, revisão humana e tratamento de dados sensíveis",
+    stabilizeOutcome: "um perímetro claro para avançar sem aumentar exposição operacional, legal ou reputacional",
+    pilotTitle: "Aplicar governança no piloto",
+    pilotAction: "incorporar controles de risco, privacidade, documentação de processo e critérios de aprovação dentro do primeiro caso de uso",
+    pilotOutcome: "um modelo de entrega que já nasce auditável e mais fácil de repetir",
+    scaleTitle: "Criar revisão recorrente",
+    scaleAction: "manter cadência de revisão de riscos, responsáveis, qualidade dos processos e decisões automatizadas ou assistidas por IA",
+    scaleOutcome: "governança suficiente para sustentar escala sem travar a execução",
+  },
+  tecnologia: {
+    stabilizeTitle: "Definir base técnica de execução",
+    stabilizeAction: "avaliar integrações, ambientes, dados, segurança e caminho de produção antes de escolher novas ferramentas ou modelos",
+    stabilizeOutcome: "um desenho técnico realista para tirar iniciativas do protótipo",
+    pilotTitle: "Entregar piloto integrado",
+    pilotAction: "implementar um caso de uso limitado, conectado aos sistemas necessários e medido por adoção, qualidade e impacto operacional",
+    pilotOutcome: "prova de valor observável, com menos dependência de processos manuais",
+    scaleTitle: "Padronizar operação de IA",
+    scaleAction: "definir práticas de monitoramento, atualização, reutilização, documentação e suporte para soluções em produção",
+    scaleOutcome: "um caminho mais previsível para escalar modelos, automações e integrações",
+  },
+};
+
+function toPillarId(id: string): InsightPillarId {
+  return PILLAR_ORDER.includes(id as InsightPillarId) ? id as InsightPillarId : "dados";
 }
 
 export function buildExecutiveSummary({
@@ -908,20 +1026,113 @@ export function buildExecutiveSummary({
   recommendation: string;
 }): string[] {
   const levelMeaning = READINESS_SUMMARY_PT[result.level] ?? "que a leitura precisa ser feita a partir dos pilares abaixo";
-  const insights = selectResultInsights(answers, pillarScores);
-  const attention = insights.find(i => i.priority <= 2) ?? insights.find(i => i.pillar === weakest.id);
+  const insights = selectResultInsights(answers, pillarScores, { min: 3, max: 5 });
+  const attention =
+    insights.find(i => i.type === "risco-critico") ??
+    insights.find(i => i.priority <= 2) ??
+    insights.find(i => i.pillar === weakest.id);
+  const opportunity = insights.find(i =>
+    i.id !== attention?.id &&
+    (i.type === "oportunidade" || i.type === "proximo-passo")
+  );
+  const strength = insights.find(i => i.priority === 3);
+  const scoreGap = Math.max(0, strongest.score - weakest.score);
+
+  const paragraphOne = paragraph([
+    `A organização obteve ${result.score}/100, ${levelMeaning}`,
+    `O contraste entre ${strongest.title} (${strongest.score}%) e ${weakest.title} (${weakest.score}%) mostra onde a empresa já tem base para avançar e onde ainda precisa reduzir risco antes de escalar`,
+    scoreGap >= 25
+      ? `A diferença de ${scoreGap} pontos entre esses pilares sugere uma prontidão desigual, em que ganhos rápidos dependem de tratar os gargalos certos primeiro`
+      : `Como a distância entre os pilares é menor, a evolução tende a depender mais de foco e priorização do que de uma reconstrução ampla da base`,
+  ]);
+
+  const paragraphTwo = paragraph([
+    attention
+      ? `O insight mais importante vem de ${PILLAR_LABEL[attention.pillar]}: ${insightSummary(attention)}`
+      : `O principal foco deve ser reduzir a lacuna em ${weakest.title}`,
+    opportunity
+      ? `Outro sinal prático aparece em ${PILLAR_LABEL[opportunity.pillar]}: ${insightSummary(opportunity)}`
+      : null,
+    strength
+      ? `Como força aproveitável, ${PILLAR_LABEL[strength.pillar]} indica que ${insightSummary(strength)}`
+      : null,
+  ]);
+
+  const recommendationText = lowerFirst(stripFinalPunctuation(recommendation));
+  const paragraphThree = paragraph([
+    result.blocker
+      ? `O bloqueio identificado reforça que a prioridade deve ser estabilizar o ponto limitante antes de ampliar o portfólio de IA`
+      : attention
+        ? `A prioridade deve ser atacar esse gargalo antes de expandir iniciativas mais ambiciosas`
+        : `A prioridade deve ser converter a base atual em iniciativas mensuráveis`,
+    `Na prática, ${recommendationText}`,
+    strength
+      ? `Essa execução deve usar a força em ${PILLAR_LABEL[strength.pillar]} como alavanca, sem deixar que ela esconda as lacunas que ainda limitam escala`
+      : null,
+  ]);
+
+  return [paragraphOne, paragraphTwo, paragraphThree];
+}
+
+export function buildQuarterlyRecommendations({
+  answers,
+  pillarScores,
+  result,
+  strongest,
+  weakest,
+}: {
+  answers: AnswerRecord;
+  pillarScores: PillarScore[];
+  result: AssessmentResult;
+  strongest: PillarScore;
+  weakest: PillarScore;
+}): QuarterlyRecommendation[] {
+  const insights = selectResultInsights(answers, pillarScores, { min: 3, max: 6 });
+  const attention =
+    insights.find(i => i.type === "risco-critico") ??
+    insights.find(i => i.priority <= 2) ??
+    insights.find(i => i.pillar === weakest.id);
+  const opportunity = insights.find(i =>
+    i.id !== attention?.id &&
+    (i.type === "oportunidade" || i.type === "proximo-passo")
+  );
   const strength = insights.find(i => i.priority === 3);
 
-  const paragraphOne = `A organização obteve ${result.score}/100, ${levelMeaning}. O pilar mais forte foi ${strongest.title} (${strongest.score}%), enquanto o principal ponto de atenção foi ${weakest.title} (${weakest.score}%). Essa combinação ajuda a separar o que já pode ser aproveitado do que precisa ser estabilizado antes de iniciativas mais amplas.`;
+  const weakestPillar = toPillarId(weakest.id);
+  const strongestPillar = toPillarId(strongest.id);
+  const firstPillar = attention?.pillar ?? weakestPillar;
+  const secondPillar = opportunity?.pillar ?? weakestPillar;
+  const thirdPillar = strength?.pillar ?? strongestPillar;
+  const firstCopy = QUARTERLY_PILLAR_ACTIONS[firstPillar];
+  const secondCopy = QUARTERLY_PILLAR_ACTIONS[secondPillar];
+  const thirdCopy = QUARTERLY_PILLAR_ACTIONS[thirdPillar];
 
-  const attentionSentence = attention
-    ? `Entre os insights personalizados, o principal sinal de atenção é "${attention.title}", ligado ao pilar de ${PILLAR_LABEL[attention.pillar]}.`
-    : `Entre os insights personalizados, o principal foco deve ser reduzir a lacuna em ${weakest.title}.`;
-  const strengthSentence = strength
-    ? `Ao mesmo tempo, "${strength.title}" aparece como uma força a preservar.`
-    : "";
-  const recommendationText = recommendation.endsWith(".") ? recommendation : `${recommendation}.`;
-  const paragraphTwo = `${attentionSentence} ${strengthSentence} Como próximo passo, ${lowerFirst(recommendationText)}`.replace(/\s+/g, " ").trim();
-
-  return [paragraphOne, paragraphTwo];
+  return [
+    {
+      id: "q1",
+      period: "Próximo trimestre",
+      focus: `Estabilizar ${PILLAR_LABEL[firstPillar]}`,
+      title: attention?.title ?? firstCopy.stabilizeTitle,
+      action: `Tratar essa frente como prioridade: ${firstCopy.stabilizeAction}.`,
+      outcome: result.blocker
+        ? "remover o limitador que impede a empresa de ampliar IA com segurança"
+        : firstCopy.stabilizeOutcome,
+    },
+    {
+      id: "q2",
+      period: "Trimestre seguinte",
+      focus: `Executar ${PILLAR_LABEL[secondPillar]}`,
+      title: opportunity?.title ?? secondCopy.pilotTitle,
+      action: `Converter o aprendizado do trimestre anterior em execução: ${secondCopy.pilotAction}.`,
+      outcome: secondCopy.pilotOutcome,
+    },
+    {
+      id: "q3",
+      period: "Terceiro trimestre",
+      focus: `Escalar ${PILLAR_LABEL[thirdPillar]}`,
+      title: strength ? `Escalar a partir de ${strength.title}` : thirdCopy.scaleTitle,
+      action: `Usar essa base para ampliar a maturidade: ${thirdCopy.scaleAction}.`,
+      outcome: thirdCopy.scaleOutcome,
+    },
+  ];
 }

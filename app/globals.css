@@ -148,6 +148,9 @@ input, select { font-family: inherit; }
 .rpt-kpis { display: flex; gap: 0; border: 1px solid #E7E4F0; border-radius: 10px; overflow: hidden; }
 .rpt-kpi { flex: 1; padding: 16px 20px; }
 .rpt-kpi + .rpt-kpi { border-left: 1px solid #E7E4F0; }
+.rpt-quarter-plan { border: 1px solid #E7E4F0; border-radius: 10px; overflow: hidden; }
+.rpt-quarter-row { display: grid; grid-template-columns: 116px 1fr; gap: 18px; padding: 16px 18px; background: #fff; }
+.rpt-quarter-row + .rpt-quarter-row { border-top: 1px solid #E7E4F0; }
 .rpt-pillar-bar-fill { height: 100%; border-radius: 2px; width: 0%; transition: width 1.1s cubic-bezier(.22,1,.36,1); }
 .rpt-bar-low      { background: linear-gradient(90deg,#CF3F54,#e05a6b); }
 .rpt-bar-emerging { background: linear-gradient(90deg,#C97A12,#e09030); }
@@ -167,6 +170,7 @@ input, select { font-family: inherit; }
   .rpt-footer  { padding: 24px 24px 32px; }
   .rpt-kpis    { flex-direction: column; }
   .rpt-kpi + .rpt-kpi { border-left: none; border-top: 1px solid #E7E4F0; }
+  .rpt-quarter-row { grid-template-columns: 1fr; gap: 8px; padding: 16px; }
 }
 
 /* ── Field inputs */

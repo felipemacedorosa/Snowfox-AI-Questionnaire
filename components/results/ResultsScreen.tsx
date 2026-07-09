@@ -8,7 +8,7 @@ import {
 } from "@/app/data";
 import { PillarBar } from "@/components/results/PillarBar";
 import { InsightsSection, insightSectionCount } from "@/components/results/InsightsSection";
-import { buildExecutiveSummary } from "@/app/resultInsights";
+import { buildExecutiveSummary, buildQuarterlyRecommendations } from "@/app/resultInsights";
 
 const BASE = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
 
@@ -26,9 +26,10 @@ export function ResultsScreen({ answers, onRestart }: {
   const weakest = pillarScores.reduce((a, b) => b.score < a.score ? b : a);
   const rec = RECOMMENDATIONS[weakest.id] || "";
   const insightSections = insightSectionCount(answers, pillarScores);
-  const actionStepNumber = String(3 + insightSections).padStart(2, "0");
+  const actionStepNumber = String(4 + insightSections).padStart(2, "0");
   const meta = LEVEL_META[result.level];
   const executiveSummary = buildExecutiveSummary({ answers, pillarScores, result, strongest, weakest, recommendation: rec });
+  const quarterlyRecommendations = buildQuarterlyRecommendations({ answers, pillarScores, result, strongest, weakest });
   const dateStr = new Date().toLocaleDateString("pt-BR", { month: "long", day: "numeric", year: "numeric" });
 
   useEffect(() => {
@@ -134,10 +135,35 @@ export function ResultsScreen({ answers, onRestart }: {
             </div>
           </div>
 
-          {/* 02 Pillar Breakdown */}
+          {/* 02 Quarterly Roadmap */}
           <div className="rpt-section">
             <div className="rpt-sechead">
               <span style={{ fontFamily: "'Typo Grotesk', sans-serif", fontSize: 17, fontWeight: 800, letterSpacing: "-0.02em", color: "#6D28D9" }}>02</span>
+              <span style={{ fontFamily: "'Typo Grotesk', sans-serif", fontSize: 19, fontWeight: 700, letterSpacing: "-0.02em", color: "#171221" }}>O Que Fazer nos Próximos 3 Trimestres</span>
+            </div>
+            <div className="rpt-quarter-plan">
+              {quarterlyRecommendations.map(item => (
+                <div key={item.id} className="rpt-quarter-row">
+                  <div>
+                    <p className="text-[11px] font-semibold leading-[1.35]" style={{ fontFamily: "Poppins, sans-serif", color: "#171221" }}>{item.period}</p>
+                    <p className="text-[10px] leading-[1.45] mt-1" style={{ fontFamily: "Poppins, sans-serif", color: "#9A95AB" }}>{item.focus}</p>
+                  </div>
+                  <div>
+                    <p className="text-[13.5px] font-semibold mb-1.5" style={{ fontFamily: "Poppins, sans-serif", color: "#171221" }}>{item.title}</p>
+                    <p className="text-[12.8px] leading-[1.65]" style={{ fontFamily: "Poppins, sans-serif", color: "#56516A" }}>{item.action}</p>
+                    <p className="text-[12.3px] leading-[1.55] mt-2" style={{ fontFamily: "Poppins, sans-serif", color: "#7A7587" }}>
+                      <span className="font-semibold" style={{ color: "#171221" }}>Resultado esperado:</span> {item.outcome}.
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* 03 Pillar Breakdown */}
+          <div className="rpt-section">
+            <div className="rpt-sechead">
+              <span style={{ fontFamily: "'Typo Grotesk', sans-serif", fontSize: 17, fontWeight: 800, letterSpacing: "-0.02em", color: "#6D28D9" }}>03</span>
               <span style={{ fontFamily: "'Typo Grotesk', sans-serif", fontSize: 19, fontWeight: 700, letterSpacing: "-0.02em", color: "#171221" }}>Detalhamento por Pilar</span>
               <span className="ml-auto text-[9px] font-bold tracking-[0.14em] uppercase" style={{ color: "#9A95AB" }}>5 dimensões</span>
             </div>
@@ -162,8 +188,8 @@ export function ResultsScreen({ answers, onRestart }: {
             </div>
           </div>
 
-          {/* 03+ Lacunas / Oportunidades / Pontos Fortes (personalized, data-driven) */}
-          <InsightsSection answers={answers} pillarScores={pillarScores} startNumber={3} />
+          {/* 04+ Lacunas / Oportunidades / Pontos Fortes (personalized, data-driven) */}
+          <InsightsSection answers={answers} pillarScores={pillarScores} startNumber={4} />
 
           {/* Recommended Action */}
           <div className="rpt-section">
