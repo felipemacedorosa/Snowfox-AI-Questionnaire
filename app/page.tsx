@@ -53,10 +53,15 @@ export default function Home() {
                 section={section}
                 answers={answers}
                 onAnswer={handleAnswer}
-                onBack={() => section === 0 ? undefined : setSection(s => s - 1)}
+                onBack={() => {
+                  if (section === 0) return;
+                  window.scrollTo({ top: 0, behavior: "smooth" });
+                  setSection(s => s - 1);
+                }}
                 onNext={() => {
-                  if (section === SECTIONS.length - 1) goTo("results");
-                  else setSection(s => s + 1);
+                  if (section === SECTIONS.length - 1) { goTo("results"); return; }
+                  window.scrollTo({ top: 0, behavior: "smooth" });
+                  setSection(s => s + 1);
                 }}
               />
             )}

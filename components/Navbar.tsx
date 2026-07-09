@@ -19,7 +19,7 @@ export function Navbar({ screen, onSave }: { screen: "quiz" | "results"; onSave:
     <nav
       className="fixed inset-x-0 top-0 z-[200] h-16"
       style={{ background: "rgba(5,1,22,0.86)", backdropFilter: "blur(28px)", boxShadow: "0 1px 0 rgba(255,255,255,0.06)" }}
-      aria-label="Main navigation"
+      aria-label="Navegação principal"
     >
       <div style={{ maxWidth: "100%", paddingInline: "clamp(20px,4vw,72px)" }}>
         <div className="flex h-16 items-center justify-between">
@@ -30,7 +30,7 @@ export function Navbar({ screen, onSave }: { screen: "quiz" | "results"; onSave:
           <button
             className="flex flex-col justify-center gap-[5px] w-10 h-10 rounded-lg p-1.5 md:hidden"
             style={{ background: menuOpen ? "rgba(255,255,255,0.06)" : "none" }}
-            aria-label={menuOpen ? "Close menu" : "Open menu"}
+            aria-label={menuOpen ? "Fechar menu" : "Abrir menu"}
             aria-expanded={menuOpen}
             onClick={() => setMenuOpen(m => !m)}
           >
@@ -54,7 +54,7 @@ export function Navbar({ screen, onSave }: { screen: "quiz" | "results"; onSave:
             style={menuOpen ? { background: "rgba(5,1,22,0.97)", backdropFilter: "blur(28px)", borderBottom: "1px solid rgba(255,255,255,0.08)", padding: "10px 16px 16px" } : {}}
             role="list"
           >
-            {["About","Services","Solutions","Success Cases","Talk to a specialist"].map(item => (
+            {["Sobre","Serviços","Soluções","Casos de Sucesso","Fale com um especialista"].map(item => (
               <li key={item}>
                 <a href="#" className="flex items-center gap-1 px-3.5 py-2 md:py-2 text-[14.5px] font-medium rounded-lg no-underline transition-colors w-full md:w-auto"
                   style={{ color: "rgba(255,255,255,0.76)", fontFamily: "Poppins, sans-serif" }}
@@ -80,7 +80,7 @@ export function Navbar({ screen, onSave }: { screen: "quiz" | "results"; onSave:
                     <path d="M13 14.5H3a1 1 0 01-1-1V2.5a1 1 0 011-1h8l3 3v9.5a1 1 0 01-1 1z"/>
                     <path d="M10.5 1.5V5.5H4V1.5M4 14.5v-5h8v5"/>
                   </svg>
-                  {saved ? "Saved" : "Save progress"}
+                  {saved ? "Salvo" : "Salvar progresso"}
                 </button>
               </li>
             )}
