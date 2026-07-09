@@ -28,7 +28,7 @@ export function ResultsScreen({ answers, onRestart }: {
   const insightSections = insightSectionCount(answers, pillarScores);
   const actionStepNumber = String(4 + insightSections).padStart(2, "0");
   const meta = LEVEL_META[result.level];
-  const executiveSummary = buildExecutiveSummary({ answers, pillarScores, result, strongest, weakest, recommendation: rec });
+  const executiveSummary = buildExecutiveSummary({ answers, pillarScores, result, strongest, weakest });
   const quarterlyRecommendations = buildQuarterlyRecommendations({ answers, pillarScores, result, strongest, weakest });
   const dateStr = new Date().toLocaleDateString("pt-BR", { month: "long", day: "numeric", year: "numeric" });
 
@@ -105,32 +105,32 @@ export function ResultsScreen({ answers, onRestart }: {
               <span style={{ fontFamily: "'Typo Grotesk', sans-serif", fontSize: 17, fontWeight: 800, letterSpacing: "-0.02em", color: "#6D28D9" }}>01</span>
               <span style={{ fontFamily: "'Typo Grotesk', sans-serif", fontSize: 19, fontWeight: 700, letterSpacing: "-0.02em", color: "#171221" }}>Resumo Executivo</span>
             </div>
-            {executiveSummary.map((paragraph, i) => (
-              <p key={i} className="text-[14.5px] leading-[1.72] mb-4" style={{ fontFamily: "Poppins, sans-serif", color: "#56516A" }}>
-                {paragraph}
-              </p>
-            ))}
-            {result.blocker && (
-              <div className="flex items-start gap-2.5 rounded-lg px-4 py-3 mb-4 text-[12.5px] leading-[1.55]"
-                style={{ background: "#FFFBEF", border: "1px solid rgba(168,120,15,0.40)", color: "#7A5A0C", fontFamily: "Poppins, sans-serif" }}>
-                <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" aria-hidden="true" className="flex-shrink-0 mt-px" style={{ color: "#A8780F" }}><circle cx="8" cy="8" r="7"/><path d="M8 5v3"/><circle cx="8" cy="11.5" r=".6" fill="currentColor" stroke="none"/></svg>
-                {result.blocker}
+            <div className="rpt-exec-summary">
+              <div className="rpt-exec-block">
+                <p className="rpt-exec-title">Situação Atual</p>
+                {executiveSummary.currentSituation.map((sentence, i) => (
+                  <p key={i} className="rpt-exec-copy">{sentence}</p>
+                ))}
               </div>
-            )}
-            <div className="rpt-kpis">
-              <div className="rpt-kpi">
-                <p style={{ fontFamily: "'Typo Grotesk', sans-serif", fontSize: 20, fontWeight: 800, letterSpacing: "-0.03em", color: "#6D28D9", whiteSpace: "nowrap" }}>{overallScore} / 100</p>
-                <p className="text-[9.5px] uppercase tracking-[0.08em] font-semibold mt-1 leading-[1.4]" style={{ color: "#9A95AB" }}>Pontuação de Prontidão</p>
+              <div className="rpt-exec-block">
+                <p className="rpt-exec-title">Principais Riscos</p>
+                <ul className="rpt-exec-risks">
+                  {executiveSummary.risks.map((risk, i) => (
+                    <li key={i}>{risk}</li>
+                  ))}
+                </ul>
               </div>
-              <div className="rpt-kpi">
-                <p style={{ fontFamily: "'Typo Grotesk', sans-serif", fontSize: 20, fontWeight: 800, letterSpacing: "-0.03em", color: "#171221", whiteSpace: "nowrap" }}>{result.level}</p>
-                <p className="text-[9.5px] uppercase tracking-[0.08em] font-semibold mt-1 leading-[1.4]" style={{ color: "#9A95AB" }}>Nível de Prontidão</p>
+              <div className="rpt-exec-block">
+                <p className="rpt-exec-title">Onde Está a Maior Oportunidade</p>
+                {executiveSummary.opportunity.map((sentence, i) => (
+                  <p key={i} className="rpt-exec-copy">{sentence}</p>
+                ))}
               </div>
-              <div className="rpt-kpi">
-                <p style={{ fontFamily: "'Typo Grotesk', sans-serif", fontSize: 20, fontWeight: 800, letterSpacing: "-0.03em", color: "#171221" }}>
-                  {Object.keys(answers).filter(k => { const v = answers[k]; return typeof v === "number" || (Array.isArray(v) && (v as number[]).length > 0); }).length}
-                </p>
-                <p className="text-[9.5px] uppercase tracking-[0.08em] font-semibold mt-1 leading-[1.4]" style={{ color: "#9A95AB" }}>Perguntas Respondidas</p>
+              <div className="rpt-exec-block">
+                <p className="rpt-exec-title">Recomendação Imediata</p>
+                {executiveSummary.immediateRecommendation.map((sentence, i) => (
+                  <p key={i} className="rpt-exec-copy">{sentence}</p>
+                ))}
               </div>
             </div>
           </div>
