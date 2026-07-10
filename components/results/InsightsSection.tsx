@@ -2,7 +2,7 @@
 
 import { AnswerRecord, PillarScore } from "@/app/data";
 import {
-  CATEGORY_LABEL, categoryOf, INSIGHT_BADGE_LABEL, InsightBadge, InsightCategory,
+  CATEGORY_INTRO, CATEGORY_LABEL, categoryOf, INSIGHT_BADGE_LABEL, InsightBadge, InsightCategory,
   PILLAR_LABEL, ResultInsight, selectResultInsights,
 } from "@/app/resultInsights";
 
@@ -14,12 +14,6 @@ const BADGE_STYLE: Record<InsightBadge, { bg: string; border: string; color: str
 };
 
 const CATEGORY_ORDER: InsightCategory[] = ["lacunas", "oportunidades", "forcas"];
-
-const CATEGORY_INTRO: Record<InsightCategory, string> = {
-  lacunas: "Com base nas suas respostas, estes são os riscos que mais podem travar a adoção de IA na sua empresa.",
-  oportunidades: "Estes são os pontos de alavancagem mais imediatos para acelerar a prontidão de IA da sua empresa.",
-  forcas: "Estas são as bases já consolidadas que sua empresa pode aproveitar nas próximas iniciativas de IA.",
-};
 
 function InsightCard({ item }: { item: ResultInsight }) {
   const badge = BADGE_STYLE[item.type];

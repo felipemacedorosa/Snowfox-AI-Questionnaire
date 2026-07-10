@@ -43,6 +43,13 @@ export const CATEGORY_LABEL: Record<InsightCategory, string> = {
   forcas: "Pontos Fortes",
 };
 
+/** Shared by the on-screen dashboard and the print report. */
+export const CATEGORY_INTRO: Record<InsightCategory, string> = {
+  lacunas: "Com base nas suas respostas, estes são os riscos que mais podem travar a adoção de IA na sua empresa.",
+  oportunidades: "Estes são os pontos de alavancagem mais imediatos para acelerar a prontidão de IA da sua empresa.",
+  forcas: "Estas são as bases já consolidadas que sua empresa pode aproveitar nas próximas iniciativas de IA.",
+};
+
 const TYPE_TO_CATEGORY: Record<InsightBadge, InsightCategory> = {
   "risco-critico": "lacunas",
   "oportunidade": "oportunidades",
