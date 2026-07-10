@@ -52,14 +52,14 @@ export function CriticalPathSection({ gates, nextLevel }: { gates: CriticalPathG
   const revealMotion = useReportReveal();
   return (
     <motion.section className="report-section critical-path-section" id="critical-path" {...revealMotion}>
-      <ReportHeading number="03" title="Caminho crítico" aside="O que precisa mudar primeiro" />
+      <ReportHeading number="03" title="Prioridades para avançar" aside="O que fazer primeiro" />
       <div className="critical-path-summary">
         <div>
-          <span className="report-label">Próximo patamar</span>
+          <span className="report-label">Próximo nível</span>
           <strong>{nextLevel.label ?? "Prontidão avançada consolidada"}</strong>
         </div>
         {nextLevel.threshold !== null && (
-          <p><b>+{nextLevel.scoreDelta} pontos</b> é a referência quantitativa; os gates abaixo mostram as mudanças de capacidade que realmente importam.</p>
+          <p>Para chegar a esse nível, comece pelas prioridades abaixo. Elas mostram os principais pontos que precisam melhorar.</p>
         )}
       </div>
       <div className="critical-path-flow">
@@ -68,16 +68,16 @@ export function CriticalPathSection({ gates, nextLevel }: { gates: CriticalPathG
             <div className="critical-gate-topline">
               <span>0{index + 1}</span>
               <strong>{gate.pillarTitle}</strong>
-              {gate.isBlocker && <b>Gate ativo</b>}
+              {gate.isBlocker && <b>Bloqueio principal</b>}
             </div>
             <p className="critical-gate-question">{gate.question}</p>
             <div className="critical-gate-shift">
               <span><small>Estado atual</small>{gate.currentState}</span>
               <ArrowRight size={16} aria-hidden="true" />
-              <span><small>Próxima capacidade</small>{gate.targetState}</span>
+              <span><small>O que precisa melhorar</small>{gate.targetState}</span>
             </div>
             <p className="critical-gate-reason">{gate.reason}</p>
-            <div className="critical-gate-dependency"><span>Dependência</span>{gate.dependency}</div>
+            <div className="critical-gate-dependency"><span>Necessário antes</span>{gate.dependency}</div>
           </article>
         ))}
       </div>
