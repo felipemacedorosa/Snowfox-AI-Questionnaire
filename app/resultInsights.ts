@@ -67,7 +67,7 @@ export const PILLAR_LABEL = Object.fromEntries(
 
 const PILLAR_ORDER: InsightPillarId[] = ["dados", "estrategia", "pessoas", "governanca", "tecnologia"];
 
-interface AnswerCondition {
+export interface AnswerCondition {
   questionId: string;
   op: "equals" | "includesAll" | "excludesAny";
   values: number[];
@@ -907,6 +907,10 @@ export interface QuarterlyRecommendation {
   title: string;
   action: string;
   outcome: string;
+  ownerRole: string;
+  dependency: string;
+  effort: "Baixo" | "Médio" | "Alto";
+  successMetric: string;
 }
 
 interface QuarterlyPillarAction {
@@ -979,6 +983,34 @@ const QUARTERLY_PILLAR_ACTIONS: Record<InsightPillarId, QuarterlyPillarAction> =
   },
 };
 
+const ACTION_META: Record<InsightPillarId, { ownerRole: string; dependency: string; successMetric: string }> = {
+  dados: {
+    ownerRole: "Liderança de Dados e Analytics",
+    dependency: "Fontes críticas e responsáveis identificados",
+    successMetric: "Dados prioritários com dono, critério de qualidade e acesso medido",
+  },
+  estrategia: {
+    ownerRole: "Patrocinador executivo de IA",
+    dependency: "Problema de negócio e tese de valor acordados",
+    successMetric: "Casos priorizados com responsável, benefício esperado e critério de decisão",
+  },
+  pessoas: {
+    ownerRole: "Pessoas, Change e liderança da área piloto",
+    dependency: "Usuários-chave e fluxo de trabalho selecionados",
+    successMetric: "Adoção ativa, barreiras registradas e capacitação concluída",
+  },
+  governanca: {
+    ownerRole: "Risco, Jurídico, Segurança e Tecnologia",
+    dependency: "Responsáveis e apetite de risco definidos",
+    successMetric: "Controles mínimos aplicados e decisões críticas com revisão humana",
+  },
+  tecnologia: {
+    ownerRole: "CTO, Engenharia ou Plataforma",
+    dependency: "Caso de uso, sistemas e caminho de produção definidos",
+    successMetric: "Piloto integrado, monitorado e utilizado em um fluxo real",
+  },
+};
+
 function toPillarId(id: string): InsightPillarId {
   return PILLAR_ORDER.includes(id as InsightPillarId) ? id as InsightPillarId : "dados";
 }
@@ -1020,14 +1052,6 @@ const EXEC_OPPORTUNITY_TEXT: Record<InsightPillarId, string> = {
   pessoas: "Melhorar esse pilar transforma IA em mudança real de trabalho, não apenas em ferramenta disponível para poucos usuários.",
   governanca: "Melhorar esse pilar dá segurança para avançar com IA sem criar riscos desnecessários para clientes, equipes e liderança.",
   tecnologia: "Melhorar esse pilar aumenta a chance de transformar pilotos em soluções usadas na rotina da empresa.",
-};
-
-const EXEC_RECOMMENDATION_TEXT: Record<InsightPillarId, string> = {
-  dados: "Nos próximos 30 a 90 dias, escolha um processo crítico e organize as fontes de dados necessárias para uma decisão específica, com dono claro, critério de qualidade e prazo de entrega.",
-  estrategia: "Nos próximos 30 a 90 dias, reúna a liderança para priorizar até três casos de uso de IA, cada um com responsável, benefício esperado e critério simples de sucesso.",
-  pessoas: "Nos próximos 30 a 90 dias, escolha uma área piloto, treine os usuários envolvidos e acompanhe semanalmente onde a adoção trava.",
-  governanca: "Nos próximos 30 a 90 dias, defina regras claras de responsabilidade para uso de IA, incluindo quem aprova, quem acompanha riscos e quando uma decisão precisa de revisão humana.",
-  tecnologia: "Nos próximos 30 a 90 dias, escolha um caso de uso pequeno e conecte-o a um fluxo real de trabalho, medindo uso, ganho operacional e barreiras de adoção.",
 };
 
 function uniquePillars(pillars: Array<InsightPillarId | undefined>): InsightPillarId[] {
@@ -1087,8 +1111,8 @@ export function buildExecutiveSummary({
       safeClientText(EXEC_READINESS_STANCE[result.level] ?? "A leitura da empresa depende dos pontos fortes e fracos identificados no diagnóstico."),
       safeClientText(`A pontuação geral foi ${result.score}/100; o ponto mais forte é ${EXEC_PILLAR_LABEL[strongestPillar]} (${strongest.score}%) e o principal limitador é ${EXEC_PILLAR_LABEL[weakestPillar]} (${weakest.score}%).`),
       scoreGap >= 25
-        ? safeClientText(`Essa diferença mostra uma maturidade desigual: há capacidade para avançar, mas ela não está distribuída de forma consistente pela empresa.`)
-        : safeClientText(`A empresa tem uma base relativamente equilibrada, mas ainda precisa transformar essa base em execução consistente.`),
+        ? safeClientText(`Na prática, a capacidade em ${EXEC_PILLAR_LABEL[strongestPillar]} pode acelerar os primeiros movimentos, enquanto a limitação em ${EXEC_PILLAR_LABEL[weakestPillar]} tende a gerar retrabalho, lentidão ou risco nas iniciativas que dependerem dela.`)
+        : safeClientText(`Como os pilares estão relativamente próximos, o ganho virá menos de corrigir um único ponto e mais de coordenar prioridades, responsáveis e métricas durante a execução.`),
     ],
     risks: riskPillars.map(pillar => safeClientText(EXEC_RISK_TEXT[pillar])),
     opportunity: [
@@ -1096,7 +1120,8 @@ export function buildExecutiveSummary({
       safeClientText(EXEC_OPPORTUNITY_TEXT[opportunityPillar]),
     ],
     immediateRecommendation: [
-      safeClientText(EXEC_RECOMMENDATION_TEXT[opportunityPillar]),
+      safeClientText("Adote Data Foundation como a primeira solução: uma base reutilizável de lake ou warehouse, qualidade, catálogo, acesso e governança para sustentar decisões e produtos de IA."),
+      safeClientText("Ela pode começar imediatamente, sem pré-requisito de maturidade, a partir de um único domínio de negócio com fontes e responsáveis claramente identificados."),
     ],
   };
 }
@@ -1127,10 +1152,8 @@ export function buildQuarterlyRecommendations({
 
   const weakestPillar = toPillarId(weakest.id);
   const strongestPillar = toPillarId(strongest.id);
-  const firstPillar = attention?.pillar ?? weakestPillar;
   const secondPillar = opportunity?.pillar ?? weakestPillar;
   const thirdPillar = strength?.pillar ?? strongestPillar;
-  const firstCopy = QUARTERLY_PILLAR_ACTIONS[firstPillar];
   const secondCopy = QUARTERLY_PILLAR_ACTIONS[secondPillar];
   const thirdCopy = QUARTERLY_PILLAR_ACTIONS[thirdPillar];
 
@@ -1138,12 +1161,14 @@ export function buildQuarterlyRecommendations({
     {
       id: "q1",
       period: "Próximo trimestre",
-      focus: safeClientText(`Estabilizar ${EXEC_PILLAR_LABEL[firstPillar]}`),
-      title: safeClientText(attention?.title ?? firstCopy.stabilizeTitle),
-      action: safeClientText(`Tratar essa frente como prioridade: ${firstCopy.stabilizeAction}.`),
-      outcome: result.blocker
-        ? safeClientText("remover o limitador que impede a empresa de ampliar IA com segurança")
-        : safeClientText(firstCopy.stabilizeOutcome),
+      focus: "Iniciar Data Foundation",
+      title: "Construir a base de dados para IA",
+      action: "Começar agora por um domínio de negócio e estruturar lake ou warehouse, qualidade, catálogo, acesso e governança como uma base reutilizável.",
+      outcome: "dados confiáveis e acessíveis para decisões, automações e modelos futuros",
+      ownerRole: ACTION_META.dados.ownerRole,
+      dependency: "Nenhuma pré-condição de maturidade",
+      effort: "Médio",
+      successMetric: ACTION_META.dados.successMetric,
     },
     {
       id: "q2",
@@ -1152,6 +1177,10 @@ export function buildQuarterlyRecommendations({
       title: safeClientText(opportunity?.title ?? secondCopy.pilotTitle),
       action: safeClientText(`Converter o aprendizado do trimestre anterior em execução: ${secondCopy.pilotAction}.`),
       outcome: safeClientText(secondCopy.pilotOutcome),
+      ownerRole: ACTION_META[secondPillar].ownerRole,
+      dependency: `Conclusão do primeiro trimestre; ${ACTION_META[secondPillar].dependency.toLocaleLowerCase("pt-BR")}`,
+      effort: "Médio",
+      successMetric: ACTION_META[secondPillar].successMetric,
     },
     {
       id: "q3",
@@ -1160,6 +1189,10 @@ export function buildQuarterlyRecommendations({
       title: safeClientText(strength ? `Escalar a partir de ${strength.title}` : thirdCopy.scaleTitle),
       action: safeClientText(`Usar essa base para ampliar a maturidade: ${thirdCopy.scaleAction}.`),
       outcome: safeClientText(thirdCopy.scaleOutcome),
+      ownerRole: ACTION_META[thirdPillar].ownerRole,
+      dependency: `Aprendizados do piloto documentados; ${ACTION_META[thirdPillar].dependency.toLocaleLowerCase("pt-BR")}`,
+      effort: "Alto",
+      successMetric: ACTION_META[thirdPillar].successMetric,
     },
   ];
 }

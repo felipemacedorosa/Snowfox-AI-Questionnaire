@@ -548,7 +548,47 @@ export function isQuestionVisible(q: Question, sectionQuestions: Question[], ans
   return q.showIf.values.includes(parentAnswer);
 }
 
-function getQuestionScore(q: Question, answers: AnswerRecord): number | null {
+export interface SectionProgress {
+  answered: number;
+  total: number;
+  percent: number;
+  complete: boolean;
+}
+
+export function isQuestionAnswered(q: Question, answers: AnswerRecord): boolean {
+  const answer = answers[q.id];
+  if (q.type === "text") return typeof answer === "string" && answer.trim().length > 0;
+  if (q.type === "multi") return Array.isArray(answer) && answer.length > 0;
+  return typeof answer === "number";
+}
+
+export function getSectionProgress(section: Section, answers: AnswerRecord): SectionProgress {
+  const requiredQuestions = section.questions
+    .filter(q => q.type !== "text")
+    .filter(q => isQuestionVisible(q, section.questions, answers));
+  const answered = requiredQuestions.filter(q => isQuestionAnswered(q, answers)).length;
+  const total = requiredQuestions.length;
+  return {
+    answered,
+    total,
+    percent: total === 0 ? 0 : Math.round((answered / total) * 100),
+    complete: total > 0 && answered === total,
+  };
+}
+
+export function getAssessmentProgress(answers: AnswerRecord): SectionProgress {
+  const progress = SECTIONS.map(section => getSectionProgress(section, answers));
+  const answered = progress.reduce((sum, item) => sum + item.answered, 0);
+  const total = progress.reduce((sum, item) => sum + item.total, 0);
+  return {
+    answered,
+    total,
+    percent: total === 0 ? 0 : Math.round((answered / total) * 100),
+    complete: total > 0 && answered === total,
+  };
+}
+
+export function getQuestionScore(q: Question, answers: AnswerRecord): number | null {
   if (q.type === "text") return null;
   const answer = answers[q.id];
   if (answer === undefined || answer === null) return null;
@@ -567,7 +607,7 @@ function getQuestionScore(q: Question, answers: AnswerRecord): number | null {
   return null;
 }
 
-function getQuestionMax(q: Question): number {
+export function getQuestionMax(q: Question): number {
   if (q.type === "single") return Math.max(...q.options.map(o => o.score));
   if (q.type === "multi") return q.options.filter(o => !o.isNone).reduce((sum, o) => sum + o.score, 0);
   return 0;
