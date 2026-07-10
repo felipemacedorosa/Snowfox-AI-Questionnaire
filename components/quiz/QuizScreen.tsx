@@ -442,9 +442,6 @@ function SingleOptions({
             aria-pressed={isSelected}
             title={option.note}
             onClick={() => onSelect(question, option.value)}
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: Math.min(index * 0.035, 0.18), duration: 0.25 }}
             whileTap={{ scale: 0.995 }}
           >
             <span className="option-marker">{index + 1}</span>
@@ -469,7 +466,7 @@ function MultiOptions({
   const selected = Array.isArray(answers[question.id]) ? answers[question.id] as number[] : [];
   return (
     <div className={`options-list${question.options.length >= 4 ? " is-dense" : ""}`} role="group" aria-label={`Opções para: ${question.text}`}>
-      {question.options.map((option, index) => {
+      {question.options.map(option => {
         const isSelected = selected.includes(option.value);
         return (
           <motion.button
@@ -479,9 +476,6 @@ function MultiOptions({
             aria-pressed={isSelected}
             title={option.note}
             onClick={() => onToggle(question, option.value, !!option.isNone)}
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: Math.min(index * 0.035, 0.18), duration: 0.25 }}
             whileTap={{ scale: 0.995 }}
           >
             <span className="option-marker option-marker-check">{isSelected ? <Check size={16} aria-hidden="true" /> : null}</span>

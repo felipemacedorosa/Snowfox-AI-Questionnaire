@@ -219,9 +219,9 @@ img { display: block; max-width: 100%; }
 .options-list.is-dense .option-copy strong { font-size: 12px; }
 .options-list.is-dense .option-copy span { font-size: 10px; line-height: 1.45; }
 .options-list.is-dense .option-state { min-height: 28px; }
-.option-card { position: relative; display: grid; grid-template-columns: 32px minmax(0, 1fr) 20px; align-items: start; gap: 13px; width: 100%; padding: 13px 14px; border: 1px solid #343537; border-radius: 6px; background: #1b1c1e; color: var(--ink-soft); text-align: left; transition: transform 160ms ease, background-color 160ms ease, border-color 160ms ease, box-shadow 160ms ease; }
+.option-card { position: relative; display: grid; grid-template-columns: 32px minmax(0, 1fr) 20px; align-items: start; gap: 13px; width: 100%; padding: 13px 14px; border: 1px solid #343537; border-radius: 6px; background: #1b1c1e; color: var(--ink-soft); text-align: left; transition: transform 160ms ease, background-color 160ms ease, border-color 160ms ease; }
 .option-card:hover { transform: translateX(2px); border-color: #55565a; background: #202123; }
-.option-card.is-selected { border-color: rgba(147,102,233,0.78); background: var(--violet-soft); box-shadow: inset 3px 0 0 var(--violet); }
+.option-card.is-selected { border-color: rgba(147,102,233,0.78); background: var(--violet-soft); }
 .option-card-multi { grid-template-columns: 32px minmax(0, 1fr); }
 .option-marker { display: grid; place-items: center; width: 30px; height: 30px; border: 1px solid var(--border-strong); color: var(--muted); font-family: 'Montserrat', sans-serif; font-size: 12px; }
 .option-card.is-selected .option-marker { border-color: var(--violet); background: var(--violet); color: #fff; }
