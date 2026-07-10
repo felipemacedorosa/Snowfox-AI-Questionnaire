@@ -137,7 +137,7 @@ export function Hero({ onStart }: { onStart: () => void }) {
             animate={{ opacity: 1 }}
             transition={{ duration: 0.5, delay: 0.85 }}
           >
-            Até {SCORED_QUESTION_COUNT} perguntas · 5 pilares ponderados · resultado imediato · sem cadastro
+            Até {SCORED_QUESTION_COUNT} perguntas · 5 pilares avaliados · resultado imediato · sem cadastro
           </motion.p>
         </div>
 

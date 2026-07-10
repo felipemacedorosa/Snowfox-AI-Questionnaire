@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { motion, useReducedMotion } from "motion/react";
-import { PILLAR_CONFIG, SECTIONS } from "@/app/data";
+import { SECTIONS } from "@/app/data";
 import { Button } from "@/components/ui/Button";
 import { EASE_OUT } from "@/lib/motion";
 import { questionCountFor } from "@/components/landing/stats";
@@ -13,7 +13,6 @@ export function PillarIntro({ sectionIndex, onBegin }: {
   onBegin: () => void;
 }) {
   const section = SECTIONS[sectionIndex];
-  const config = PILLAR_CONFIG.find(p => p.id === section.id);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const reduced = useReducedMotion();
 
@@ -84,9 +83,8 @@ export function PillarIntro({ sectionIndex, onBegin }: {
             Começar
             <span className="text-[11px] font-normal opacity-70" aria-hidden="true">↵</span>
           </Button>
-          <span className="flex gap-4 text-[12px] text-[var(--text-dim)]">
-            <span>peso no índice: {Math.round((config?.weight ?? 0) * 100)}%</span>
-            <span>{questionCountFor(section.id)} perguntas</span>
+          <span className="text-[12px] text-[var(--text-dim)]">
+            {questionCountFor(section.id)} perguntas
           </span>
         </motion.div>
       </div>

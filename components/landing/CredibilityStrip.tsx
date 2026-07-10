@@ -8,7 +8,7 @@ import { AVG_MINUTES, PILLAR_COUNT, ROADMAP_QUARTERS, SCORED_QUESTION_COUNT } fr
 
 const STATS = [
   { value: SCORED_QUESTION_COUNT, label: "perguntas objetivas" },
-  { value: PILLAR_COUNT, label: "pilares ponderados" },
+  { value: PILLAR_COUNT, label: "pilares avaliados" },
   { value: ROADMAP_QUARTERS, label: "trimestres de roadmap" },
   { value: AVG_MINUTES, label: "minutos em média" },
 ];

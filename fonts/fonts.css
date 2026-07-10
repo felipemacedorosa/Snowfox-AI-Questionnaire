@@ -112,3 +112,33 @@
                  U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122,
                  U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
 }
+
+/* ── Typo Grotesk demo cut watermarks the period glyph (U+002E) in every
+   weight — serve just that codepoint from Poppins instead. One exact-weight
+   face per cut (a single `400 900` range face makes Chrome prefer it for
+   every codepoint and skip the real faces); declared last so each wins the
+   U+002E overlap for its weight. */
+@font-face {
+  font-family: 'Typo Grotesk';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('poppins-600-latin.woff2') format('woff2');
+  unicode-range: U+002E;
+}
+@font-face {
+  font-family: 'Typo Grotesk';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('poppins-600-latin.woff2') format('woff2');
+  unicode-range: U+002E;
+}
+@font-face {
+  font-family: 'Typo Grotesk';
+  font-style: normal;
+  font-weight: 900;
+  font-display: swap;
+  src: url('poppins-600-latin.woff2') format('woff2');
+  unicode-range: U+002E;
+}

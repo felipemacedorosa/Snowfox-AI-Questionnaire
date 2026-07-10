@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
-import { PILLAR_CONFIG, SECTIONS } from "@/app/data";
+import { SECTIONS } from "@/app/data";
 import { fadeUp, staggerChildren, VIEWPORT_ONCE, EASE_INOUT } from "@/lib/motion";
 import { questionCountFor } from "./stats";
 
@@ -47,7 +47,6 @@ export function PillarShowcase() {
         >
           {SECTIONS.map((sec, i) => {
             const isActive = active === i;
-            const config = PILLAR_CONFIG.find(p => p.id === sec.id);
             return (
               <motion.button
                 key={sec.id}
@@ -84,7 +83,6 @@ export function PillarShowcase() {
                         {sec.desc}
                       </span>
                       <span className="mt-auto pt-6 flex gap-5 text-[12px] text-[var(--text-dim)]">
-                        <span>peso {Math.round((config?.weight ?? 0) * 100)}%</span>
                         <span>{questionCountFor(sec.id)} perguntas</span>
                       </span>
                     </motion.span>
@@ -110,7 +108,6 @@ export function PillarShowcase() {
         <motion.div variants={fadeUp} className="surface-panel mt-10 md:hidden overflow-hidden">
           {SECTIONS.map((sec, i) => {
             const isActive = active === i;
-            const config = PILLAR_CONFIG.find(p => p.id === sec.id);
             return (
               <div key={sec.id} style={{ borderTop: i > 0 ? "1px solid var(--line-1)" : "none" }}>
                 <button
@@ -144,7 +141,6 @@ export function PillarShowcase() {
                       <div className="px-5 pb-5 pl-[52px]">
                         <p className="text-[13.5px] leading-[1.7] text-[var(--text-m)]">{sec.desc}</p>
                         <p className="mt-3 flex gap-5 text-[12px] text-[var(--text-dim)]">
-                          <span>peso {Math.round((config?.weight ?? 0) * 100)}%</span>
                           <span>{questionCountFor(sec.id)} perguntas</span>
                         </p>
                       </div>

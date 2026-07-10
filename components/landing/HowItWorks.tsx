@@ -54,14 +54,15 @@ export function HowItWorks() {
 
         <motion.div
           ref={listRef}
-          className="relative pl-10"
+          className="relative"
           initial="hidden"
           whileInView="visible"
           viewport={VIEWPORT_ONCE}
           variants={staggerChildren(0.09)}
         >
-          {/* Connector line draws with scroll */}
-          <div className="absolute left-[11px] top-2 bottom-2 w-[2px] bg-[var(--line-1)]" aria-hidden="true">
+          {/* Connector line draws with scroll — sits in the gap between the
+              numeral column and the copy, never through the numerals */}
+          <div className="absolute left-[47px] top-2 bottom-2 w-[2px] bg-[var(--line-1)]" aria-hidden="true">
             <motion.div
               className="w-full h-full origin-top"
               style={{ scaleY: scrollYProgress, background: "var(--violet-500)" }}
@@ -72,22 +73,27 @@ export function HowItWorks() {
             <motion.div
               key={step.title}
               variants={fadeUp}
-              className="relative py-8"
-              style={{ borderBottom: i < STEPS.length - 1 ? "1px solid var(--line-1)" : "none" }}
+              className="grid gap-x-9 py-8"
+              style={{
+                gridTemplateColumns: "30px 1fr",
+                borderBottom: i < STEPS.length - 1 ? "1px solid var(--line-1)" : "none",
+              }}
             >
               <span
-                className="absolute -left-10 top-8 font-display font-bold text-[26px] leading-none"
+                className="font-display font-bold text-[24px] leading-none text-right pt-0.5"
                 style={{ color: "rgba(167,139,250,0.5)" }}
                 aria-hidden="true"
               >
                 {i + 1}
               </span>
-              <h3 className="font-display font-bold text-[20px] text-white tracking-[-0.01em]">
-                {step.title}
-              </h3>
-              <p className="mt-2 max-w-[560px] text-[14px] leading-[1.7] text-[var(--text-m)]">
-                {step.body}
-              </p>
+              <div>
+                <h3 className="font-display font-bold text-[20px] text-white tracking-[-0.01em]">
+                  {step.title}
+                </h3>
+                <p className="mt-2 max-w-[560px] text-[14px] leading-[1.7] text-[var(--text-m)]">
+                  {step.body}
+                </p>
+              </div>
             </motion.div>
           ))}
         </motion.div>
