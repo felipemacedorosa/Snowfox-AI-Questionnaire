@@ -1,85 +1,230 @@
 "use client";
 
-import { useState, useCallback } from "react";
-import { BeamsBackground } from "@/components/ui/beams-background";
-import { Navbar } from "@/components/Navbar";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { LandingScreen } from "@/components/landing/LandingScreen";
+import { Navbar, type AppScreen, type SaveState } from "@/components/Navbar";
 import { QuizScreen } from "@/components/quiz/QuizScreen";
 import { ResultsScreen } from "@/components/results/ResultsScreen";
-import { SECTIONS, AnswerRecord, clearDependentAnswers } from "./data";
+import { AnswerRecord, SECTIONS, clearDependentAnswers } from "./data";
 
-type Screen = "quiz" | "results";
+const STORAGE_KEY = "snowfox-ai-assessment-v1";
+
+interface AssessmentDraft {
+  version: 1;
+  screen: AppScreen;
+  resumeScreen?: "quiz" | "results" | null;
+  section: number;
+  answers: AnswerRecord;
+  updatedAt: string;
+}
+
+function isAnswerRecord(value: unknown): value is AnswerRecord {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  return Object.values(value as Record<string, unknown>).every(item =>
+    typeof item === "number" ||
+    typeof item === "string" ||
+    (Array.isArray(item) && item.every(entry => typeof entry === "number"))
+  );
+}
+
+function isAssessmentDraft(value: unknown): value is AssessmentDraft {
+  if (!value || typeof value !== "object") return false;
+  const draft = value as Partial<AssessmentDraft>;
+  return draft.version === 1 &&
+    (draft.screen === "landing" || draft.screen === "quiz" || draft.screen === "results") &&
+    typeof draft.section === "number" &&
+    isAnswerRecord(draft.answers);
+}
+
+function clampSection(section: number) {
+  return Math.min(Math.max(Math.round(section), 0), SECTIONS.length - 1);
+}
 
 export default function Home() {
-  const [screen, setScreen] = useState<Screen>("quiz");
+  const [screen, setScreen] = useState<AppScreen>("landing");
   const [section, setSection] = useState(0);
   const [answers, setAnswers] = useState<AnswerRecord>({});
+  const [hydrated, setHydrated] = useState(false);
+  const [saveState, setSaveState] = useState<SaveState>("idle");
+  const [resumeScreen, setResumeScreen] = useState<"quiz" | "results" | null>(null);
 
-  const handleAnswer = useCallback((qid: string, val: number | number[] | string | -1) => {
-    setAnswers(prev => {
-      if (val === -1) {
-        const next = clearDependentAnswers(qid, prev);
-        delete next[qid];
-        return next;
+  const draftExists = useMemo(
+    () => resumeScreen !== null || Object.keys(answers).length > 0 || screen === "results",
+    [answers, resumeScreen, screen]
+  );
+
+  useEffect(() => {
+    try {
+      const raw = window.localStorage.getItem(STORAGE_KEY);
+      if (raw) {
+        const parsed: unknown = JSON.parse(raw);
+        if (isAssessmentDraft(parsed)) {
+          setScreen(parsed.screen);
+          setSection(clampSection(parsed.section));
+          setAnswers(parsed.answers);
+          setResumeScreen(parsed.resumeScreen ?? (parsed.screen === "results" ? "results" : Object.keys(parsed.answers).length > 0 ? "quiz" : null));
+        }
       }
-      const next = clearDependentAnswers(qid, prev);
-      next[qid] = val as number | number[] | string;
+    } catch {
+      setSaveState("unavailable");
+    } finally {
+      setHydrated(true);
+    }
+  }, []);
+
+  const buildDraft = useCallback((): AssessmentDraft => ({
+    version: 1,
+    screen,
+    resumeScreen,
+    section,
+    answers,
+    updatedAt: new Date().toISOString(),
+  }), [answers, resumeScreen, screen, section]);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    setSaveState(current => current === "unavailable" ? current : "saving");
+    const timeout = window.setTimeout(() => {
+      try {
+        window.localStorage.setItem(STORAGE_KEY, JSON.stringify(buildDraft()));
+        setSaveState("saved");
+      } catch {
+        setSaveState("unavailable");
+      }
+    }, 180);
+    return () => window.clearTimeout(timeout);
+  }, [answers, buildDraft, hydrated, resumeScreen, screen, section]);
+
+  const persistNow = useCallback(() => {
+    try {
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(buildDraft()));
+      setSaveState("saved");
+    } catch {
+      setSaveState("unavailable");
+    }
+  }, [buildDraft]);
+
+  const scrollToTop = useCallback(() => {
+    const root = document.documentElement;
+    const previousBehavior = root.style.scrollBehavior;
+    root.style.scrollBehavior = "auto";
+    root.scrollTop = 0;
+    document.body.scrollTop = 0;
+    window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+    root.style.scrollBehavior = previousBehavior;
+  }, []);
+
+  useEffect(() => {
+    const root = document.documentElement;
+    const previousBehavior = root.style.scrollBehavior;
+    root.style.scrollBehavior = "auto";
+    root.scrollTop = 0;
+    document.body.scrollTop = 0;
+    window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+    root.style.scrollBehavior = previousBehavior;
+  }, [screen, section]);
+
+  const goTo = useCallback((nextScreen: AppScreen) => {
+    if (nextScreen === "quiz") setResumeScreen("quiz");
+    if (nextScreen === "results") setResumeScreen("results");
+    setScreen(nextScreen);
+    scrollToTop();
+  }, [scrollToTop]);
+
+  const handleAnswer = useCallback((qid: string, value: number | number[] | string | -1) => {
+    setResumeScreen("quiz");
+    setAnswers(previous => {
+      const next = clearDependentAnswers(qid, previous);
+      if (value === -1) {
+        delete next[qid];
+      } else {
+        next[qid] = value;
+      }
       return next;
     });
   }, []);
 
-  function goTo(s: Screen) {
-    window.scrollTo({ top: 0, behavior: "smooth" });
-    setScreen(s);
+  const startFresh = useCallback(() => {
+    setResumeScreen("quiz");
+    setAnswers({});
+    setSection(0);
+    goTo("quiz");
+  }, [goTo]);
+
+  const restart = useCallback(() => {
+    setResumeScreen(null);
+    setAnswers({});
+    setSection(0);
+    try {
+      window.localStorage.removeItem(STORAGE_KEY);
+      setSaveState("idle");
+    } catch {
+      setSaveState("unavailable");
+    }
+    goTo("landing");
+  }, [goTo]);
+
+  if (!hydrated) {
+    return <div className="loading-screen" aria-label="Carregando avaliação" />;
   }
 
+  const sectionLabel = SECTIONS[section]?.title ?? "Avaliação";
+
   return (
-    <>
-      <div
-        aria-hidden="true"
-        style={{ position: "fixed", inset: 0, zIndex: 0, overflow: "hidden", pointerEvents: "none" }}
-      >
-        <BeamsBackground intensity="strong" />
-      </div>
+    <div className="app-shell">
+      <Navbar
+        screen={screen}
+        sectionLabel={sectionLabel}
+        saveState={saveState}
+        onSave={persistNow}
+        onNavigate={goTo}
+      />
 
-      <div className="relative min-h-screen" style={{ zIndex: 10 }}>
-        <Navbar screen={screen} onSave={() => {}} />
+      <main className="page-content">
+        {screen === "landing" && (
+          <LandingScreen
+            hasDraft={draftExists}
+            savedScreen={resumeScreen}
+            savedSection={section}
+            onStart={startFresh}
+            onResume={() => goTo(resumeScreen === "results" ? "results" : "quiz")}
+            onReset={restart}
+          />
+        )}
 
-        <div className="flex justify-center pt-16">
-          <div className="w-full px-5 py-9 pb-[72px]" style={{ maxWidth: "1100px" }}>
+        {screen === "quiz" && (
+          <QuizScreen
+            section={section}
+            answers={answers}
+            saveState={saveState}
+            onAnswer={handleAnswer}
+            onSectionSelect={nextSection => {
+              setSection(nextSection);
+              scrollToTop();
+            }}
+            onBack={() => {
+              if (section === 0) {
+                goTo("landing");
+                return;
+              }
+              setSection(current => current - 1);
+              scrollToTop();
+            }}
+            onNext={() => {
+              if (section === SECTIONS.length - 1) {
+                goTo("results");
+                return;
+              }
+              setSection(current => current + 1);
+              scrollToTop();
+            }}
+          />
+        )}
 
-            {screen === "quiz" && (
-              <QuizScreen
-                key={section}
-                section={section}
-                answers={answers}
-                onAnswer={handleAnswer}
-                onBack={() => {
-                  if (section === 0) return;
-                  window.scrollTo({ top: 0, behavior: "smooth" });
-                  setSection(s => s - 1);
-                }}
-                onNext={() => {
-                  if (section === SECTIONS.length - 1) { goTo("results"); return; }
-                  window.scrollTo({ top: 0, behavior: "smooth" });
-                  setSection(s => s + 1);
-                }}
-              />
-            )}
-
-            {screen === "results" && (
-              <ResultsScreen
-                answers={answers}
-                onRestart={() => {
-                  setAnswers({});
-                  setSection(0);
-                  goTo("quiz");
-                }}
-              />
-            )}
-
-          </div>
-        </div>
-      </div>
-    </>
+        {screen === "results" && (
+          <ResultsScreen answers={answers} onRestart={restart} />
+        )}
+      </main>
+    </div>
   );
 }

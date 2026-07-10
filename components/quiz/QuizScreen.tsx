@@ -1,35 +1,51 @@
 "use client";
 
 import {
-  SECTIONS, AnswerRecord, Question, SingleQuestion, MultiQuestion, TextQuestion,
+  Check,
+  ChevronRight,
+  Circle,
+  FileText,
+  LockKeyhole,
+  Save,
+  Square,
+} from "lucide-react";
+import { motion } from "motion/react";
+import {
+  AnswerRecord,
+  getAssessmentProgress,
+  getSectionProgress,
   isQuestionVisible,
+  SECTIONS,
+  Question,
+  SingleQuestion,
+  MultiQuestion,
+  TextQuestion,
 } from "@/app/data";
 import { NavBtn } from "@/components/NavBtn";
+import type { SaveState } from "@/components/Navbar";
 
-export function QuizScreen({ section, answers, onAnswer, onBack, onNext }: {
+export function QuizScreen({
+  section,
+  answers,
+  saveState,
+  onAnswer,
+  onSectionSelect,
+  onBack,
+  onNext,
+}: {
   section: number;
   answers: AnswerRecord;
+  saveState: SaveState;
   onAnswer: (qid: string, val: number | number[] | string | -1) => void;
+  onSectionSelect: (section: number) => void;
   onBack: () => void;
   onNext: () => void;
 }) {
   const sec = SECTIONS[section];
   const isLast = section === SECTIONS.length - 1;
-
   const visibleQs = sec.questions.filter(q => isQuestionVisible(q, sec.questions, answers));
-
-  const answeredTotal = Object.keys(answers).filter(k => {
-    const v = answers[k];
-    return typeof v === "number" || (Array.isArray(v) && (v as number[]).length > 0);
-  }).length;
-
-  const sectionDone = visibleQs
-    .filter(q => q.type !== "text")
-    .every(q => {
-      const ans = answers[q.id];
-      if (q.type === "multi") return Array.isArray(ans) && (ans as number[]).length > 0;
-      return typeof ans === "number";
-    });
+  const sectionProgress = getSectionProgress(sec, answers);
+  const assessmentProgress = getAssessmentProgress(answers);
 
   function handleMultiToggle(q: MultiQuestion, optValue: number, isNone: boolean) {
     const current = Array.isArray(answers[q.id]) ? (answers[q.id] as number[]) : [];
@@ -47,67 +63,106 @@ export function QuizScreen({ section, answers, onAnswer, onBack, onNext }: {
   }
 
   return (
-    <div>
-      <div className="glass-card">
-        {/* Progress */}
-        <div className="mb-9" role="status" aria-live="polite"
-          aria-label={`Progresso: Pilar ${sec.pillar} de ${SECTIONS.length}, ${answeredTotal} perguntas respondidas`}>
-          <div className="flex gap-[5px] mb-3.5">
-            {SECTIONS.map((_, i) => (
-              <div key={i} className={`progress-seg${i < section ? " done" : i === section ? " active" : ""}`} role="presentation" />
-            ))}
+    <div className="quiz-layout page-frame" id="assessment-navigation">
+      <aside className="assessment-rail" aria-label="Navegação da avaliação">
+        <div className="rail-heading">
+          <div>
+            <span className="section-kicker"><span className="kicker-line" /> Rota da avaliação</span>
+            <strong>5 dimensões</strong>
           </div>
-          <div className="flex items-center justify-between gap-3">
-            <span className="text-[13px] font-semibold" style={{ color: "var(--text-m)" }}>
-              Pilar {sec.pillar} / {SECTIONS.length} — {sec.title}
-            </span>
-            <span className="text-[12px] whitespace-nowrap" style={{ color: "rgba(190,175,245,0.50)" }}>
-              {answeredTotal} respondidas
-            </span>
-          </div>
+          <motion.span key={assessmentProgress.percent} className="rail-total" initial={{ opacity: 0.35, y: 5 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.22 }}>{assessmentProgress.percent}%</motion.span>
+        </div>
+        <div className="rail-progress" aria-hidden="true"><span style={{ width: `${assessmentProgress.percent}%` }} /></div>
+        <ol className="section-list">
+          {SECTIONS.map((item, index) => {
+            const progress = getSectionProgress(item, answers);
+            const isCurrent = index === section;
+            return (
+              <li key={item.id}>
+                <button
+                  type="button"
+                  className={`section-item${isCurrent ? " is-current" : ""}${progress.complete ? " is-complete" : ""}`}
+                  onClick={() => onSectionSelect(index)}
+                  aria-current={isCurrent ? "step" : undefined}
+                >
+                  <span className="section-item-number">{progress.complete ? <Check size={14} aria-hidden="true" /> : `0${index + 1}`}</span>
+                  <span className="section-item-copy"><strong>{item.title}</strong><small>{progress.answered}/{progress.total} respondidas</small></span>
+                  <ChevronRight size={15} aria-hidden="true" />
+                </button>
+              </li>
+            );
+          })}
+        </ol>
+        <div className="rail-footer">
+          <LockKeyhole size={15} aria-hidden="true" />
+          <span>Suas respostas ficam neste dispositivo.</span>
+        </div>
+      </aside>
+
+      <motion.main key={sec.id} className="question-panel" aria-labelledby="questionnaire-title" initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.38, ease: [0.22, 1, 0.36, 1] }}>
+        <div className="question-panel-topline">
+          <span>Pilar {sec.pillar} de {SECTIONS.length}</span>
+          <span className={`save-state save-state-${saveState}`} aria-live="polite">
+            <Save size={13} aria-hidden="true" />
+            {saveState === "unavailable" ? "Sessão local" : saveState === "saving" ? "Salvando..." : saveState === "saved" ? "Salvo agora" : "Pronto para salvar"}
+          </span>
         </div>
 
-        {/* Section header */}
-        <div className="pb-7 mb-9" style={{ borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
-          <p className="text-[12px] font-bold tracking-[0.12em] uppercase mb-2.5" style={{ color: "rgba(167,139,250,0.65)" }}>
-            Pilar {sec.pillar} de {SECTIONS.length}
-          </p>
-          <h2 className="text-[clamp(22px,4vw,30px)] font-bold leading-[1.25] mb-2.5">
-            <span style={{ color: "#ffffff" }}>{sec.title}</span>
-          </h2>
-          <p className="text-[14px] leading-[1.65]" style={{ color: "var(--text-m)" }}>{sec.desc}</p>
-        </div>
+        <header className="question-header">
+          <div className="question-header-meta">
+            <span className="section-kicker"><span className="kicker-line" /> Dimensão {String(sec.pillar).padStart(2, "0")}</span>
+            <span>{sectionProgress.answered} de {sectionProgress.total} respondidas</span>
+          </div>
+          <h1 id="questionnaire-title">{sec.title}</h1>
+          <p>{sec.desc}</p>
+          <div className="section-progress-track" aria-label={`${sectionProgress.percent}% da dimensão concluída`}>
+            <span style={{ width: `${sectionProgress.percent}%` }} />
+          </div>
+        </header>
 
-        {/* Questions */}
-        <div className="flex flex-col">
-          {visibleQs.map((q, qi) => (
-            <div key={q.id} className="py-7 first:pt-0 last:pb-0"
-              style={{ borderBottom: qi < visibleQs.length - 1 ? "1px solid rgba(255,255,255,0.06)" : "none" }}>
-              <p className="text-[10.5px] font-bold tracking-[0.10em] uppercase mb-2.5" style={{ color: "rgba(167,139,250,0.48)" }}>
-                Pergunta {qi + 1} de {visibleQs.length}
-              </p>
-              <p className="text-[16px] font-medium leading-[1.65] mb-[22px]" style={{ color: "var(--text-h)" }}>{q.text}</p>
-
-              {q.type === "single" && <SingleOptions q={q as SingleQuestion} answers={answers} onAnswer={onAnswer} />}
-              {q.type === "multi"  && <MultiOptions  q={q as MultiQuestion}  answers={answers} onToggle={handleMultiToggle} />}
-              {q.type === "text"   && <TextInput     q={q as TextQuestion}   answers={answers} onAnswer={onAnswer} />}
-            </div>
+        <div className="question-list">
+          {visibleQs.map((q, questionIndex) => (
+            <QuestionBlock key={q.id} question={q} index={questionIndex} total={visibleQs.length} answers={answers} onAnswer={onAnswer} onMultiToggle={handleMultiToggle} />
           ))}
         </div>
 
-        {/* Navigation */}
-        <div className="flex items-center justify-between gap-4 pt-8 mt-8" style={{ borderTop: "1px solid rgba(255,255,255,0.07)" }}>
-          {section > 0 ? <NavBtn variant="back" onClick={onBack}>Voltar</NavBtn> : <span />}
-          <span className={`text-[12px] flex-1 text-center${sectionDone ? " text-[rgba(110,231,183,0.80)]" : ""}`}
-            style={{ color: sectionDone ? undefined : "rgba(190,175,245,0.50)" }}>
-            {sectionDone ? "Todas as perguntas respondidas — pronto para continuar" : "Responda todas as perguntas para continuar"}
-          </span>
-          <NavBtn variant="next" disabled={!sectionDone} onClick={onNext}>
-            {isLast ? "Concluir Avaliação" : "Próxima Seção"}
-          </NavBtn>
-        </div>
-      </div>
+        <footer className="question-footer">
+          <div className="question-footer-status" aria-live="polite">
+            {sectionProgress.complete ? <><Check size={16} aria-hidden="true" /> Dimensão concluída</> : <><Circle size={13} aria-hidden="true" /> Responda as perguntas obrigatórias para continuar</>}
+          </div>
+          <div className="question-footer-actions">
+            <NavBtn variant="back" onClick={onBack}>{section === 0 ? "Início" : "Voltar"}</NavBtn>
+            <NavBtn variant="next" disabled={!sectionProgress.complete} onClick={onNext}>{isLast ? "Ver resultado" : "Próxima dimensão"}</NavBtn>
+          </div>
+        </footer>
+      </motion.main>
     </div>
+  );
+}
+
+function QuestionBlock({
+  question,
+  index,
+  total,
+  answers,
+  onAnswer,
+  onMultiToggle,
+}: {
+  question: Question;
+  index: number;
+  total: number;
+  answers: AnswerRecord;
+  onAnswer: (qid: string, val: number | number[] | string | -1) => void;
+  onMultiToggle: (q: MultiQuestion, value: number, isNone: boolean) => void;
+}) {
+  return (
+    <motion.article className="question-block" id={`question-${question.id}`} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: Math.min(index * 0.045, 0.28), duration: 0.32 }}>
+      <div className="question-number">Pergunta {String(index + 1).padStart(2, "0")} <span>/ {String(total).padStart(2, "0")}</span></div>
+      <h2>{question.text}</h2>
+      {question.type === "single" && <SingleOptions q={question} answers={answers} onAnswer={onAnswer} />}
+      {question.type === "multi" && <MultiOptions q={question} answers={answers} onToggle={onMultiToggle} />}
+      {question.type === "text" && <TextInput q={question} answers={answers} onAnswer={onAnswer} />}
+    </motion.article>
   );
 }
 
@@ -116,35 +171,17 @@ function SingleOptions({ q, answers, onAnswer }: {
   answers: AnswerRecord;
   onAnswer: (qid: string, val: number | -1) => void;
 }) {
-  const selected = typeof answers[q.id] === "number" ? (answers[q.id] as number) : undefined;
+  const selected = typeof answers[q.id] === "number" ? answers[q.id] as number : undefined;
   return (
-    <div className="flex flex-col gap-2" role="group" aria-label={`Opções para: ${q.text}`}>
-      {q.options.map(opt => {
-        const isSel = selected === opt.value;
+    <div className="options-list" role="group" aria-label={`Opções para: ${q.text}`}>
+      {q.options.map(option => {
+        const isSelected = selected === option.value;
         return (
-          <button
-            key={opt.value}
-            type="button"
-            className={`option-card${isSel ? " selected" : ""}`}
-            aria-pressed={isSel}
-            onClick={() => onAnswer(q.id, isSel ? -1 : opt.value)}
-            style={opt.note ? { alignItems: "flex-start" } : undefined}
-          >
-            <span className="flex-shrink-0 w-[30px] h-[30px] rounded-[8px] flex items-center justify-center text-[13px] font-bold transition-all"
-              style={isSel
-                ? { background: "var(--grad)", border: "1px solid transparent", color: "#fff" }
-                : { background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.09)", color: "rgba(190,175,245,0.50)" }}>
-              {opt.value}
-            </span>
-            <span className="flex-1 min-w-0">
-              <span className="block text-[13px] font-semibold leading-[1.5] transition-colors"
-                style={{ color: isSel ? "var(--text-h)" : "var(--text-m)" }}>{opt.label}</span>
-              {opt.note && (
-                <span className="block text-[12px] leading-[1.5] mt-1 transition-colors"
-                  style={{ color: isSel ? "rgba(210,198,255,0.62)" : "rgba(190,175,245,0.42)" }}>{opt.note}</span>
-              )}
-            </span>
-          </button>
+          <motion.button key={option.value} type="button" className={`option-card${isSelected ? " is-selected" : ""}`} aria-pressed={isSelected} onClick={() => onAnswer(q.id, isSelected ? -1 : option.value)} whileTap={{ scale: 0.995 }} transition={{ duration: 0.12 }}>
+            <span className="option-marker">{isSelected ? <Check size={16} aria-hidden="true" /> : option.value}</span>
+            <span className="option-copy"><strong>{option.label}</strong>{option.note && <span>{option.note}</span>}</span>
+            <span className="option-state" aria-hidden="true">{isSelected ? <Check size={15} /> : <Circle size={15} />}</span>
+          </motion.button>
         );
       })}
     </div>
@@ -154,45 +191,19 @@ function SingleOptions({ q, answers, onAnswer }: {
 function MultiOptions({ q, answers, onToggle }: {
   q: MultiQuestion;
   answers: AnswerRecord;
-  onToggle: (q: MultiQuestion, val: number, isNone: boolean) => void;
+  onToggle: (q: MultiQuestion, value: number, isNone: boolean) => void;
 }) {
-  const selected = Array.isArray(answers[q.id]) ? (answers[q.id] as number[]) : [];
+  const selected = Array.isArray(answers[q.id]) ? answers[q.id] as number[] : [];
   return (
-    <div className="flex flex-col gap-2" role="group" aria-label={`Opções para: ${q.text}`}>
-      {q.options.map(opt => {
-        const isSel = selected.includes(opt.value);
+    <div className="options-list" role="group" aria-label={`Opções para: ${q.text}`}>
+      {q.options.map(option => {
+        const isSelected = selected.includes(option.value);
         return (
-          <button
-            key={opt.value}
-            type="button"
-            className={`option-card${isSel ? " selected" : ""}`}
-            aria-pressed={isSel}
-            onClick={() => onToggle(q, opt.value, !!opt.isNone)}
-            style={opt.note ? { alignItems: "flex-start" } : undefined}
-          >
-            <span className="flex-shrink-0 w-[30px] h-[30px] rounded-[8px] flex items-center justify-center transition-all"
-              style={isSel
-                ? { background: "var(--grad)", border: "1px solid transparent" }
-                : { background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.09)" }}>
-              {isSel ? (
-                <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                  <path d="M3 8l3.5 3.5L13 4.5" />
-                </svg>
-              ) : (
-                <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="rgba(190,175,245,0.50)" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
-                  <rect x="2" y="2" width="12" height="12" rx="2" />
-                </svg>
-              )}
-            </span>
-            <span className="flex-1 min-w-0">
-              <span className="block text-[13px] font-semibold leading-[1.5] transition-colors"
-                style={{ color: isSel ? "var(--text-h)" : "var(--text-m)" }}>{opt.label}</span>
-              {opt.note && (
-                <span className="block text-[12px] leading-[1.5] mt-1 transition-colors"
-                  style={{ color: isSel ? "rgba(210,198,255,0.62)" : "rgba(190,175,245,0.42)" }}>{opt.note}</span>
-              )}
-            </span>
-          </button>
+          <motion.button key={option.value} type="button" className={`option-card${isSelected ? " is-selected" : ""}`} aria-pressed={isSelected} onClick={() => onToggle(q, option.value, !!option.isNone)} whileTap={{ scale: 0.995 }} transition={{ duration: 0.12 }}>
+            <span className="option-marker option-marker-check">{isSelected ? <Check size={16} aria-hidden="true" /> : <Square size={15} aria-hidden="true" />}</span>
+            <span className="option-copy"><strong>{option.label}</strong>{option.note && <span>{option.note}</span>}</span>
+            <span className="option-state" aria-hidden="true">{isSelected ? <Check size={15} /> : null}</span>
+          </motion.button>
         );
       })}
     </div>
@@ -204,28 +215,18 @@ function TextInput({ q, answers, onAnswer }: {
   answers: AnswerRecord;
   onAnswer: (qid: string, val: string) => void;
 }) {
-  const value = typeof answers[q.id] === "string" ? (answers[q.id] as string) : "";
+  const value = typeof answers[q.id] === "string" ? answers[q.id] as string : "";
   return (
-    <div>
+    <div className="text-answer">
+      <div className="text-answer-label"><FileText size={15} aria-hidden="true" /> Contexto adicional</div>
       <textarea
-        className="w-full rounded-[10px] px-4 py-3 text-[13px] leading-[1.65] resize-none transition-all"
-        style={{
-          background: "rgba(255,255,255,0.05)",
-          border: "1px solid rgba(255,255,255,0.10)",
-          color: "var(--text-h)",
-          fontFamily: "Poppins, sans-serif",
-          minHeight: 100,
-          outline: "none",
-        }}
+        className="text-input"
         placeholder={q.placeholder ?? "Digite sua resposta..."}
         value={value}
-        onChange={e => onAnswer(q.id, e.target.value)}
-        onFocus={e => { (e.currentTarget as HTMLElement).style.borderColor = "rgba(167,139,250,0.50)"; }}
-        onBlur={e => { (e.currentTarget as HTMLElement).style.borderColor = "rgba(255,255,255,0.10)"; }}
+        onChange={event => onAnswer(q.id, event.target.value)}
+        rows={4}
       />
-      <p className="text-[11px] mt-1.5" style={{ color: "rgba(190,175,245,0.40)" }}>
-        Opcional — sua resposta é salva mas não afeta a pontuação.
-      </p>
+      <p>Opcional — sua resposta fica salva, mas não afeta a pontuação.</p>
     </div>
   );
 }

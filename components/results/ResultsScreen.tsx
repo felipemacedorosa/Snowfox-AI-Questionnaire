@@ -1,233 +1,308 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import {
-  AnswerRecord, LEVEL_META, RECOMMENDATIONS,
-  calculatePillarScores, calculateOverallScore, applyBlockerRules, getPillarTier,
+  ChevronDown,
+  Database,
+  Download,
+  ExternalLink,
+  RotateCcw,
+  TrendingDown,
+} from "lucide-react";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
+import {
+  AnswerRecord,
+  applyBlockerRules,
+  calculateOverallScore,
+  calculatePillarScores,
+  LEVEL_META,
 } from "@/app/data";
-import { PillarBar } from "@/components/results/PillarBar";
-import { InsightsSection, insightSectionCount } from "@/components/results/InsightsSection";
-import { buildExecutiveSummary, buildQuarterlyRecommendations } from "@/app/resultInsights";
+import {
+  buildQuestionEvidence,
+  getCriticalPath,
+  getNextLevelTarget,
+  getOpportunityTracks,
+  getReadinessProfile,
+  getRiskSignals,
+} from "@/app/resultAnalysis";
+import {
+  buildExecutiveSummary,
+  buildQuarterlyRecommendations,
+  InsightPillarId,
+  QuarterlyRecommendation,
+} from "@/app/resultInsights";
+import {
+  CriticalPathSection,
+  OpportunityLibrarySection,
+  PillarDeepDiveSection,
+  RiskViewSection,
+} from "@/components/results/DeepResultSections";
+import { ReportChapter, ReportNavigation } from "@/components/results/ReportNavigation";
+import { ReadinessNetwork } from "@/components/ui/ReadinessNetwork";
 
 const BASE = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
+const CONTACT_URL = process.env.NEXT_PUBLIC_CONTACT_URL ?? "https://snowfox-ai.com";
 
-export function ResultsScreen({ answers, onRestart }: {
-  answers: AnswerRecord;
-  onRestart: () => void;
-}) {
-  const scoreNumRef = useRef<HTMLSpanElement>(null);
-  const barRef = useRef<HTMLDivElement>(null);
+const REPORT_CHAPTERS: ReportChapter[] = [
+  { id: "summary", number: "01", label: "Resumo" },
+  { id: "system-map", number: "02", label: "Sistema" },
+  { id: "critical-path", number: "03", label: "Caminho crítico" },
+  { id: "risks", number: "04", label: "Riscos" },
+  { id: "pillars", number: "05", label: "Dimensões" },
+  { id: "opportunities", number: "06", label: "Oportunidades" },
+  { id: "action-plan", number: "07", label: "Plano de ação" },
+];
 
-  const pillarScores = calculatePillarScores(answers);
-  const overallScore = calculateOverallScore(answers);
-  const result = applyBlockerRules(overallScore, pillarScores);
-  const strongest = pillarScores.reduce((a, b) => b.score > a.score ? b : a);
-  const weakest = pillarScores.reduce((a, b) => b.score < a.score ? b : a);
-  const rec = RECOMMENDATIONS[weakest.id] || "";
-  const insightSections = insightSectionCount(answers, pillarScores);
-  const actionStepNumber = String(4 + insightSections).padStart(2, "0");
+const reveal = {
+  initial: { opacity: 0, y: 18 },
+  whileInView: { opacity: 1, y: 0 },
+  viewport: { once: true, amount: 0.14 },
+  transition: { duration: 0.42 },
+};
+
+function RoadmapDetailContent({ item }: { item: QuarterlyRecommendation }) {
+  return (
+    <>
+      <div className="roadmap-action-copy"><p>{item.action}</p><p><strong>Resultado esperado:</strong> {item.outcome}.</p></div>
+      <dl className="roadmap-action-meta">
+        <div><dt>Responsável sugerido</dt><dd>{item.ownerRole}</dd></div>
+        <div><dt>Esforço</dt><dd>{item.effort}</dd></div>
+        <div><dt>Dependência</dt><dd>{item.dependency}</dd></div>
+        <div><dt>Medida de sucesso</dt><dd>{item.successMetric}</dd></div>
+      </dl>
+    </>
+  );
+}
+
+export function ResultsScreen({ answers, onRestart }: { answers: AnswerRecord; onRestart: () => void }) {
+  const [displayScore, setDisplayScore] = useState(0);
+  const [activePillarId, setActivePillarId] = useState<InsightPillarId | "">("");
+  const [expandedRoadmap, setExpandedRoadmap] = useState("q1");
+  const prefersReducedMotion = useReducedMotion();
+  const revealMotion = prefersReducedMotion ? { initial: false as const } : reveal;
+
+  const pillarScores = useMemo(() => calculatePillarScores(answers), [answers]);
+  const overallScore = useMemo(() => calculateOverallScore(answers), [answers]);
+  const result = useMemo(() => applyBlockerRules(overallScore, pillarScores), [overallScore, pillarScores]);
+  const strongest = pillarScores.reduce((current, item) => item.score > current.score ? item : current);
+  const weakest = pillarScores.reduce((current, item) => item.score < current.score ? item : current);
+  const selectedPillarId = activePillarId || weakest.id as InsightPillarId;
   const meta = LEVEL_META[result.level];
-  const executiveSummary = buildExecutiveSummary({ answers, pillarScores, result, strongest, weakest });
-  const quarterlyRecommendations = buildQuarterlyRecommendations({ answers, pillarScores, result, strongest, weakest });
-  const dateStr = new Date().toLocaleDateString("pt-BR", { month: "long", day: "numeric", year: "numeric" });
+  const executiveSummary = useMemo(
+    () => buildExecutiveSummary({ answers, pillarScores, result, strongest, weakest }),
+    [answers, pillarScores, result, strongest, weakest]
+  );
+  const quarterlyRecommendations = useMemo(
+    () => buildQuarterlyRecommendations({ answers, pillarScores, result, strongest, weakest }),
+    [answers, pillarScores, result, strongest, weakest]
+  );
+  const evidence = useMemo(() => buildQuestionEvidence(answers), [answers]);
+  const profile = useMemo(() => getReadinessProfile(pillarScores, result), [pillarScores, result]);
+  const criticalPath = useMemo(() => getCriticalPath(answers, pillarScores, result), [answers, pillarScores, result]);
+  const nextLevel = useMemo(() => getNextLevelTarget(result), [result]);
+  const riskSignals = useMemo(() => getRiskSignals(answers, pillarScores), [answers, pillarScores]);
+  const opportunityTracks = useMemo(() => getOpportunityTracks(answers, pillarScores), [answers, pillarScores]);
+  const dateStr = useMemo(
+    () => new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "long", year: "numeric" }).format(new Date()),
+    []
+  );
 
   useEffect(() => {
-    const el = scoreNumRef.current;
-    const bar = barRef.current;
-    if (!el) return;
-    const duration = 1100;
-    let start: number | null = null;
-    function step(ts: number) {
-      if (!start) start = ts;
-      const t = Math.min((ts - start) / duration, 1);
-      const ease = 1 - Math.pow(1 - t, 3);
-      el!.textContent = String(Math.round(ease * overallScore));
-      if (t < 1) requestAnimationFrame(step);
+    if (prefersReducedMotion) {
+      setDisplayScore(overallScore);
+      return;
     }
-    requestAnimationFrame(step);
-    if (bar) requestAnimationFrame(() => { bar.style.width = overallScore + "%"; });
+    let frame = 0;
+    let start: number | null = null;
+    const duration = 1050;
+    const step = (timestamp: number) => {
+      if (start === null) start = timestamp;
+      const progress = Math.min((timestamp - start) / duration, 1);
+      setDisplayScore(Math.round((1 - Math.pow(1 - progress, 3)) * overallScore));
+      if (progress < 1) frame = window.requestAnimationFrame(step);
+    };
+    frame = window.requestAnimationFrame(step);
+    return () => window.cancelAnimationFrame(frame);
+  }, [overallScore, prefersReducedMotion]);
+
+  useEffect(() => {
+    const originalStyles = new Map<HTMLElement, {
+      opacity: string;
+      opacityPriority: string;
+      transform: string;
+      transformPriority: string;
+    }>();
+    const prepareReport = () => {
+      setDisplayScore(overallScore);
+      document.querySelectorAll<HTMLElement>(".report-section").forEach(section => {
+        originalStyles.set(section, {
+          opacity: section.style.getPropertyValue("opacity"),
+          opacityPriority: section.style.getPropertyPriority("opacity"),
+          transform: section.style.getPropertyValue("transform"),
+          transformPriority: section.style.getPropertyPriority("transform"),
+        });
+        section.style.setProperty("opacity", "1", "important");
+        section.style.setProperty("transform", "none", "important");
+      });
+    };
+    const restoreReport = () => {
+      originalStyles.forEach((style, section) => {
+        if (style.opacity) section.style.setProperty("opacity", style.opacity, style.opacityPriority);
+        else section.style.removeProperty("opacity");
+        if (style.transform) section.style.setProperty("transform", style.transform, style.transformPriority);
+        else section.style.removeProperty("transform");
+      });
+      originalStyles.clear();
+    };
+    window.addEventListener("beforeprint", prepareReport);
+    window.addEventListener("afterprint", restoreReport);
+    return () => {
+      window.removeEventListener("beforeprint", prepareReport);
+      window.removeEventListener("afterprint", restoreReport);
+      restoreReport();
+    };
   }, [overallScore]);
 
   return (
-    <div className="flex flex-col items-center pb-16">
-      <div className="print-root flex flex-col items-center pb-16">
-      <div className="report-wrap">
-        {/* Cover */}
-        <div className="rpt-cover">
-          <div className="flex items-center justify-between mb-9 relative z-[1]">
-            <Image src={`${BASE}/logo-dark.png`} alt="Snowfox AI" width={88} height={22} style={{ height: 22, width: "auto" }} />
-            <div className="flex items-center gap-3">
-              <span className="text-[9px] font-bold tracking-[0.20em] uppercase" style={{ color: "rgba(255,255,255,0.30)" }}>Avaliação de Prontidão para IA</span>
-              <button
-                onClick={() => window.print()}
-                className="no-print inline-flex items-center gap-1.5 px-3.5 h-[30px] rounded-[7px] text-[11px] font-semibold tracking-[0.02em] transition-all"
-                style={{ border: "1px solid rgba(255,255,255,0.18)", background: "rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.75)", fontFamily: "Poppins, sans-serif" }}
-                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.15)"; (e.currentTarget as HTMLElement).style.color = "#fff"; }}
-                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.08)"; (e.currentTarget as HTMLElement).style.color = "rgba(255,255,255,0.75)"; }}
-              >
-                <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                  <path d="M3 11v2a1 1 0 001 1h8a1 1 0 001-1v-2"/>
-                  <path d="M8 2v7M5 6l3 3 3-3"/>
-                </svg>
-                Baixar PDF
-              </button>
-            </div>
-          </div>
-          <p className="text-[10px] font-bold tracking-[0.20em] uppercase mb-3.5 relative z-[1]" style={{ color: "rgba(167,139,250,0.80)" }}>Pontuação de Prontidão</p>
-          <div className="flex items-baseline gap-2 mb-4 relative z-[1]">
-            <span ref={scoreNumRef} className="text-[76px] font-black leading-none tracking-[-0.04em] text-white" style={{ fontFamily: "'Typo Grotesk', sans-serif" }}>0</span>
-            <span className="text-[20px] font-medium self-end pb-2.5" style={{ color: "rgba(255,255,255,0.35)" }}>/100</span>
-          </div>
-          <div className="h-[3px] rounded-sm mb-5 relative z-[1]" style={{ background: "rgba(255,255,255,0.10)" }}>
-            <div ref={barRef} className="h-full rounded-sm" style={{ width: "0%", background: "linear-gradient(90deg,#8E2DE2,#a855f7)", transition: "width 1.2s cubic-bezier(.22,1,.36,1)" }} />
-          </div>
-          <span className={`inline-flex items-center px-4 py-[5px] rounded-[20px] text-[11px] font-bold tracking-[0.06em] relative z-[1] rpt-level-tag ${meta.key}`}
-            style={meta.key === "low" ? { background: "rgba(239,68,68,0.20)", border: "1px solid rgba(239,68,68,0.45)", color: "rgba(252,165,165,1)" }
-              : meta.key === "emerging" ? { background: "rgba(251,146,60,0.18)", border: "1px solid rgba(251,146,60,0.42)", color: "rgba(253,186,116,1)" }
-              : meta.key === "moderate" ? { background: "rgba(167,139,250,0.18)", border: "1px solid rgba(167,139,250,0.42)", color: "rgba(196,181,253,1)" }
-              : meta.key === "high" ? { background: "rgba(52,211,153,0.18)", border: "1px solid rgba(52,211,153,0.42)", color: "rgba(110,231,183,1)" }
-              : { background: "rgba(34,211,238,0.18)", border: "1px solid rgba(34,211,238,0.40)", color: "rgba(103,232,249,1)" }}
-          >{result.level}</span>
-          <div className="flex gap-11 mt-6 relative z-[1]">
-            <div>
-              <p className="text-[9px] font-bold tracking-[0.18em] uppercase mb-1" style={{ color: "rgba(167,139,250,0.70)" }}>Data</p>
-              <p className="text-[13px]" style={{ color: "rgba(255,255,255,0.72)", fontFamily: "Poppins, sans-serif" }}>{dateStr}</p>
-            </div>
-          </div>
-        </div>
+    <div className="results-page">
+      <div className="results-layout page-frame">
+        <ReportNavigation chapters={REPORT_CHAPTERS} />
 
-        {/* Body */}
-        <div>
-          {/* 01 Executive Summary */}
-          <div className="rpt-section">
-            <div className="rpt-sechead">
-              <span style={{ fontFamily: "'Typo Grotesk', sans-serif", fontSize: 17, fontWeight: 800, letterSpacing: "-0.02em", color: "#6D28D9" }}>01</span>
-              <span style={{ fontFamily: "'Typo Grotesk', sans-serif", fontSize: 19, fontWeight: 700, letterSpacing: "-0.02em", color: "#171221" }}>Resumo Executivo</span>
-            </div>
-            <div className="rpt-exec-summary">
-              <div className="rpt-exec-block">
-                <p className="rpt-exec-title">Situação Atual</p>
-                {executiveSummary.currentSituation.map((sentence, i) => (
-                  <p key={i} className="rpt-exec-copy">{sentence}</p>
-                ))}
+        <div className="results-report print-root">
+          <motion.section className="results-hero" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.45 }}>
+            <motion.div className="results-hero-topline" initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1, duration: 0.35 }}>
+              <div className="brand-lockup brand-lockup-light">
+                <Image src={`${BASE}/fox-icon.png`} alt="" width={28} height={28} />
+                <span>snowfox <b>AI</b></span>
               </div>
-              <div className="rpt-exec-block">
-                <p className="rpt-exec-title">Principais Riscos</p>
-                <ul className="rpt-exec-risks">
-                  {executiveSummary.risks.map((risk, i) => (
-                    <li key={i}>{risk}</li>
-                  ))}
-                </ul>
+              <div className="results-hero-actions no-print">
+                <span>Relatório personalizado · {dateStr}</span>
+                <button type="button" className="hero-tool-button" onClick={() => window.print()} title="Exportar relatório em PDF">
+                  <Download size={15} aria-hidden="true" /> <span>Exportar PDF</span>
+                </button>
               </div>
-              <div className="rpt-exec-block">
-                <p className="rpt-exec-title">Onde Está a Maior Oportunidade</p>
-                {executiveSummary.opportunity.map((sentence, i) => (
-                  <p key={i} className="rpt-exec-copy">{sentence}</p>
-                ))}
-              </div>
-              <div className="rpt-exec-block">
-                <p className="rpt-exec-title">Recomendação Imediata</p>
-                {executiveSummary.immediateRecommendation.map((sentence, i) => (
-                  <p key={i} className="rpt-exec-copy">{sentence}</p>
-                ))}
-              </div>
-            </div>
-          </div>
+            </motion.div>
 
-          {/* 02 Quarterly Roadmap */}
-          <div className="rpt-section">
-            <div className="rpt-sechead">
-              <span style={{ fontFamily: "'Typo Grotesk', sans-serif", fontSize: 17, fontWeight: 800, letterSpacing: "-0.02em", color: "#6D28D9" }}>02</span>
-              <span style={{ fontFamily: "'Typo Grotesk', sans-serif", fontSize: 19, fontWeight: 700, letterSpacing: "-0.02em", color: "#171221" }}>O Que Fazer nos Próximos 3 Trimestres</span>
+            <div className="results-hero-grid">
+              <motion.div className="score-column" initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.16, duration: 0.42 }}>
+                <span className="section-kicker section-kicker-light"><span className="kicker-line" /> Leitura de prontidão</span>
+                <div className="score-value"><span>{displayScore}</span><small>/100</small></div>
+                <div className="score-track" role="progressbar" aria-label={`Pontuação de ${overallScore} em 100`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={overallScore}><span style={{ width: `${overallScore}%` }} /></div>
+                <div className="score-meta"><span className={`level-tag level-${meta.key}`}>{result.level}</span><span>{dateStr}</span></div>
+              </motion.div>
+              <motion.div className="results-hero-reading" initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25, duration: 0.42 }}>
+                <span className="results-profile-label">Perfil de prontidão</span>
+                <h1>{profile.title}</h1>
+                <p className="results-hero-summary">{profile.summary}</p>
+                <p className="results-profile-implication">{profile.implication}</p>
+                {result.blocker && <div className="blocker-note"><TrendingDown size={16} aria-hidden="true" /><span>{result.blocker}</span></div>}
+              </motion.div>
             </div>
-            <div className="rpt-quarter-plan">
-              {quarterlyRecommendations.map(item => (
-                <div key={item.id} className="rpt-quarter-row">
-                  <div>
-                    <p className="text-[11px] font-semibold leading-[1.35]" style={{ fontFamily: "Poppins, sans-serif", color: "#171221" }}>{item.period}</p>
-                    <p className="text-[10px] leading-[1.45] mt-1" style={{ fontFamily: "Poppins, sans-serif", color: "#9A95AB" }}>{item.focus}</p>
-                  </div>
-                  <div>
-                    <p className="text-[13.5px] font-semibold mb-1.5" style={{ fontFamily: "Poppins, sans-serif", color: "#171221" }}>{item.title}</p>
-                    <p className="text-[12.8px] leading-[1.65]" style={{ fontFamily: "Poppins, sans-serif", color: "#56516A" }}>{item.action}</p>
-                    <p className="text-[12.3px] leading-[1.55] mt-2" style={{ fontFamily: "Poppins, sans-serif", color: "#7A7587" }}>
-                      <span className="font-semibold" style={{ color: "#171221" }}>Resultado esperado:</span> {item.outcome}.
-                    </p>
-                  </div>
+          </motion.section>
+
+          <motion.section className="report-section executive-section" id="summary" {...revealMotion}>
+            <div className="report-section-heading">
+              <div><span className="report-section-number">01</span><h2>Resumo executivo</h2></div>
+              <span className="report-section-aside">Uma leitura para decisão</span>
+            </div>
+            <div className="executive-grid">
+              <article className="executive-lead">
+                <span className="report-label">Situação atual</span>
+                <p className="executive-lead-copy">{executiveSummary.currentSituation[0]}</p>
+                <p>{executiveSummary.currentSituation[1]}</p>
+                <p>{executiveSummary.currentSituation[2]}</p>
+              </article>
+              <article className="executive-block executive-risk-block">
+                <span className="report-label">Principais riscos</span>
+                <ul>{executiveSummary.risks.map((risk, index) => <li key={index}>{risk}</li>)}</ul>
+              </article>
+              <article className="executive-block">
+                <span className="report-label">Maior oportunidade</span>
+                {executiveSummary.opportunity.map((line, index) => <p key={index}>{line}</p>)}
+              </article>
+              <article className="executive-block executive-recommendation-block executive-data-foundation">
+                <Database size={22} aria-hidden="true" />
+                <div>
+                  <span className="report-label">Solução recomendada</span>
+                  <h3>Data Foundation</h3>
+                  {executiveSummary.immediateRecommendation.map((line, index) => <p key={index}>{line}</p>)}
                 </div>
-              ))}
+                <div className="solution-availability"><strong>Começar agora</strong><span>Sem pré-requisitos</span></div>
+              </article>
             </div>
-          </div>
+          </motion.section>
 
-          {/* 03 Pillar Breakdown */}
-          <div className="rpt-section">
-            <div className="rpt-sechead">
-              <span style={{ fontFamily: "'Typo Grotesk', sans-serif", fontSize: 17, fontWeight: 800, letterSpacing: "-0.02em", color: "#6D28D9" }}>03</span>
-              <span style={{ fontFamily: "'Typo Grotesk', sans-serif", fontSize: 19, fontWeight: 700, letterSpacing: "-0.02em", color: "#171221" }}>Detalhamento por Pilar</span>
-              <span className="ml-auto text-[9px] font-bold tracking-[0.14em] uppercase" style={{ color: "#9A95AB" }}>5 dimensões</span>
+          <motion.section className="report-section readiness-map-section" id="system-map" {...revealMotion}>
+            <div className="report-section-heading">
+              <div><span className="report-section-number">02</span><h2>Mapa do sistema</h2></div>
+              <span className="report-section-aside">Cinco capacidades conectadas</span>
             </div>
-            <div>
-              {pillarScores.map((p, i) => {
-                const tier = getPillarTier(p.score);
+            <div className="readiness-map-layout">
+              <ReadinessNetwork
+                mode="scored"
+                scores={pillarScores}
+                activePillarId={selectedPillarId}
+                onActivePillarChange={setActivePillarId}
+              />
+              <aside className="readiness-map-reading">
+                <span className="report-label">Como ler o sistema</span>
+                <h3>{profile.title}</h3>
+                <p>{profile.implication}</p>
+                <div className="readiness-map-signals">
+                  <div><span>Maior força</span><strong>{strongest.title}</strong><b>{strongest.score}%</b></div>
+                  <div><span>Principal limitador</span><strong>{weakest.title}</strong><b>{weakest.score}%</b></div>
+                </div>
+                <p className="readiness-map-note">Linhas destacadas mostram relações tocadas pela dimensão selecionada. Conexões em alerta passam por capacidades abaixo de 40%.</p>
+              </aside>
+            </div>
+          </motion.section>
+
+          <CriticalPathSection gates={criticalPath} nextLevel={nextLevel} />
+          <RiskViewSection signals={riskSignals} />
+          <PillarDeepDiveSection pillarScores={pillarScores} evidence={evidence} activePillarId={selectedPillarId} onSelect={setActivePillarId} />
+          <OpportunityLibrarySection tracks={opportunityTracks} />
+
+          <motion.section className="report-section roadmap-section" id="action-plan" {...revealMotion}>
+            <div className="report-section-heading">
+              <div><span className="report-section-number">07</span><h2>Plano de ação</h2></div>
+              <span className="report-section-aside">Três trimestres, uma sequência</span>
+            </div>
+            <p className="report-section-intro">A ordem reduz dependências antes de ampliar investimento. Os papéis e métricas são referências para estruturar a conversa interna.</p>
+            <div className="roadmap-list">
+              {quarterlyRecommendations.map((item, index) => {
+                const isExpanded = expandedRoadmap === item.id;
                 return (
-                  <div key={p.id} className="grid items-center gap-[18px] py-3.5"
-                    style={{ gridTemplateColumns: "1fr 56px", borderBottom: i < pillarScores.length - 1 ? "1px solid #F1EFF7" : "none" }}>
-                    <div>
-                      <p className="text-[13px] font-semibold mb-2" style={{ fontFamily: "Poppins, sans-serif", color: "#171221" }}>{p.title}</p>
-                      <div className="h-1 rounded-sm overflow-hidden" style={{ background: "#E7E4F0" }}>
-                        <PillarBar pct={p.score} barClass={tier.barClass} />
-                      </div>
-                      <p className="text-[10.5px] font-semibold mt-1.5 tracking-[0.02em]" style={{ color: "#9A95AB" }}>{tier.label}</p>
-                    </div>
-                    <p className={`text-[19px] font-black tracking-[-0.03em] text-right ${tier.pctClass}`}
-                      style={{ fontFamily: "'Typo Grotesk', sans-serif" }}>{p.score}%</p>
-                  </div>
+                  <article key={item.id} className={`roadmap-row${isExpanded ? " is-active" : ""}`}>
+                    <button type="button" className="roadmap-row-trigger" onClick={() => setExpandedRoadmap(isExpanded ? "" : item.id)} aria-expanded={isExpanded}>
+                      <span className="roadmap-index">0{index + 1}</span>
+                      <span className="roadmap-period"><strong>{item.period}</strong><small>{item.focus}</small></span>
+                      <span className="roadmap-title">{item.title}</span>
+                      <ChevronDown size={18} aria-hidden="true" />
+                    </button>
+                    <AnimatePresence initial={false}>
+                      {isExpanded && (
+                        <motion.div className="roadmap-row-detail screen-only" initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.24 }}>
+                          <RoadmapDetailContent item={item} />
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                    <div className="roadmap-row-detail print-only"><RoadmapDetailContent item={item} /></div>
+                  </article>
                 );
               })}
             </div>
-          </div>
+          </motion.section>
 
-          {/* 04+ Lacunas / Oportunidades / Pontos Fortes (personalized, data-driven) */}
-          <InsightsSection answers={answers} pillarScores={pillarScores} startNumber={4} />
-
-          {/* Recommended Action */}
-          <div className="rpt-section">
-            <div className="rpt-sechead">
-              <span style={{ fontFamily: "'Typo Grotesk', sans-serif", fontSize: 17, fontWeight: 800, letterSpacing: "-0.02em", color: "#6D28D9" }}>{actionStepNumber}</span>
-              <span style={{ fontFamily: "'Typo Grotesk', sans-serif", fontSize: 19, fontWeight: 700, letterSpacing: "-0.02em", color: "#171221" }}>Próximo Passo Recomendado</span>
+          <motion.footer className="results-footer no-print" initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true, amount: 0.2 }} transition={{ duration: 0.42 }}>
+            <div className="footer-cta-copy"><span className="section-kicker"><span className="kicker-line" /> Próxima conversa</span><h2>Transforme a leitura em uma agenda de IA concreta.</h2><p>Leve este diagnóstico para uma conversa com quem pode ajudar sua organização a decidir o que preparar, testar e escalar.</p></div>
+            <div className="footer-actions">
+              <a className="button-primary button-large" href={CONTACT_URL} target="_blank" rel="noreferrer">Falar com um especialista <ExternalLink size={16} aria-hidden="true" /></a>
+              <button type="button" className="button-secondary" onClick={onRestart}><RotateCcw size={15} aria-hidden="true" /> Refazer avaliação</button>
             </div>
-            <div className="rounded-[10px] p-5" style={{ background: "#FAF9FD", border: "1px solid #E7E4F0" }}>
-              <p className="text-[9.5px] font-bold tracking-[0.16em] uppercase mb-2" style={{ color: "#6D28D9" }}>Ação Prioritária</p>
-              <p className="text-[13.5px] leading-[1.70]" style={{ fontFamily: "Poppins, sans-serif", color: "#56516A" }}>{rec}</p>
-            </div>
-          </div>
+            <div className="footer-meta"><span>Snowfox AI</span><span>Diagnóstico de prontidão para IA</span><span>snowfox-ai.com</span></div>
+          </motion.footer>
         </div>
-
-        {/* Footer CTA */}
-        <div className="rpt-footer">
-          <p className="text-[13px] no-print" style={{ color: "#9A95AB" }}>Pronto para transformar esses insights em um roadmap de IA concreto?</p>
-          <button className="no-print inline-flex items-center gap-2.5 px-9 h-[50px] rounded-[10px] text-[14px] font-semibold tracking-[0.03em] text-white cursor-pointer border-none transition-all"
-            style={{ background: "linear-gradient(135deg,#6D28D9,#4A00E0)", boxShadow: "0 4px 20px rgba(109,40,217,0.36)", fontFamily: "Poppins, sans-serif" }}
-            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = "translateY(-2px)"; (e.currentTarget as HTMLElement).style.boxShadow = "0 8px 30px rgba(109,40,217,0.50)"; }}
-            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = ""; (e.currentTarget as HTMLElement).style.boxShadow = "0 4px 20px rgba(109,40,217,0.36)"; }}
-          >
-            Fale com um Especialista Snowfox AI
-            <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4"/></svg>
-          </button>
-          <button onClick={onRestart} className="no-print inline-flex items-center gap-2 px-5 h-[38px] rounded-[8px] text-[12.5px] font-medium cursor-pointer transition-all"
-            style={{ border: "1px solid #E7E4F0", background: "#fff", color: "#9A95AB", fontFamily: "Poppins, sans-serif" }}
-            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = "#9A95AB"; (e.currentTarget as HTMLElement).style.color = "#56516A"; }}
-            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = "#E7E4F0"; (e.currentTarget as HTMLElement).style.color = "#9A95AB"; }}
-          >
-            <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" aria-hidden="true"><path d="M2 8a6 6 0 116 6"/><path d="M2 8V4M2 8H6"/></svg>
-            Refazer Avaliação
-          </button>
-          <p className="text-[9.5px] tracking-[0.08em] w-full pt-3.5 text-center" style={{ color: "#C0BBCF", borderTop: "1px solid #E7E4F0" }}>
-            SnowFox AI · snowfox-ai.com
-          </p>
-        </div>
-      </div>
       </div>
     </div>
   );
