@@ -3,24 +3,21 @@
 import { motion } from "motion/react";
 import type { QuarterlyRecommendation } from "@/app/resultInsights";
 import { EASE_OUT, fadeUp, staggerChildren, VIEWPORT_ONCE } from "@/lib/motion";
+import { SectionHeading } from "./SectionHeading";
 
 /** Three-quarter roadmap: horizontal track on desktop, vertical on mobile. */
 export function RoadmapTimeline({ items }: { items: QuarterlyRecommendation[] }) {
   return (
     <motion.section
+      id="plano"
+      className="scroll-mt-28"
       initial="hidden"
       whileInView="visible"
       viewport={VIEWPORT_ONCE}
       variants={staggerChildren(0.12)}
-      aria-labelledby="roadmap-title"
+      aria-labelledby="plano"
     >
-      <motion.h2
-        id="roadmap-title"
-        variants={fadeUp}
-        className="font-display font-bold text-white text-[24px] tracking-[-0.02em]"
-      >
-        O que fazer nos próximos 3 trimestres
-      </motion.h2>
+      <SectionHeading number="06" title="Plano de ação" aside="Três trimestres, uma sequência" />
 
       {/* Track */}
       <motion.div variants={fadeUp} className="relative mt-8 mb-6 hidden md:block" aria-hidden="true">
@@ -69,6 +66,23 @@ export function RoadmapTimeline({ items }: { items: QuarterlyRecommendation[] })
             >
               <span className="font-semibold text-white">Resultado esperado:</span> {item.outcome}.
             </p>
+
+            <dl
+              className="mt-4 pt-4 grid grid-cols-2 gap-x-4 gap-y-3"
+              style={{ borderTop: "1px solid var(--line-1)" }}
+            >
+              {[
+                ["Responsável sugerido", item.ownerRole],
+                ["Esforço", item.effort],
+                ["Dependência", item.dependency],
+                ["Medida de sucesso", item.successMetric],
+              ].map(([label, value]) => (
+                <div key={label}>
+                  <dt className="text-[10.5px] font-semibold uppercase tracking-[0.06em] text-[var(--text-p)]">{label}</dt>
+                  <dd className="mt-0.5 text-[12px] leading-[1.5] text-[var(--text-m)]">{value}</dd>
+                </div>
+              ))}
+            </dl>
           </motion.article>
         ))}
       </div>
