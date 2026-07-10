@@ -15,20 +15,55 @@
   --pa-10: rgba(142,45,226,0.10);
 
   --text-h:   #ffffff;
-  --text-b:   rgba(238,232,255,0.96);
+  --text-b:   rgba(235,230,250,0.92);
   --text-m:   rgba(210,198,255,0.82);
   --text-dim: rgba(190,175,245,0.50);
   --text-p:   rgba(190,175,245,0.42);
 
-  --glass-bg:     rgba(8,3,32,0.92);
-  --glass-border: rgba(255,255,255,0.09);
-  --input-bg:     rgba(255,255,255,0.06);
-  --input-border: rgba(255,255,255,0.12);
+  /* Surface ladder (hue ~262 violet-black, all opaque — no glass) */
+  --bg-0:      #050112;
+  --surface-1: #0C0724;
+  --surface-2: rgba(255,255,255,0.03);
+  --surface-3: rgba(255,255,255,0.06);
+  --nav-bg:    #07031A;
 
-  --r:    10px;
-  --r-lg: 18px;
+  /* Border ladder */
+  --line-1:     rgba(255,255,255,0.06);
+  --line-2:     rgba(255,255,255,0.10);
+  --line-3:     rgba(255,255,255,0.16);
+  --line-brand: rgba(142,45,226,0.55);
+
+  /* Violet scale */
+  --violet-100: #EDE6FF;
+  --violet-200: #D6C6FB;
+  --violet-300: #B69AF8;
+  --violet-400: #A78BFA;
+  --violet-500: #8E2DE2;
+  --violet-600: #6D28D9;
+  --violet-700: #4A00E0;
+  --violet-800: #2A0B6B;
+  --violet-900: #150534;
+
+  /* Readiness tiers — marks get `mark`, small text gets `text`, chips get `bg` */
+  --tier-low-mark: #EF4444;      --tier-low-text: #FCA5A5;      --tier-low-bg: rgba(239,68,68,0.14);
+  --tier-emerging-mark: #F59E0B; --tier-emerging-text: #FDBA74; --tier-emerging-bg: rgba(245,158,11,0.13);
+  --tier-moderate-mark: #8B5CF6; --tier-moderate-text: #C4B5FD; --tier-moderate-bg: rgba(139,92,246,0.14);
+  --tier-high-mark: #34D399;     --tier-high-text: #6EE7B7;     --tier-high-bg: rgba(52,211,153,0.13);
+  --tier-advanced-mark: #22D3EE; --tier-advanced-text: #67E8F9; --tier-advanced-bg: rgba(34,211,238,0.13);
+
+  /* Motion */
+  --ease-out:   cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in:    cubic-bezier(0.4, 0, 1, 1);
+  --ease-inout: cubic-bezier(0.32, 0.72, 0, 1);
+
+  --glass-bg:     var(--surface-1);
+  --glass-border: var(--line-2);
+  --input-bg:     rgba(255,255,255,0.06);
+  --input-border: var(--line-2);
+
+  --r:    12px;
+  --r-lg: 20px;
   --nav-h: 64px;
-  --max-w: 840px;
   --err: rgba(239,68,68,0.65);
 }
 
@@ -36,7 +71,7 @@
 html { scroll-behavior: smooth; overflow-x: hidden; }
 body {
   font-family: 'Poppins', sans-serif;
-  background: transparent;
+  background: var(--bg-0);
   color: var(--text-b);
   line-height: 1.6;
   overflow-x: hidden;
@@ -45,9 +80,9 @@ body {
 }
 img { display: block; max-width: 100%; }
 button { cursor: pointer; border: none; background: none; font-family: inherit; touch-action: manipulation; }
-input, select { font-family: inherit; }
+input, select, textarea { font-family: inherit; }
 
-/* ── Gradient text */
+/* ── Gradient text (one sanctioned hero phrase only) */
 .gt {
   background: var(--grad);
   -webkit-background-clip: text;
@@ -55,82 +90,110 @@ input, select { font-family: inherit; }
   background-clip: text;
 }
 
-/* ── Glass card */
-.glass-card {
-  background: var(--glass-bg);
-  backdrop-filter: blur(28px);
-  -webkit-backdrop-filter: blur(28px);
-  border: 1px solid var(--glass-border);
-  border-radius: var(--r-lg);
-  padding: 48px 52px;
+/* ── Ambient backdrop: two soft radial glows drifting slowly on the GPU.
+   No canvas, no blur filters — radial falloff is inherently soft. */
+.app-backdrop {
+  position: fixed; inset: 0; z-index: 0;
+  background: var(--bg-0);
+  overflow: hidden;
+  pointer-events: none;
 }
-@media (max-width: 700px) {
-  .glass-card { padding: 28px 22px; }
+.app-backdrop::before,
+.app-backdrop::after {
+  content: ''; position: absolute;
+  width: 64vmax; height: 64vmax; border-radius: 50%;
+  will-change: transform;
+}
+.app-backdrop::before {
+  top: -26vmax; right: -16vmax;
+  background: radial-gradient(closest-side, rgba(109,40,217,0.17), transparent 72%);
+  animation: drift-a 46s ease-in-out infinite alternate;
+}
+.app-backdrop::after {
+  bottom: -30vmax; left: -18vmax;
+  background: radial-gradient(closest-side, rgba(74,0,224,0.11), transparent 72%);
+  animation: drift-b 58s ease-in-out infinite alternate;
+}
+@keyframes drift-a {
+  from { transform: translate3d(0, 0, 0) scale(1); }
+  to   { transform: translate3d(-9vmax, 7vmax, 0) scale(1.12); }
+}
+@keyframes drift-b {
+  from { transform: translate3d(0, 0, 0) scale(1.08); }
+  to   { transform: translate3d(11vmax, -8vmax, 0) scale(1); }
 }
 
+/* ── Static grain: kills banding on the dark violet. Above backdrop, below content. */
+.grain-overlay {
+  position: fixed; inset: 0; z-index: 1;
+  pointer-events: none;
+  opacity: 0.035;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='256' height='256'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 256px 256px;
+}
+
+/* ── Primary panel: opaque surface for whole view regions; nested cards stay flat */
+.surface-panel {
+  background: var(--surface-1);
+  border: 1px solid var(--line-2);
+  border-radius: var(--r-lg);
+}
 /* ── Animations */
 @keyframes fadeUp {
-  from { opacity: 0; transform: translateY(18px); }
+  from { opacity: 0; transform: translateY(16px); }
   to   { opacity: 1; transform: translateY(0); }
 }
-@keyframes segFill {
-  from { transform: scaleX(0); transform-origin: left; }
-  to   { transform: scaleX(1); transform-origin: left; }
-}
-@keyframes iconPop {
-  from { opacity: 0; transform: scale(0.7); }
-  to   { opacity: 1; transform: scale(1); }
-}
-.animate-fade-up { animation: fadeUp .5s cubic-bezier(.22,1,.36,1) both; }
-
-/* ── Progress segments */
-.progress-seg {
-  flex: 1; height: 4px; border-radius: 2px;
-  background: rgba(255,255,255,0.09);
-  position: relative; overflow: hidden; transition: background .3s ease;
-}
-.progress-seg.done   { background: rgba(142,45,226,0.55); }
-.progress-seg.active { background: rgba(142,45,226,0.18); }
-.progress-seg.active::after {
-  content: ''; position: absolute; inset: 0;
-  background: var(--grad);
-  animation: segFill .45s cubic-bezier(.22,1,.36,1) forwards;
-}
+.animate-fade-up { animation: fadeUp .5s var(--ease-out) both; }
 
 /* ── Option cards */
 .option-card {
   display: flex; align-items: center; gap: 16px;
-  padding: 13px 18px; border-radius: var(--r);
-  border: 1px solid rgba(255,255,255,0.08);
-  background: rgba(255,255,255,0.03);
+  padding: 14px 18px; border-radius: var(--r);
+  border: 1px solid var(--line-2);
+  background: var(--surface-2);
   color: inherit; font-family: inherit;
   cursor: pointer; text-align: left; width: 100%;
-  transition: border-color .16s, background .16s, box-shadow .16s, transform .14s;
+  transition: border-color .15s ease, background .15s ease, transform .09s ease;
   -webkit-tap-highlight-color: transparent;
 }
 .option-card:hover {
-  border-color: rgba(142,45,226,0.50);
-  background: rgba(142,45,226,0.09);
-  transform: translateX(3px);
+  border-color: rgba(142,45,226,0.45);
+  background: rgba(142,45,226,0.06);
 }
-.option-card:active { transform: translateX(0) scale(0.99); }
+.option-card:active { transform: scale(0.985); }
 .option-card.selected {
-  border-color: rgba(142,45,226,0.75);
-  background: linear-gradient(145deg, rgba(142,45,226,0.20), rgba(74,0,224,0.15));
-  box-shadow: 0 0 0 1px rgba(142,45,226,0.22), 0 4px 18px rgba(142,45,226,0.16);
-  transform: translateX(3px);
+  border-color: var(--line-brand);
+  background: rgba(142,45,226,0.10);
 }
 @media (max-width: 700px) {
-  .option-card { padding: 11px 14px; gap: 12px; }
+  .option-card { padding: 12px 14px; gap: 12px; }
 }
 
-/* ── Report (results) styles */
+/* ── Cursor-aware border glow (pillar showcase + insight cards only) */
+.cursor-glow {
+  position: relative;
+}
+.cursor-glow::after {
+  content: ''; position: absolute; inset: 0;
+  border-radius: inherit;
+  background: radial-gradient(140px at var(--mx, 50%) var(--my, 50%), rgba(167,139,250,0.14), transparent 70%);
+  opacity: 0; transition: opacity .3s ease;
+  pointer-events: none;
+}
+.cursor-glow:hover::after { opacity: 1; }
+@media (hover: none) {
+  .cursor-glow::after { display: none; }
+}
+
+/* ── Screen / print DOM split */
+.print-only { display: none; }
+
+/* ── Report (print twin) styles */
 .report-wrap {
   width: 100%; max-width: 780px;
   background: #0d0535;
   border-radius: 16px; overflow: hidden;
-  box-shadow: 0 28px 70px rgba(0,0,0,0.40), 0 4px 18px rgba(0,0,0,0.22);
-  animation: fadeUp .5s cubic-bezier(.22,1,.36,1) both;
 }
 .rpt-cover {
   background: linear-gradient(160deg,#140a2d 0%,#1e0f45 55%,#0d0535 100%);
@@ -141,7 +204,6 @@ input, select { font-family: inherit; }
   background: radial-gradient(ellipse 90% 120% at 85% 40%,rgba(142,45,226,0.28) 0%,transparent 65%);
   pointer-events: none;
 }
-.rpt-body {}
 .rpt-section { background: #ffffff; padding: 34px 48px 36px; border-bottom: 1px solid #E7E4F0; }
 .rpt-section:last-child { border-bottom: none; }
 .rpt-sechead { display: flex; align-items: baseline; gap: 14px; border-bottom: 2px solid #171221; padding-bottom: 12px; margin-bottom: 22px; }
@@ -160,7 +222,7 @@ input, select { font-family: inherit; }
 .rpt-quarter-plan { border: 1px solid #E7E4F0; border-radius: 10px; overflow: hidden; }
 .rpt-quarter-row { display: grid; grid-template-columns: 116px 1fr; gap: 18px; padding: 16px 18px; background: #fff; }
 .rpt-quarter-row + .rpt-quarter-row { border-top: 1px solid #E7E4F0; }
-.rpt-pillar-bar-fill { height: 100%; border-radius: 2px; width: 0%; transition: width 1.1s cubic-bezier(.22,1,.36,1); }
+.rpt-pillar-bar-fill { height: 100%; border-radius: 2px; }
 .rpt-bar-low      { background: linear-gradient(90deg,#CF3F54,#e05a6b); }
 .rpt-bar-emerging { background: linear-gradient(90deg,#C97A12,#e09030); }
 .rpt-bar-moderate { background: linear-gradient(90deg,#6D28D9,#8B5CF6); }
@@ -198,28 +260,28 @@ input, select { font-family: inherit; }
   border-color: var(--brand-start);
   background: rgba(142,45,226,0.08);
 }
-.field-input.error-field { border-color: rgba(239,68,68,0.65); }
-.field-select {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='rgba(210%2C198%2C255%2C0.55)' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 14px center;
-  padding-right: 38px;
-}
-.field-select option { background: #000; color: var(--text-h); }
 
 :focus-visible { outline: 2px solid rgba(167,139,250,0.70); outline-offset: 3px; }
 
+/* Decorative CSS animation off under reduced motion; functional transitions
+   (border/background state changes) stay. motion/react is handled separately
+   via MotionConfig reducedMotion="user" + useReducedMotion. */
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after { animation: none !important; transition: none !important; }
+  html { scroll-behavior: auto; }
+  .animate-fade-up { animation: none; opacity: 1; transform: none; }
+  .option-card, .option-card:active { transform: none; }
 }
 
-/* ── Print / PDF export */
+/* ── Print / PDF export: the light linear report is the only printed surface */
 @media print {
   @page { margin: 0; size: A4; }
 
   .no-print { display: none !important; }
+  .screen-only { display: none !important; }
+  .print-only { display: block !important; }
 
   nav,
+  .grain-overlay,
   [aria-hidden="true"] { display: none !important; }
 
   html, body {
@@ -247,5 +309,4 @@ input, select { font-family: inherit; }
   }
 
   .rpt-section, .rpt-cover, .rpt-kpis, li { page-break-inside: avoid; break-inside: avoid; }
-  .rpt-pillar-bar-fill { transition: none !important; }
 }
