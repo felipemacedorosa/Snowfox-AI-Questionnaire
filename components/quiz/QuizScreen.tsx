@@ -24,6 +24,7 @@ import {
 import {
   AnswerRecord,
   getAssessmentProgress,
+  getQuestionFlowState,
   getSectionProgress,
   isQuestionAnswered,
   isQuestionVisible,
@@ -112,6 +113,7 @@ export function QuizScreen({
 
   const currentIndex = Math.max(0, visibleQs.findIndex(question => question.id === cursorId));
   const currentQuestion = visibleQs[currentIndex] ?? visibleQs[0];
+  const currentStepIndex = Math.max(0, sec.questions.findIndex(question => question.id === currentQuestion?.id));
   const sectionProgress = getSectionProgress(sec, answers);
   const assessmentProgress = getAssessmentProgress(answers);
   const currentAnswered = currentQuestion ? isQuestionAnswered(currentQuestion, answers) : false;
@@ -291,7 +293,7 @@ export function QuizScreen({
                   aria-current={isCurrent ? "step" : undefined}
                 >
                   <span className="section-item-number">{progress.complete ? <Check size={14} aria-hidden="true" /> : `0${index + 1}`}</span>
-                  <span className="section-item-copy"><strong>{item.title}</strong><small>{progress.answered}/{progress.total} respondidas</small></span>
+                  <span className="section-item-copy"><strong>{item.title}</strong><small>{progress.answered}/{progress.total} concluídas</small></span>
                   <ChevronRight size={15} aria-hidden="true" />
                 </button>
               </li>
@@ -324,7 +326,7 @@ export function QuizScreen({
         <header className="question-header question-header-flow">
           <div className="question-header-meta">
             <span className="section-kicker"><span className="kicker-line" /> Dimensão {String(sec.pillar).padStart(2, "0")}</span>
-            <span>{sectionProgress.answered} de {sectionProgress.total} respondidas</span>
+            <span>{sectionProgress.answered} de {sectionProgress.total} concluídas</span>
           </div>
           <h1 id="questionnaire-title">{sec.title}</h1>
           <p>{sec.desc}</p>
@@ -332,19 +334,36 @@ export function QuizScreen({
 
         <nav
           className="question-position-track"
-          aria-label={`Perguntas da dimensão. Pergunta atual: ${currentIndex + 1} de ${visibleQs.length}`}
+          aria-label={`Perguntas da dimensão. Pergunta atual: ${currentStepIndex + 1} de ${sec.questions.length}`}
         >
-          {visibleQs.map((question, index) => (
-            <button
-              type="button"
-              key={question.id}
-              className={`${index === currentIndex ? " is-current" : ""}${isQuestionAnswered(question, answers) ? " is-answered" : ""}`}
-              onClick={() => moveToQuestion(index)}
-              aria-current={index === currentIndex ? "step" : undefined}
-              aria-label={`Ir para a pergunta ${index + 1}`}
-              title={`Pergunta ${index + 1}`}
-            />
-          ))}
+          {sec.questions.map((question, stepIndex) => {
+            const flowState = getQuestionFlowState(question, sec.questions, answers);
+            const visibleIndex = visibleQs.findIndex(item => item.id === question.id);
+            const isCurrent = question.id === currentQuestion.id;
+            const isSkipped = flowState === "skipped";
+            const isPending = flowState === "pending";
+            const isCompleted = flowState === "visible" && (
+              question.type === "text" || isQuestionAnswered(question, answers)
+            );
+            const stepLabel = isSkipped
+              ? `Pergunta ${stepIndex + 1}, não aplicável e concluída automaticamente`
+              : isPending
+                ? `Pergunta ${stepIndex + 1}, aguardando resposta anterior`
+                : `Ir para a pergunta ${stepIndex + 1}`;
+
+            return (
+              <button
+                type="button"
+                key={question.id}
+                className={`${isCurrent ? " is-current" : ""}${isCompleted ? " is-answered" : ""}${isSkipped ? " is-skipped" : ""}${isPending ? " is-pending" : ""}`}
+                onClick={() => moveToQuestion(visibleIndex)}
+                disabled={flowState !== "visible"}
+                aria-current={isCurrent ? "step" : undefined}
+                aria-label={stepLabel}
+                title={stepLabel}
+              />
+            );
+          })}
         </nav>
 
         <div className="question-card-viewport">
@@ -361,8 +380,8 @@ export function QuizScreen({
               <QuestionCard
                 headingRef={headingRef}
                 question={currentQuestion}
-                index={currentIndex}
-                total={visibleQs.length}
+                index={currentStepIndex}
+                total={sec.questions.length}
                 answers={answers}
                 onAnswer={onAnswer}
                 onSingleSelect={handleSingleSelect}

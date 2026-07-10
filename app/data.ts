@@ -539,13 +539,34 @@ export const RECOMMENDATIONS: Record<string, string> = {
   tecnologia: "Estabeleça uma base técnica para conectar dados, integrar sistemas, monitorar modelos e levar pilotos para produção com menor retrabalho.",
 };
 
+export type QuestionFlowState = "visible" | "pending" | "skipped";
+
+export function getQuestionFlowState(
+  q: Question,
+  sectionQuestions: Question[],
+  answers: AnswerRecord
+): QuestionFlowState {
+  function resolve(question: Question, visited: Set<string>): QuestionFlowState {
+    if (!question.showIf) return "visible";
+    if (visited.has(question.id)) return "pending";
+
+    const parent = sectionQuestions.find(item => item.id === question.showIf?.qId);
+    if (!parent) return "pending";
+
+    const nextVisited = new Set(visited).add(question.id);
+    const parentState = resolve(parent, nextVisited);
+    if (parentState !== "visible") return parentState;
+
+    const parentAnswer = answers[parent.id];
+    if (typeof parentAnswer !== "number") return "pending";
+    return question.showIf.values.includes(parentAnswer) ? "visible" : "skipped";
+  }
+
+  return resolve(q, new Set());
+}
+
 export function isQuestionVisible(q: Question, sectionQuestions: Question[], answers: AnswerRecord): boolean {
-  if (!q.showIf) return true;
-  const parentAnswer = answers[q.showIf.qId];
-  if (typeof parentAnswer !== "number") return false;
-  const parentQ = sectionQuestions.find(p => p.id === q.showIf!.qId);
-  if (parentQ && !isQuestionVisible(parentQ, sectionQuestions, answers)) return false;
-  return q.showIf.values.includes(parentAnswer);
+  return getQuestionFlowState(q, sectionQuestions, answers) === "visible";
 }
 
 export interface SectionProgress {
@@ -563,11 +584,13 @@ export function isQuestionAnswered(q: Question, answers: AnswerRecord): boolean 
 }
 
 export function getSectionProgress(section: Section, answers: AnswerRecord): SectionProgress {
-  const requiredQuestions = section.questions
-    .filter(q => q.type !== "text")
-    .filter(q => isQuestionVisible(q, section.questions, answers));
-  const answered = requiredQuestions.filter(q => isQuestionAnswered(q, answers)).length;
-  const total = requiredQuestions.length;
+  const answered = section.questions.filter(q => {
+    const state = getQuestionFlowState(q, section.questions, answers);
+    return state === "skipped" || (
+      state === "visible" && (q.type === "text" || isQuestionAnswered(q, answers))
+    );
+  }).length;
+  const total = section.questions.length;
   return {
     answered,
     total,

@@ -204,7 +204,9 @@ img { display: block; max-width: 100%; }
 .question-position-track button { position: relative; flex: 1; height: 18px; background: transparent; }
 .question-position-track button::before { content: ''; position: absolute; inset: 8px 0 auto; height: 2px; background: var(--border); transition: background-color 160ms ease, height 160ms ease; }
 .question-position-track button:hover::before { background: var(--border-strong); }
-.question-position-track button.is-answered::before { background: #477a60; }
+.question-position-track button:disabled { cursor: default; }
+.question-position-track button.is-answered::before, .question-position-track button.is-skipped::before { background: #477a60; }
+.question-position-track button.is-pending::before { background: #292a2c; }
 .question-position-track button.is-current::before { height: 4px; background: var(--violet); }
 .question-card-viewport { flex: 1; min-height: 0; overflow: hidden; }
 .question-card { display: flex; flex-direction: column; justify-content: center; width: 100%; height: 100%; padding: 18px 0 20px; }
