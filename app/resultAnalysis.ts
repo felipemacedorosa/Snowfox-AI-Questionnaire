@@ -13,6 +13,7 @@ import {
 } from "./data";
 import {
   InsightPillarId,
+  isWeakPillarScore,
   ResultInsight,
   selectResultInsights,
 } from "./resultInsights";
@@ -29,6 +30,8 @@ export interface QuestionEvidence {
   normalizedScore: number | null;
   kind: EvidenceKind;
   targetState: string | null;
+  /** Declarative rewrite of the question for display when kind is "strength" (e.g. "A empresa já..."). */
+  strengthLabel: string | null;
 }
 
 export interface ReadinessProfile {
@@ -150,6 +153,49 @@ function nextCapability(q: Question, answers: AnswerRecord): string | null {
   return missing.length > 0 ? missing.map(item => item.label).join(" + ") : null;
 }
 
+// Declarative rewrite of each scored question, used in "Capacidades presentes"
+// instead of echoing the interview question back at the reader.
+const STRENGTH_PHRASING: Record<string, string> = {
+  dados_q1: "Os dados coletados hoje já são suficientes e relevantes para apoiar as decisões mais importantes do negócio.",
+  dados_q2: "Os dados já estão acessíveis às equipes e sistemas que precisam deles.",
+  dados_q3: "A operação já consegue crescer sem depender apenas de contratar mais pessoas.",
+  dados_q4: "A organização já acumula um histórico de dados relevante.",
+  dados_q5: "As decisões já contam com dados disponíveis na velocidade necessária.",
+  dados_q6: "A exposição a um eventual vazamento de dados já é considerada baixa ou controlada.",
+  dados_q7: "Já existe confiança em tomar decisões com base nos dados fornecidos pela empresa.",
+  est_q1: "A organização já definiu uma visão clara de como a IA pode gerar valor para o negócio.",
+  est_q1a: "A liderança já mapeou as áreas e processos com maior potencial de retorno com IA.",
+  est_q1a1: "Já existe um roadmap de IA documentado para os próximos 12 a 24 meses.",
+  est_q1a1a: "Esse roadmap já é revisado e atualizado com regularidade.",
+  est_q1b: "A liderança já entende o potencial e o valor econômico da IA.",
+  est_q2: "A IA já é vista como algo além de testes isolados dentro da organização.",
+  est_q3: "Os executivos já patrocinam ativamente as iniciativas de IA.",
+  est_q3a: "As iniciativas de IA já avançam sem sofrer atrasos recorrentes.",
+  pess_q1: "A liderança já comunica expectativas claras sobre a adoção de IA e os resultados esperados.",
+  pess_q2: "As equipes já experimentam novas capacidades de IA com frequência.",
+  pess_q2a: "Já existe um processo estruturado para testar e avaliar novas capacidades de IA.",
+  pess_q3: "A organização já possui expertise interna em áreas relevantes para IA.",
+  pess_q4: "Os colaboradores já são receptivos a mudanças em processos e tecnologias.",
+  pess_q5: "A organização já aplica critérios claros para saber quando a IA é a solução certa.",
+  pess_q5a: "Já existe um processo claro para priorizar iniciativas de IA.",
+  pess_q6: "A empresa já investe ativamente em preparar os colaboradores para trabalhar com IA.",
+  gov_q1: "Os processos críticos de negócio já estão bem documentados.",
+  gov_q2: "Já existem diretrizes claras para gerenciar riscos de segurança e privacidade em iniciativas de IA.",
+  tec_q1: "A empresa já executa um volume relevante de projetos de IA.",
+  tec_q1b: "A empresa já conseguiria conectar os dados e sistemas necessários para lançar um piloto em prazo razoável.",
+  tec_q1c: "Os projetos de IA já estão em desenvolvimento ativo ou em uso, não parados.",
+  tec_q1d: "Os projetos já combinam abordagens de IA tradicional e generativa conforme a necessidade.",
+  tec_q1e: "Os projetos de IA já se integram aos sistemas internos da empresa.",
+  tec_q1f: "Algum projeto de IA já entregou resultado concreto e mensurável para o negócio.",
+  tec_q1g: "Uma solução de IA que funciona bem já pode ser expandida para outras áreas sem reconstruir tudo do zero.",
+  tec_q2a: "Os projetos de IA já são atualizados com frequência.",
+  tec_q2b: "As soluções de IA já fazem parte de um ecossistema integrado, não são apenas iniciativas pontuais.",
+  tec_q2c: "Os projetos já combinam abordagens de IA tradicional e generativa conforme a necessidade.",
+  tec_q2d: "Os projetos de IA já se integram aos sistemas internos da empresa.",
+  tec_q2e: "Algum projeto de IA já entregou resultado concreto e mensurável para o negócio.",
+  tec_q2f: "Uma solução de IA que funciona bem já pode ser expandida para outras áreas sem reconstruir tudo do zero.",
+};
+
 export function buildQuestionEvidence(answers: AnswerRecord): QuestionEvidence[] {
   const evidence: QuestionEvidence[] = [];
 
@@ -166,11 +212,13 @@ export function buildQuestionEvidence(answers: AnswerRecord): QuestionEvidence[]
         ? null
         : max > 0 ? Math.round((score / max) * 100) : 0;
       const pillar = toPillarId(question.scorePillar ?? question.pillar);
+      // A question only counts as a gap/risk when the chosen answer scored
+      // below half of what it could be worth — a "good enough" answer isn't a gap.
       const kind: EvidenceKind = question.type === "text"
         ? "context"
-        : question.type === "single" && question.riskFlag && (normalizedScore ?? 0) < 60
+        : question.type === "single" && question.riskFlag && (normalizedScore ?? 0) < 50
           ? "risk"
-          : (normalizedScore ?? 0) >= 60 ? "strength" : "gap";
+          : (normalizedScore ?? 0) >= 50 ? "strength" : "gap";
 
       evidence.push({
         id: question.id,
@@ -182,6 +230,7 @@ export function buildQuestionEvidence(answers: AnswerRecord): QuestionEvidence[]
         normalizedScore,
         kind,
         targetState: nextCapability(question, answers),
+        strengthLabel: kind === "strength" ? STRENGTH_PHRASING[question.id] ?? null : null,
       });
     }
   }
@@ -278,7 +327,10 @@ export function getCriticalPath(
   result: AssessmentResult,
 ): CriticalPathGate[] {
   const evidence = buildQuestionEvidence(answers)
-    .filter(item => item.normalizedScore !== null && item.targetState)
+    // Only surface a gate when the chosen answer scored below half of what the
+    // question could be worth — a strong answer shouldn't be told to go one
+    // notch higher just because it wasn't the maximum option.
+    .filter(item => item.normalizedScore !== null && item.normalizedScore < 50 && item.targetState)
     .sort((a, b) => {
       if (a.kind === "risk" && b.kind !== "risk") return -1;
       if (b.kind === "risk" && a.kind !== "risk") return 1;
@@ -323,7 +375,7 @@ function evidenceForInsight(insight: ResultInsight, evidence: QuestionEvidence[]
   return ids
     .map(id => evidence.find(item => item.id === id))
     .filter((item): item is QuestionEvidence => Boolean(item))
-    .map(item => `${item.question} — ${item.answer}`);
+    .map(item => `${item.question}: ${item.answer}`);
 }
 
 export function getRiskSignals(answers: AnswerRecord, pillarScores: PillarScore[]): RiskSignal[] {
@@ -332,10 +384,14 @@ export function getRiskSignals(answers: AnswerRecord, pillarScores: PillarScore[
   const insights = selectResultInsights(answers, pillarScores, { min: 5, max: 8 });
 
   return insights.map(insight => {
-    const blocksScale = insight.type === "risco-critico" && (insight.priority === 1 || scores[insight.pillar] < 40);
+    const pillarScore = scores[insight.pillar] ?? 0;
+    // A pillar's own aggregate score gates the band: a matched risco-critico
+    // insight can't "block scale" or "weaken delivery" for a pillar that's
+    // already scoring well, regardless of the insight's authored priority.
+    const blocksScale = insight.type === "risco-critico" && pillarScore < 40;
     const band: RiskBand = blocksScale
       ? "blocks-scale"
-      : insight.priority <= 2 ? "weakens-delivery" : "monitor";
+      : insight.priority <= 2 && isWeakPillarScore(pillarScore) ? "weakens-delivery" : "monitor";
     return {
       id: insight.id,
       pillar: insight.pillar,

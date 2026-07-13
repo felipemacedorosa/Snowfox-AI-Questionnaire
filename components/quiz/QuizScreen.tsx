@@ -85,7 +85,7 @@ export function QuizScreen({
                   onClick={() => onSectionSelect(index)}
                   aria-current={isCurrent ? "step" : undefined}
                 >
-                  <span className="section-item-number">{progress.complete ? <Check size={14} aria-hidden="true" /> : `0${index + 1}`}</span>
+                  <span className="section-item-number">{progress.complete ? <motion.span style={{ display: "grid", placeItems: "center" }} initial={{ scale: 0.4, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ type: "spring", stiffness: 500, damping: 24 }}><Check size={14} aria-hidden="true" /></motion.span> : `0${index + 1}`}</span>
                   <span className="section-item-copy"><strong>{item.title}</strong><small>{progress.answered}/{progress.total} respondidas</small></span>
                   <ChevronRight size={15} aria-hidden="true" />
                 </button>
@@ -177,10 +177,14 @@ function SingleOptions({ q, answers, onAnswer }: {
       {q.options.map(option => {
         const isSelected = selected === option.value;
         return (
-          <motion.button key={option.value} type="button" className={`option-card${isSelected ? " is-selected" : ""}`} aria-pressed={isSelected} onClick={() => onAnswer(q.id, isSelected ? -1 : option.value)} whileTap={{ scale: 0.995 }} transition={{ duration: 0.12 }}>
-            <span className="option-marker">{isSelected ? <Check size={16} aria-hidden="true" /> : option.value}</span>
+          <motion.button key={option.value} type="button" className={`option-card${isSelected ? " is-selected" : ""}`} aria-pressed={isSelected} onClick={() => onAnswer(q.id, isSelected ? -1 : option.value)} whileHover={{ y: -1.5 }} whileTap={{ scale: 0.99 }} transition={{ type: "spring", stiffness: 480, damping: 32 }}>
+            <span className="option-marker">
+              <motion.span key={isSelected ? "checked" : "value"} style={{ display: "grid", placeItems: "center" }} initial={{ scale: 0.5, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ type: "spring", stiffness: 520, damping: 26 }}>
+                {isSelected ? <Check size={16} aria-hidden="true" /> : option.value}
+              </motion.span>
+            </span>
             <span className="option-copy"><strong>{option.label}</strong>{option.note && <span>{option.note}</span>}</span>
-            <span className="option-state" aria-hidden="true">{isSelected ? <Check size={15} /> : <Circle size={15} />}</span>
+            <span className="option-state" aria-hidden="true">{isSelected ? <motion.span style={{ display: "grid", placeItems: "center" }} initial={{ scale: 0.4, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ type: "spring", stiffness: 520, damping: 26 }}><Check size={15} /></motion.span> : <Circle size={15} />}</span>
           </motion.button>
         );
       })}
@@ -199,10 +203,14 @@ function MultiOptions({ q, answers, onToggle }: {
       {q.options.map(option => {
         const isSelected = selected.includes(option.value);
         return (
-          <motion.button key={option.value} type="button" className={`option-card${isSelected ? " is-selected" : ""}`} aria-pressed={isSelected} onClick={() => onToggle(q, option.value, !!option.isNone)} whileTap={{ scale: 0.995 }} transition={{ duration: 0.12 }}>
-            <span className="option-marker option-marker-check">{isSelected ? <Check size={16} aria-hidden="true" /> : <Square size={15} aria-hidden="true" />}</span>
+          <motion.button key={option.value} type="button" className={`option-card${isSelected ? " is-selected" : ""}`} aria-pressed={isSelected} onClick={() => onToggle(q, option.value, !!option.isNone)} whileHover={{ y: -1.5 }} whileTap={{ scale: 0.99 }} transition={{ type: "spring", stiffness: 480, damping: 32 }}>
+            <span className="option-marker option-marker-check">
+              <motion.span key={isSelected ? "checked" : "empty"} style={{ display: "grid", placeItems: "center" }} initial={{ scale: 0.5, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ type: "spring", stiffness: 520, damping: 26 }}>
+                {isSelected ? <Check size={16} aria-hidden="true" /> : <Square size={15} aria-hidden="true" />}
+              </motion.span>
+            </span>
             <span className="option-copy"><strong>{option.label}</strong>{option.note && <span>{option.note}</span>}</span>
-            <span className="option-state" aria-hidden="true">{isSelected ? <Check size={15} /> : null}</span>
+            <span className="option-state" aria-hidden="true">{isSelected ? <motion.span style={{ display: "grid", placeItems: "center" }} initial={{ scale: 0.4, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ type: "spring", stiffness: 520, damping: 26 }}><Check size={15} /></motion.span> : null}</span>
           </motion.button>
         );
       })}

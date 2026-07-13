@@ -18,7 +18,7 @@
 // `theme` groups insights that make a similar point, so the selector never
 // shows two near-duplicates side by side.
 
-import { AnswerRecord, AssessmentResult, PillarScore, PILLAR_CONFIG, RECOMMENDATIONS } from "@/app/data";
+import { AnswerRecord, AssessmentResult, PillarScore, PILLAR_CONFIG, RECOMMENDATIONS, getPillarTier } from "@/app/data";
 
 export type InsightPillarId = "dados" | "estrategia" | "pessoas" | "governanca" | "tecnologia";
 
@@ -1008,6 +1008,14 @@ function toPillarId(id: string): InsightPillarId {
   return PILLAR_ORDER.includes(id as InsightPillarId) ? id as InsightPillarId : "dados";
 }
 
+// A pillar already at "Forte"/"Avançado" tier shouldn't be called out as a
+// risk or gap even if some individual answer matched a risco-critico insight —
+// the aggregate score says it isn't actually weak.
+export function isWeakPillarScore(score: number): boolean {
+  const tier = getPillarTier(score).key;
+  return tier !== "high" && tier !== "advanced";
+}
+
 export interface ExecutiveSummary {
   currentSituation: string[];
   risks: string[];
@@ -1039,12 +1047,15 @@ const EXEC_RISK_TEXT: Record<InsightPillarId, string> = {
   tecnologia: "Projetos podem ficar presos em pilotos, sem chegar à operação do dia a dia",
 };
 
+const EXEC_NO_RISK_TEXT =
+  "Nenhum pilar apresenta risco crítico no momento: todos estão em nível forte ou avançado. O foco deve ser manter a consistência e capturar o retorno já disponível, em vez de corrigir fragilidades.";
+
 const EXEC_OPPORTUNITY_TEXT: Record<InsightPillarId, string> = {
-  dados: "Melhorar esse pilar aumenta a confiança nas decisões e reduz o tempo perdido conciliando informações antes de agir.",
-  estrategia: "Melhorar esse pilar ajuda a concentrar investimento nos casos de uso com maior retorno, em vez de dispersar energia em testes soltos.",
-  pessoas: "Melhorar esse pilar transforma IA em mudança real de trabalho, não apenas em ferramenta disponível para poucos usuários.",
-  governanca: "Melhorar esse pilar dá segurança para avançar com IA sem criar riscos desnecessários para clientes, equipes e liderança.",
-  tecnologia: "Melhorar esse pilar aumenta a chance de transformar pilotos em soluções usadas na rotina da empresa.",
+  dados: "A empresa já trata dados como insumo relevante para suas decisões. Na visão da Snowfox, falta dar mais consistência a esse acesso, para reduzir o tempo perdido reconciliando informações antes de agir.",
+  estrategia: "A liderança já demonstra compromisso real com IA como prioridade de negócio. Na visão da Snowfox, falta concentrar esse investimento nos casos de uso com maior retorno, em vez de dispersar energia em iniciativas isoladas.",
+  pessoas: "As equipes já demonstram abertura para adotar IA no dia a dia. Na visão da Snowfox, falta transformar essa abertura em mudança real de trabalho, não apenas em ferramenta disponível para poucos usuários.",
+  governanca: "A empresa já opera com um nível saudável de controle sobre suas iniciativas de IA. Na visão da Snowfox, falta consolidar essas regras para avançar sem criar riscos desnecessários para clientes, equipes e liderança.",
+  tecnologia: "A base tecnológica atual já sustenta iniciativas de IA com solidez. Na visão da Snowfox, falta garantir que os pilotos sejam desenhados desde o início para virar solução usada na rotina da empresa.",
 };
 
 function uniquePillars(pillars: Array<InsightPillarId | undefined>): InsightPillarId[] {
@@ -1060,18 +1071,24 @@ function buildExecutiveRiskPillars(
   pillarScores: PillarScore[],
   weakest: PillarScore,
 ): InsightPillarId[] {
-  const rankedPillars = [...pillarScores]
+  const scoreById = Object.fromEntries(pillarScores.map(p => [p.id, p.score])) as Record<InsightPillarId, number>;
+  const isWeak = (pillar: InsightPillarId) => isWeakPillarScore(scoreById[pillar] ?? 0);
+
+  // Only a matched risk/gap insight whose pillar score actually agrees that
+  // it's weak counts — a single low answer inside an otherwise strong pillar
+  // isn't a real risk for the executive summary.
+  const insightPillars = insights
+    .filter(i => i.priority <= 2 && isWeak(i.pillar))
+    .map(i => i.pillar);
+  const rankedWeakPillars = [...pillarScores]
+    .filter(p => isWeak(toPillarId(p.id)))
     .sort((a, b) => a.score - b.score)
     .map(p => toPillarId(p.id));
-  const insightPillars = insights
-    .filter(i => i.priority <= 2)
-    .map(i => i.pillar);
-  return uniquePillars([
-    ...insightPillars,
-    toPillarId(weakest.id),
-    ...rankedPillars,
-    ...PILLAR_ORDER,
-  ]).slice(0, 3);
+  const weakestIfWeak = isWeak(toPillarId(weakest.id)) ? [toPillarId(weakest.id)] : [];
+
+  // No forced padding to 3 entries: if fewer pillars (or none) are genuinely
+  // weak, the risk list should reflect that instead of fabricating risks.
+  return uniquePillars([...insightPillars, ...weakestIfWeak, ...rankedWeakPillars]).slice(0, 3);
 }
 
 export function buildExecutiveSummary({
@@ -1088,26 +1105,37 @@ export function buildExecutiveSummary({
   weakest: PillarScore;
 }): ExecutiveSummary {
   const insights = selectResultInsights(answers, pillarScores, { min: 3, max: 5 });
+  const scoreByPillar = Object.fromEntries(pillarScores.map(p => [p.id, p.score])) as Record<InsightPillarId, number>;
+  const isWeakPillar = (pillar: InsightPillarId) => isWeakPillarScore(scoreByPillar[pillar] ?? 0);
+  // Only trust a matched risk/gap insight to pick the "opportunity" pillar
+  // when that pillar's own aggregate score still agrees it's weak — otherwise
+  // fall back to the pillar that is genuinely the lowest scoring one.
   const attention =
-    insights.find(i => i.type === "risco-critico") ??
-    insights.find(i => i.priority <= 2) ??
+    insights.find(i => i.type === "risco-critico" && isWeakPillar(i.pillar)) ??
+    insights.find(i => i.priority <= 2 && isWeakPillar(i.pillar)) ??
     insights.find(i => i.pillar === weakest.id);
   const weakestPillar = toPillarId(weakest.id);
   const strongestPillar = toPillarId(strongest.id);
   const opportunityPillar = attention?.pillar ?? weakestPillar;
-  const scoreByPillar = Object.fromEntries(pillarScores.map(p => [p.id, p.score])) as Record<InsightPillarId, number>;
   const scoreGap = Math.max(0, strongest.score - weakest.score);
   const riskPillars = buildExecutiveRiskPillars(insights, pillarScores, weakest);
+  const weakestIsStrong = !isWeakPillar(weakestPillar);
 
   return {
     currentSituation: [
       safeClientText(EXEC_READINESS_STANCE[result.level] ?? "A leitura da empresa depende dos pontos fortes e fracos identificados no diagnóstico."),
-      safeClientText(`A pontuação geral foi ${result.score}/100; o ponto mais forte é ${EXEC_PILLAR_LABEL[strongestPillar]} (${strongest.score}%) e o principal limitador é ${EXEC_PILLAR_LABEL[weakestPillar]} (${weakest.score}%).`),
-      scoreGap >= 25
-        ? safeClientText(`Na prática, a capacidade em ${EXEC_PILLAR_LABEL[strongestPillar]} pode acelerar os primeiros movimentos, enquanto a limitação em ${EXEC_PILLAR_LABEL[weakestPillar]} tende a gerar retrabalho, lentidão ou risco nas iniciativas que dependerem dela.`)
-        : safeClientText(`Como os pilares estão relativamente próximos, o ganho virá menos de corrigir um único ponto e mais de coordenar prioridades, responsáveis e métricas durante a execução.`),
+      weakestIsStrong
+        ? safeClientText(`A pontuação geral foi ${result.score}/100; todos os pilares avaliados estão em nível forte ou avançado, com destaque para ${EXEC_PILLAR_LABEL[strongestPillar]} (${strongest.score}%) e ${EXEC_PILLAR_LABEL[weakestPillar]} como o que ainda tem mais espaço para evoluir (${weakest.score}%).`)
+        : safeClientText(`A pontuação geral foi ${result.score}/100; o ponto mais forte é ${EXEC_PILLAR_LABEL[strongestPillar]} (${strongest.score}%) e o principal limitador é ${EXEC_PILLAR_LABEL[weakestPillar]} (${weakest.score}%).`),
+      weakestIsStrong
+        ? safeClientText(`Como todos os pilares já estão em nível forte, o ganho vem menos de corrigir uma fragilidade e mais de manter consistência, aprofundar o uso e capturar o retorno já disponível.`)
+        : scoreGap >= 25
+          ? safeClientText(`Na prática, a capacidade em ${EXEC_PILLAR_LABEL[strongestPillar]} pode acelerar os primeiros movimentos, enquanto a limitação em ${EXEC_PILLAR_LABEL[weakestPillar]} tende a gerar retrabalho, lentidão ou risco nas iniciativas que dependerem dela.`)
+          : safeClientText(`Como os pilares estão relativamente próximos, o ganho virá menos de corrigir um único ponto e mais de coordenar prioridades, responsáveis e métricas durante a execução.`),
     ],
-    risks: riskPillars.map(pillar => safeClientText(EXEC_RISK_TEXT[pillar])),
+    risks: riskPillars.length > 0
+      ? riskPillars.map(pillar => safeClientText(EXEC_RISK_TEXT[pillar]))
+      : [safeClientText(EXEC_NO_RISK_TEXT)],
     opportunity: [
       safeClientText(`A maior oportunidade está em ${EXEC_PILLAR_LABEL[opportunityPillar]} (${scoreByPillar[opportunityPillar] ?? weakest.score}%).`),
       safeClientText(EXEC_OPPORTUNITY_TEXT[opportunityPillar]),

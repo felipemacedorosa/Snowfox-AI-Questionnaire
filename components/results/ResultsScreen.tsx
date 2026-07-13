@@ -58,7 +58,7 @@ const reveal = {
   initial: { opacity: 0, y: 18 },
   whileInView: { opacity: 1, y: 0 },
   viewport: { once: true, amount: 0.14 },
-  transition: { duration: 0.42 },
+  transition: { duration: 0.6, ease: [0.22, 1, 0.36, 1] as const },
 };
 
 function RoadmapDetailContent({ item }: { item: QuarterlyRecommendation }) {
@@ -224,7 +224,7 @@ export function ResultsScreen({ answers, onRestart }: { answers: AnswerRecord; o
               <article className="executive-block executive-recommendation-block executive-data-foundation">
                 <Database size={22} aria-hidden="true" />
                 <div>
-                  <span className="report-label">Solução recomendada</span>
+                  <span className="report-label">O que a Snowfox recomenda</span>
                   <h3>Data Foundation</h3>
                   {executiveSummary.immediateRecommendation.map((line, index) => <p key={index}>{line}</p>)}
                 </div>
@@ -282,7 +282,7 @@ export function ResultsScreen({ answers, onRestart }: { answers: AnswerRecord; o
                     </button>
                     <AnimatePresence initial={false}>
                       {isExpanded && (
-                        <motion.div className="roadmap-row-detail screen-only" initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.24 }}>
+                        <motion.div className="roadmap-row-detail screen-only" initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}>
                           <RoadmapDetailContent item={item} />
                         </motion.div>
                       )}
