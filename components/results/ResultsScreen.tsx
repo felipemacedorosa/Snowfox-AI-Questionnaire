@@ -30,6 +30,7 @@ import {
   buildExecutiveSummary,
   buildQuarterlyRecommendations,
   InsightPillarId,
+  isWeakPillarScore,
   QuarterlyRecommendation,
 } from "@/app/resultInsights";
 import {
@@ -58,7 +59,7 @@ const reveal = {
   initial: { opacity: 0, y: 18 },
   whileInView: { opacity: 1, y: 0 },
   viewport: { once: true, amount: 0.14 },
-  transition: { duration: 0.42 },
+  transition: { duration: 0.6, ease: [0.22, 1, 0.36, 1] as const },
 };
 
 function RoadmapDetailContent({ item }: { item: QuarterlyRecommendation }) {
@@ -204,7 +205,6 @@ export function ResultsScreen({ answers, onRestart }: { answers: AnswerRecord; o
           <motion.section className="report-section executive-section" id="summary" {...revealMotion}>
             <div className="report-section-heading">
               <div><span className="report-section-number">01</span><h2>Resumo executivo</h2></div>
-              <span className="report-section-aside">Uma leitura para decisão</span>
             </div>
             <div className="executive-grid">
               <article className="executive-lead">
@@ -224,7 +224,7 @@ export function ResultsScreen({ answers, onRestart }: { answers: AnswerRecord; o
               <article className="executive-block executive-recommendation-block executive-data-foundation">
                 <Database size={22} aria-hidden="true" />
                 <div>
-                  <span className="report-label">Solução recomendada</span>
+                  <span className="report-label">O que a Snowfox recomenda</span>
                   <h3>Data Foundation</h3>
                   {executiveSummary.immediateRecommendation.map((line, index) => <p key={index}>{line}</p>)}
                 </div>
@@ -236,7 +236,6 @@ export function ResultsScreen({ answers, onRestart }: { answers: AnswerRecord; o
           <motion.section className="report-section readiness-map-section" id="system-map" {...revealMotion}>
             <div className="report-section-heading">
               <div><span className="report-section-number">02</span><h2>Mapa do sistema</h2></div>
-              <span className="report-section-aside">Cinco capacidades conectadas</span>
             </div>
             <div className="readiness-map-layout">
               <ReadinessNetwork
@@ -250,8 +249,14 @@ export function ResultsScreen({ answers, onRestart }: { answers: AnswerRecord; o
                 <h3>{profile.title}</h3>
                 <p>{profile.implication}</p>
                 <div className="readiness-map-signals">
-                  <div><span>Maior força</span><strong>{strongest.title}</strong><b>{strongest.score}%</b></div>
-                  <div><span>Principal limitador</span><strong>{weakest.title}</strong><b>{weakest.score}%</b></div>
+                  {strongest.score === weakest.score ? (
+                    <div><span>Nível consolidado</span><strong>Todos os pilares</strong><b>{strongest.score}%</b></div>
+                  ) : (
+                    <>
+                      <div><span>Maior força</span><strong>{strongest.title}</strong><b>{strongest.score}%</b></div>
+                      <div><span>{isWeakPillarScore(weakest.score) ? "Principal limitador" : "Espaço para evoluir"}</span><strong>{weakest.title}</strong><b>{weakest.score}%</b></div>
+                    </>
+                  )}
                 </div>
                 <p className="readiness-map-note">Linhas destacadas mostram relações tocadas pela dimensão selecionada. Conexões em alerta passam por capacidades abaixo de 40%.</p>
               </aside>
@@ -266,7 +271,6 @@ export function ResultsScreen({ answers, onRestart }: { answers: AnswerRecord; o
           <motion.section className="report-section roadmap-section" id="action-plan" {...revealMotion}>
             <div className="report-section-heading">
               <div><span className="report-section-number">07</span><h2>Plano de ação</h2></div>
-              <span className="report-section-aside">Três trimestres, uma sequência</span>
             </div>
             <p className="report-section-intro">A ordem reduz dependências antes de ampliar investimento. Os papéis e métricas são referências para estruturar a conversa interna.</p>
             <div className="roadmap-list">
@@ -282,7 +286,7 @@ export function ResultsScreen({ answers, onRestart }: { answers: AnswerRecord; o
                     </button>
                     <AnimatePresence initial={false}>
                       {isExpanded && (
-                        <motion.div className="roadmap-row-detail screen-only" initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.24 }}>
+                        <motion.div className="roadmap-row-detail screen-only" initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}>
                           <RoadmapDetailContent item={item} />
                         </motion.div>
                       )}

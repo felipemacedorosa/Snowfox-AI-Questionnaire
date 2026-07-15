@@ -1,11 +1,14 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { LandingScreen } from "@/components/landing/LandingScreen";
 import { Navbar, type AppScreen, type SaveState } from "@/components/Navbar";
 import { QuizScreen } from "@/components/quiz/QuizScreen";
 import { ResultsScreen } from "@/components/results/ResultsScreen";
 import { AnswerRecord, SECTIONS, clearDependentAnswers } from "./data";
+// DEV SHORTCUT (remove with app/devShortcuts.ts): see effect below.
+import { buildStrategyGapTestAnswers } from "./devShortcuts";
 
 const STORAGE_KEY = "snowfox-ai-assessment-v1";
 
@@ -47,6 +50,7 @@ export default function Home() {
   const [hydrated, setHydrated] = useState(false);
   const [saveState, setSaveState] = useState<SaveState>("idle");
   const [resumeScreen, setResumeScreen] = useState<"quiz" | "results" | null>(null);
+  const prefersReducedMotion = useReducedMotion();
 
   const draftExists = useMemo(
     () => resumeScreen !== null || Object.keys(answers).length > 0 || screen === "results",
@@ -70,6 +74,17 @@ export default function Home() {
     } finally {
       setHydrated(true);
     }
+  }, []);
+
+  // DEV SHORTCUT (remove this block + app/devShortcuts.ts to remove entirely):
+  // visit /?debug=strategy-gap to jump straight to the results page with a
+  // near-perfect answer set that has 1-2 deliberately weak sub-answers in
+  // Estratégia, for eyeballing the "high score, not a gap" fix.
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get("debug") !== "strategy-gap") return;
+    setAnswers(buildStrategyGapTestAnswers());
+    setResumeScreen("results");
+    setScreen("results");
   }, []);
 
   const buildDraft = useCallback((): AssessmentDraft => ({
@@ -181,49 +196,59 @@ export default function Home() {
       />
 
       <main className="page-content">
-        {screen === "landing" && (
-          <LandingScreen
-            hasDraft={draftExists}
-            savedScreen={resumeScreen}
-            savedSection={section}
-            onStart={startFresh}
-            onResume={() => goTo(resumeScreen === "results" ? "results" : "quiz")}
-            onReset={restart}
-          />
-        )}
+        <AnimatePresence mode="wait" initial={false}>
+          <motion.div
+            key={screen}
+            initial={prefersReducedMotion ? false : { opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={prefersReducedMotion ? undefined : { opacity: 0, y: -8 }}
+            transition={{ duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
+          >
+            {screen === "landing" && (
+              <LandingScreen
+                hasDraft={draftExists}
+                savedScreen={resumeScreen}
+                savedSection={section}
+                onStart={startFresh}
+                onResume={() => goTo(resumeScreen === "results" ? "results" : "quiz")}
+                onReset={restart}
+              />
+            )}
 
-        {screen === "quiz" && (
-          <QuizScreen
-            section={section}
-            answers={answers}
-            saveState={saveState}
-            onAnswer={handleAnswer}
-            onSectionSelect={nextSection => {
-              setSection(nextSection);
-              scrollToTop();
-            }}
-            onBack={() => {
-              if (section === 0) {
-                goTo("landing");
-                return;
-              }
-              setSection(current => current - 1);
-              scrollToTop();
-            }}
-            onNext={() => {
-              if (section === SECTIONS.length - 1) {
-                goTo("results");
-                return;
-              }
-              setSection(current => current + 1);
-              scrollToTop();
-            }}
-          />
-        )}
+            {screen === "quiz" && (
+              <QuizScreen
+                section={section}
+                answers={answers}
+                saveState={saveState}
+                onAnswer={handleAnswer}
+                onSectionSelect={nextSection => {
+                  setSection(nextSection);
+                  scrollToTop();
+                }}
+                onBack={() => {
+                  if (section === 0) {
+                    goTo("landing");
+                    return;
+                  }
+                  setSection(current => current - 1);
+                  scrollToTop();
+                }}
+                onNext={() => {
+                  if (section === SECTIONS.length - 1) {
+                    goTo("results");
+                    return;
+                  }
+                  setSection(current => current + 1);
+                  scrollToTop();
+                }}
+              />
+            )}
 
-        {screen === "results" && (
-          <ResultsScreen answers={answers} onRestart={restart} />
-        )}
+            {screen === "results" && (
+              <ResultsScreen answers={answers} onRestart={restart} />
+            )}
+          </motion.div>
+        </AnimatePresence>
       </main>
     </div>
   );

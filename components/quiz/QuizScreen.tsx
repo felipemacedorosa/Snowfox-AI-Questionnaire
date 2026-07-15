@@ -292,7 +292,7 @@ export function QuizScreen({
                   onClick={() => onSectionSelect(index)}
                   aria-current={isCurrent ? "step" : undefined}
                 >
-                  <span className="section-item-number">{progress.complete ? <Check size={14} aria-hidden="true" /> : `0${index + 1}`}</span>
+                  <span className="section-item-number">{progress.complete ? <motion.span style={{ display: "grid", placeItems: "center" }} initial={{ scale: 0.4, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ type: "spring", stiffness: 500, damping: 24 }}><Check size={14} aria-hidden="true" /></motion.span> : `0${index + 1}`}</span>
                   <span className="section-item-copy"><strong>{item.title}</strong><small>{progress.answered}/{progress.total} concluídas</small></span>
                   <ChevronRight size={15} aria-hidden="true" />
                 </button>
@@ -461,11 +461,13 @@ function SingleOptions({
             aria-pressed={isSelected}
             title={option.note}
             onClick={() => onSelect(question, option.value)}
-            whileTap={{ scale: 0.995 }}
+            whileHover={{ y: -1.5 }}
+            whileTap={{ scale: 0.99 }}
+            transition={{ type: "spring", stiffness: 480, damping: 32 }}
           >
             <span className="option-marker">{index + 1}</span>
             <span className="option-copy"><strong>{option.label}</strong>{option.note && <span>{option.note}</span>}</span>
-            <span className="option-state" aria-hidden="true">{isSelected ? <Check size={15} /> : <Circle size={15} />}</span>
+            <span className="option-state" aria-hidden="true">{isSelected ? <motion.span style={{ display: "grid", placeItems: "center" }} initial={{ scale: 0.4, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ type: "spring", stiffness: 520, damping: 26 }}><Check size={15} /></motion.span> : <Circle size={15} />}</span>
           </motion.button>
         );
       })}
@@ -495,7 +497,9 @@ function MultiOptions({
             aria-pressed={isSelected}
             title={option.note}
             onClick={() => onToggle(question, option.value, !!option.isNone)}
-            whileTap={{ scale: 0.995 }}
+            whileHover={{ y: -1.5 }}
+            whileTap={{ scale: 0.99 }}
+            transition={{ type: "spring", stiffness: 480, damping: 32 }}
           >
             <span className="option-marker option-marker-check">{isSelected ? <Check size={16} aria-hidden="true" /> : null}</span>
             <span className="option-copy"><strong>{option.label}</strong>{option.note && <span>{option.note}</span>}</span>

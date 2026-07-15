@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import {
   AlertTriangle,
   ArrowRight,
@@ -27,11 +28,10 @@ import {
 } from "@/app/resultAnalysis";
 import { InsightPillarId } from "@/app/resultInsights";
 
-function ReportHeading({ number, title, aside }: { number: string; title: string; aside: string }) {
+function ReportHeading({ number, title }: { number: string; title: string }) {
   return (
     <div className="report-section-heading">
       <div><span className="report-section-number">{number}</span><h2>{title}</h2></div>
-      <span className="report-section-aside">{aside}</span>
     </div>
   );
 }
@@ -40,7 +40,7 @@ const reveal = {
   initial: { opacity: 0, y: 18 },
   whileInView: { opacity: 1, y: 0 },
   viewport: { once: true, amount: 0.12 },
-  transition: { duration: 0.42 },
+  transition: { duration: 0.6, ease: [0.22, 1, 0.36, 1] as const },
 };
 
 function useReportReveal() {
@@ -52,7 +52,7 @@ export function CriticalPathSection({ gates, nextLevel }: { gates: CriticalPathG
   const revealMotion = useReportReveal();
   return (
     <motion.section className="report-section critical-path-section" id="critical-path" {...revealMotion}>
-      <ReportHeading number="03" title="Prioridades para avançar" aside="O que fazer primeiro" />
+      <ReportHeading number="03" title="Prioridades para avançar" />
       <div className="critical-path-summary">
         <div>
           <span className="report-label">Próximo nível</span>
@@ -62,6 +62,9 @@ export function CriticalPathSection({ gates, nextLevel }: { gates: CriticalPathG
           <p>Para chegar a esse nível, comece pelas prioridades abaixo. Elas mostram os principais pontos que precisam melhorar.</p>
         )}
       </div>
+      {gates.length === 0 ? (
+        <p className="report-section-intro">Nenhuma resposta ficou abaixo de metade da pontuação possível. Não há gates críticos a destravar agora.</p>
+      ) : (
       <div className="critical-path-flow">
         {gates.map((gate, index) => (
           <article className={`critical-gate${gate.isBlocker ? " is-blocker" : ""}`} key={gate.id}>
@@ -81,6 +84,7 @@ export function CriticalPathSection({ gates, nextLevel }: { gates: CriticalPathG
           </article>
         ))}
       </div>
+      )}
     </motion.section>
   );
 }
@@ -91,11 +95,60 @@ const RISK_BANDS: Array<{ id: RiskBand; label: string; description: string; icon
   { id: "monitor", label: "Monitorar e preservar", description: "Forças e sinais que precisam continuar visíveis.", icon: Gauge },
 ];
 
+const RISK_LANE_PAGE_SIZE = 5;
+
+const RISK_BAND_EMPTY_TEXT: Record<RiskBand, string> = {
+  "blocks-scale": "Com base nas respostas, nenhum sinal bloqueia a escala no momento.",
+  "weakens-delivery": "Com base nas respostas, nenhum sinal reduz adoção, velocidade ou valor no momento.",
+  monitor: "Com base nas respostas, não há força ou sinal deste tipo para monitorar agora.",
+};
+
+function RiskLaneItems({ items, band }: { items: RiskSignal[]; band: RiskBand }) {
+  const [expanded, setExpanded] = useState(false);
+  const visibleItems = expanded ? items : items.slice(0, RISK_LANE_PAGE_SIZE);
+  const hiddenCount = items.length - visibleItems.length;
+
+  if (items.length === 0) return <p className="risk-empty">{RISK_BAND_EMPTY_TEXT[band]}</p>;
+
+  return (
+    <>
+      {visibleItems.map(item => (
+        <details className="risk-item" key={item.id}>
+          <summary>
+            <span><small>{item.pillarTitle}</small><strong>{item.title}</strong></span>
+            <span className="risk-item-urgency">{item.urgency}</span>
+            <ChevronDown size={16} aria-hidden="true" />
+          </summary>
+          <div className="risk-item-body">
+            <p>{item.detail}</p>
+            {item.evidence.length > 0 && (
+              <div className="risk-evidence">
+                <span><FileSearch size={13} aria-hidden="true" /> Evidência utilizada</span>
+                {item.evidence.map((line, index) => <p key={index}>{line}</p>)}
+              </div>
+            )}
+          </div>
+        </details>
+      ))}
+      {hiddenCount > 0 && (
+        <button type="button" className="risk-lane-toggle" onClick={() => setExpanded(true)}>
+          Ver mais ({hiddenCount})
+        </button>
+      )}
+      {expanded && items.length > RISK_LANE_PAGE_SIZE && (
+        <button type="button" className="risk-lane-toggle" onClick={() => setExpanded(false)}>
+          Ver menos
+        </button>
+      )}
+    </>
+  );
+}
+
 export function RiskViewSection({ signals }: { signals: RiskSignal[] }) {
   const revealMotion = useReportReveal();
   return (
     <motion.section className="report-section risk-view-section" id="risks" {...revealMotion}>
-      <ReportHeading number="04" title="Topologia de riscos" aside="Urgência sem falsa precisão" />
+      <ReportHeading number="04" title="Topologia de riscos" />
       <p className="report-section-intro">Os sinais são organizados pelo efeito sobre a capacidade de escalar, não por uma probabilidade inventada. Abra cada leitura para ver a evidência que a sustenta.</p>
       <div className="risk-lanes">
         {RISK_BANDS.map(band => {
@@ -109,25 +162,7 @@ export function RiskViewSection({ signals }: { signals: RiskSignal[] }) {
                 <b>{items.length}</b>
               </div>
               <div className="risk-lane-items">
-                {items.length === 0 && <p className="risk-empty">Nenhum sinal selecionado nesta faixa.</p>}
-                {items.map(item => (
-                  <details className="risk-item" key={item.id}>
-                    <summary>
-                      <span><small>{item.pillarTitle}</small><strong>{item.title}</strong></span>
-                      <span className="risk-item-urgency">{item.urgency}</span>
-                      <ChevronDown size={16} aria-hidden="true" />
-                    </summary>
-                    <div className="risk-item-body">
-                      <p>{item.detail}</p>
-                      {item.evidence.length > 0 && (
-                        <div className="risk-evidence">
-                          <span><FileSearch size={13} aria-hidden="true" /> Evidência utilizada</span>
-                          {item.evidence.map((line, index) => <p key={index}>{line}</p>)}
-                        </div>
-                      )}
-                    </div>
-                  </details>
-                ))}
+                <RiskLaneItems items={items} band={band.id} />
               </div>
             </div>
           );
@@ -148,8 +183,14 @@ function EvidenceList({ title, items, empty }: { title: string; items: QuestionE
             <span>{item.kind === "strength" ? <Check size={13} aria-hidden="true" /> : item.kind === "risk" ? <AlertTriangle size={13} aria-hidden="true" /> : <Circle size={11} aria-hidden="true" />}</span>
             {item.normalizedScore !== null && <b>{item.normalizedScore}%</b>}
           </div>
-          <p>{item.question}</p>
-          <strong>{item.answer}</strong>
+          {item.kind === "strength" && item.strengthLabel ? (
+            <p>{item.strengthLabel}</p>
+          ) : (
+            <>
+              <p>{item.question}</p>
+              <strong>{item.answer}</strong>
+            </>
+          )}
           {item.targetState && item.kind !== "strength" && <small>Próxima capacidade: {item.targetState}</small>}
         </article>
       ))}
@@ -201,7 +242,7 @@ export function PillarDeepDiveSection({
 
   return (
     <motion.section className="report-section pillar-deep-dive-section" id="pillars" {...revealMotion}>
-      <ReportHeading number="05" title="Diagnóstico por dimensão" aside="Das respostas às capacidades" />
+      <ReportHeading number="05" title="Diagnóstico por dimensão" />
       <div className="pillar-deep-dive-layout screen-only">
         <div className="pillar-deep-tabs" role="tablist" aria-label="Dimensões do diagnóstico">
           {pillarScores.map((pillar, index) => {
@@ -214,7 +255,9 @@ export function PillarDeepDiveSection({
           })}
         </div>
         <div role="tabpanel" aria-live="polite">
-          <PillarEvidencePanel pillar={activePillarId} score={activeScore} evidence={activeEvidence} />
+          <motion.div key={activePillarId} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}>
+            <PillarEvidencePanel pillar={activePillarId} score={activeScore} evidence={activeEvidence} />
+          </motion.div>
         </div>
       </div>
       <div className="pillar-print-list print-only">
@@ -236,7 +279,7 @@ export function OpportunityLibrarySection({ tracks }: { tracks: OpportunityTrack
   const revealMotion = useReportReveal();
   return (
     <motion.section className="report-section opportunity-section" id="opportunities" {...revealMotion}>
-      <ReportHeading number="06" title="Biblioteca de oportunidades" aside="Hipóteses para validar" />
+      <ReportHeading number="06" title="Biblioteca de oportunidades" />
       <p className="report-section-intro"><strong>Data Foundation é a solução recomendada e pode começar imediatamente, independentemente do nível atual de prontidão.</strong> Automation Agents e Predictive Agents continuam condicionados às capacidades necessárias para operar com segurança e valor.</p>
       <div className="opportunity-tracks">
         {tracks.map(track => {

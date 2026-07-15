@@ -105,15 +105,15 @@ export function LandingScreen({
             <p>O diagnóstico organiza a conversa antes que a organização invista em mais uma iniciativa isolada.</p>
           </div>
           <div className="method-steps">
-            <motion.div className="method-step" initial={{ opacity: 0, y: 12 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.5 }} transition={{ duration: 0.35 }}>
+            <motion.div className="method-step" initial={{ opacity: 0, y: 12 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.5 }} transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}>
               <span>01</span>
               <div><strong>Responda com contexto</strong><p>As perguntas foram desenhadas para refletir decisões, não apenas ferramentas.</p></div>
             </motion.div>
-            <motion.div className="method-step" initial={{ opacity: 0, y: 12 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.5 }} transition={{ delay: 0.08, duration: 0.35 }}>
+            <motion.div className="method-step" initial={{ opacity: 0, y: 12 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.5 }} transition={{ delay: 0.08, duration: 0.5, ease: [0.22, 1, 0.36, 1] }}>
               <span>02</span>
               <div><strong>Enxergue o sistema</strong><p>Dados, estratégia, pessoas, governança e tecnologia aparecem em conjunto.</p></div>
             </motion.div>
-            <motion.div className="method-step" initial={{ opacity: 0, y: 12 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.5 }} transition={{ delay: 0.16, duration: 0.35 }}>
+            <motion.div className="method-step" initial={{ opacity: 0, y: 12 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.5 }} transition={{ delay: 0.16, duration: 0.5, ease: [0.22, 1, 0.36, 1] }}>
               <span>03</span>
               <div><strong>Saia com uma agenda</strong><p>O resultado destaca riscos, alavancas e uma sequência de ação para os próximos trimestres.</p></div>
             </motion.div>
@@ -133,7 +133,7 @@ export function LandingScreen({
           {PILLAR_DETAILS.map((pillar, index) => {
             const config = PILLAR_CONFIG[index];
             return (
-              <motion.button type="button" className="dimension-item" key={pillar.label} initial={{ opacity: 0, y: 14 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.35 }} transition={{ delay: index * 0.06, duration: 0.35 }} onClick={() => {
+              <motion.button type="button" className="dimension-item" key={pillar.label} initial={{ opacity: 0, y: 14 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.35 }} transition={{ delay: index * 0.06, duration: 0.5, ease: [0.22, 1, 0.36, 1] }} onClick={() => {
                 setActivePillarId(pillar.id);
                 document.getElementById("landing-top")?.scrollIntoView({ behavior: "smooth" });
               }}>
@@ -149,7 +149,7 @@ export function LandingScreen({
         </div>
       </section>
 
-      <motion.section className="landing-final page-frame" initial={{ opacity: 0, y: 14 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.5 }} transition={{ duration: 0.4 }}>
+      <motion.section className="landing-final page-frame" initial={{ opacity: 0, y: 14 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.5 }} transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}>
         <div className="landing-final-mark"><ShieldCheck size={20} aria-hidden="true" /></div>
         <div>
           <h2>Uma conversa melhor começa com uma pergunta melhor.</h2>
