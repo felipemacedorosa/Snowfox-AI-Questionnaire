@@ -16,17 +16,13 @@ import {
   Target,
 } from "lucide-react";
 import { motion, useReducedMotion } from "motion/react";
-import { getPillarTier, PillarScore } from "@/app/data";
 import {
   CriticalPathGate,
   NextLevelTarget,
   OpportunityTrack,
-  PILLAR_TITLES,
-  QuestionEvidence,
   RiskBand,
   RiskSignal,
 } from "@/app/resultAnalysis";
-import { InsightPillarId } from "@/app/resultInsights";
 
 function ReportHeading({ number, title }: { number: string; title: string }) {
   return (
@@ -52,7 +48,7 @@ export function CriticalPathSection({ gates, nextLevel }: { gates: CriticalPathG
   const revealMotion = useReportReveal();
   return (
     <motion.section className="report-section critical-path-section" id="critical-path" {...revealMotion}>
-      <ReportHeading number="03" title="Prioridades para avançar" />
+      <ReportHeading number="04" title="Prioridades para avançar" />
       <div className="critical-path-summary">
         <div>
           <span className="report-label">Próximo nível</span>
@@ -148,7 +144,7 @@ export function RiskViewSection({ signals }: { signals: RiskSignal[] }) {
   const revealMotion = useReportReveal();
   return (
     <motion.section className="report-section risk-view-section" id="risks" {...revealMotion}>
-      <ReportHeading number="04" title="Topologia de riscos" />
+      <ReportHeading number="05" title="Topologia de riscos" />
       <p className="report-section-intro">Os sinais são organizados pelo efeito sobre a capacidade de escalar, não por uma probabilidade inventada. Abra cada leitura para ver a evidência que a sustenta.</p>
       <div className="risk-lanes">
         {RISK_BANDS.map(band => {
@@ -172,104 +168,7 @@ export function RiskViewSection({ signals }: { signals: RiskSignal[] }) {
   );
 }
 
-function EvidenceList({ title, items, empty }: { title: string; items: QuestionEvidence[]; empty: string }) {
-  return (
-    <div className="pillar-evidence-group">
-      <h3>{title}<span>{items.length}</span></h3>
-      {items.length === 0 && <p className="pillar-evidence-empty">{empty}</p>}
-      {items.map(item => (
-        <article className={`pillar-evidence-row evidence-${item.kind}`} key={item.id}>
-          <div className="pillar-evidence-meta">
-            <span>{item.kind === "strength" ? <Check size={13} aria-hidden="true" /> : item.kind === "risk" ? <AlertTriangle size={13} aria-hidden="true" /> : <Circle size={11} aria-hidden="true" />}</span>
-            {item.normalizedScore !== null && <b>{item.normalizedScore}%</b>}
-          </div>
-          {item.kind === "strength" && item.strengthLabel ? (
-            <p>{item.strengthLabel}</p>
-          ) : (
-            <>
-              <p>{item.question}</p>
-              <strong>{item.answer}</strong>
-            </>
-          )}
-          {item.targetState && item.kind !== "strength" && <small>Próxima capacidade: {item.targetState}</small>}
-        </article>
-      ))}
-    </div>
-  );
-}
-
-function PillarEvidencePanel({ pillar, score, evidence }: { pillar: InsightPillarId; score: number; evidence: QuestionEvidence[] }) {
-  const tier = getPillarTier(score);
-  const strengths = evidence
-    .filter(item => item.kind === "strength")
-    .sort((a, b) => (b.normalizedScore ?? 0) - (a.normalizedScore ?? 0))
-    .slice(0, 3);
-  const gaps = evidence
-    .filter(item => item.kind === "gap" || item.kind === "risk")
-    .sort((a, b) => (a.normalizedScore ?? 100) - (b.normalizedScore ?? 100))
-    .slice(0, 4);
-  const context = evidence.filter(item => item.kind === "context");
-
-  return (
-    <div className="pillar-evidence-panel">
-      <div className="pillar-evidence-scoreline">
-        <div><span className="report-label">{PILLAR_TITLES[pillar]}</span><strong>{score}%</strong></div>
-        <div><span className={`level-tag level-${tier.key}`}>{tier.label}</span><div className="pillar-evidence-track"><span className={tier.barClass} style={{ width: `${score}%` }} /></div></div>
-      </div>
-      <div className={`pillar-evidence-columns${strengths.length === 0 ? " is-single" : ""}`}>
-        {strengths.length > 0 && <EvidenceList title="Capacidades presentes" items={strengths} empty="Nenhuma força específica foi selecionada neste pilar." />}
-        <EvidenceList title="Gaps prioritários" items={gaps} empty="Nenhum gap prioritário foi identificado neste pilar." />
-      </div>
-      {context.map(item => <div className="pillar-context" key={item.id}><span>Contexto fornecido</span><p>{item.answer}</p></div>)}
-    </div>
-  );
-}
-
-export function PillarDeepDiveSection({
-  pillarScores,
-  evidence,
-  activePillarId,
-  onSelect,
-}: {
-  pillarScores: PillarScore[];
-  evidence: QuestionEvidence[];
-  activePillarId: InsightPillarId;
-  onSelect: (pillar: InsightPillarId) => void;
-}) {
-  const revealMotion = useReportReveal();
-  const activeScore = pillarScores.find(pillar => pillar.id === activePillarId)?.score ?? 0;
-  const activeEvidence = evidence.filter(item => item.pillar === activePillarId);
-
-  return (
-    <motion.section className="report-section pillar-deep-dive-section" id="pillars" {...revealMotion}>
-      <ReportHeading number="05" title="Diagnóstico por dimensão" />
-      <div className="pillar-deep-dive-layout screen-only">
-        <div className="pillar-deep-tabs" role="tablist" aria-label="Dimensões do diagnóstico">
-          {pillarScores.map((pillar, index) => {
-            const id = pillar.id as InsightPillarId;
-            return (
-              <button key={id} type="button" role="tab" aria-selected={id === activePillarId} className={id === activePillarId ? "is-active" : ""} onClick={() => onSelect(id)}>
-                <span>0{index + 1}</span><strong>{pillar.title}</strong><b>{pillar.score}%</b>
-              </button>
-            );
-          })}
-        </div>
-        <div role="tabpanel" aria-live="polite">
-          <motion.div key={activePillarId} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}>
-            <PillarEvidencePanel pillar={activePillarId} score={activeScore} evidence={activeEvidence} />
-          </motion.div>
-        </div>
-      </div>
-      <div className="pillar-print-list print-only">
-        {pillarScores.map(pillar => (
-          <PillarEvidencePanel key={pillar.id} pillar={pillar.id as InsightPillarId} score={pillar.score} evidence={evidence.filter(item => item.pillar === pillar.id)} />
-        ))}
-      </div>
-    </motion.section>
-  );
-}
-
-const OPPORTUNITY_ICONS = {
+export const OPPORTUNITY_ICONS = {
   "data-foundation": Database,
   "automation-agents": Bot,
   "predictive-agents": BrainCircuit,

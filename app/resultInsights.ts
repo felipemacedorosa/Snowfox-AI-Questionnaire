@@ -1017,10 +1017,8 @@ export function isWeakPillarScore(score: number): boolean {
 }
 
 export interface ExecutiveSummary {
-  currentSituation: string[];
-  risks: string[];
-  opportunity: string[];
-  immediateRecommendation: string[];
+  strengths: string;
+  opportunities: string;
 }
 
 const EXEC_PILLAR_LABEL: Record<InsightPillarId, string> = {
@@ -1040,15 +1038,22 @@ const EXEC_READINESS_STANCE: Record<string, string> = {
 };
 
 const EXEC_RISK_TEXT: Record<InsightPillarId, string> = {
-  dados: "Decisões podem continuar sendo tomadas com informações incompletas, lentas ou contraditórias",
-  estrategia: "Investimentos em IA podem virar testes isolados, sem prioridade executiva ou retorno claro",
-  pessoas: "As equipes podem não adotar as soluções, mesmo quando a tecnologia funcionar",
-  governanca: "A empresa pode ampliar IA sem regras claras de responsabilidade, aumentando exposição e retrabalho",
-  tecnologia: "Projetos podem ficar presos em pilotos, sem chegar à operação do dia a dia",
+  dados: "decisões podem continuar sendo tomadas com informações incompletas, lentas ou contraditórias",
+  estrategia: "investimentos em IA podem virar testes isolados, sem prioridade executiva ou retorno claro",
+  pessoas: "as equipes podem não adotar as soluções, mesmo quando a tecnologia funcionar",
+  governanca: "a empresa pode ampliar IA sem regras claras de responsabilidade, aumentando exposição e retrabalho",
+  tecnologia: "projetos podem ficar presos em pilotos, sem chegar à operação do dia a dia",
 };
 
-const EXEC_NO_RISK_TEXT =
-  "Nenhum pilar apresenta risco crítico no momento: todos estão em nível forte ou avançado. O foco deve ser manter a consistência e capturar o retorno já disponível, em vez de corrigir fragilidades.";
+// Why the strongest pillar being strong actually matters — paired with the
+// strongest pillar's name in the "strengths" paragraph of the executive summary.
+const EXEC_STRENGTH_TEXT: Record<InsightPillarId, string> = {
+  dados: "Isso é uma vantagem real: dados confiáveis reduzem retrabalho e dão à liderança confiança para decidir com base em evidência, não em intuição.",
+  estrategia: "Isso é uma vantagem real: ter direção clara evita que investimento em IA vire uma coleção de experimentos desconectados, e concentra energia onde o retorno é maior.",
+  pessoas: "Isso é uma vantagem real: equipes dispostas a adotar novas ferramentas são o que transforma tecnologia disponível em mudança de trabalho de fato.",
+  governanca: "Isso é uma vantagem real: regras claras de responsabilidade permitem escalar iniciativas de IA sem acumular risco desnecessário para clientes e liderança.",
+  tecnologia: "Isso é uma vantagem real: uma base técnica sólida é o que permite que pilotos promissores cheguem à operação do dia a dia, em vez de ficarem presos em testes.",
+};
 
 const EXEC_OPPORTUNITY_TEXT: Record<InsightPillarId, string> = {
   dados: "A empresa já trata dados como insumo relevante para suas decisões. Na visão da Snowfox, falta dar mais consistência a esse acesso, para reduzir o tempo perdido reconciliando informações antes de agir.",
@@ -1081,39 +1086,6 @@ const EXEC_OPPORTUNITY_CRITICAL_TEXT: Record<InsightPillarId, string> = {
   tecnologia: "A base tecnológica ainda não sustenta nem os pilotos mais simples de IA. Este é o ponto de partida: garantir infraestrutura básica de dados e sistemas antes de investir em soluções mais sofisticadas.",
 };
 
-function uniquePillars(pillars: Array<InsightPillarId | undefined>): InsightPillarId[] {
-  const unique: InsightPillarId[] = [];
-  for (const pillar of pillars) {
-    if (pillar && !unique.includes(pillar)) unique.push(pillar);
-  }
-  return unique;
-}
-
-function buildExecutiveRiskPillars(
-  insights: ResultInsight[],
-  pillarScores: PillarScore[],
-  weakest: PillarScore,
-): InsightPillarId[] {
-  const scoreById = Object.fromEntries(pillarScores.map(p => [p.id, p.score])) as Record<InsightPillarId, number>;
-  const isWeak = (pillar: InsightPillarId) => isWeakPillarScore(scoreById[pillar] ?? 0);
-
-  // Only a matched risk/gap insight whose pillar score actually agrees that
-  // it's weak counts — a single low answer inside an otherwise strong pillar
-  // isn't a real risk for the executive summary.
-  const insightPillars = insights
-    .filter(i => i.priority <= 2 && isWeak(i.pillar))
-    .map(i => i.pillar);
-  const rankedWeakPillars = [...pillarScores]
-    .filter(p => isWeak(toPillarId(p.id)))
-    .sort((a, b) => a.score - b.score)
-    .map(p => toPillarId(p.id));
-  const weakestIfWeak = isWeak(toPillarId(weakest.id)) ? [toPillarId(weakest.id)] : [];
-
-  // No forced padding to 3 entries: if fewer pillars (or none) are genuinely
-  // weak, the risk list should reflect that instead of fabricating risks.
-  return uniquePillars([...insightPillars, ...weakestIfWeak, ...rankedWeakPillars]).slice(0, 3);
-}
-
 export function buildExecutiveSummary({
   answers,
   pillarScores,
@@ -1141,61 +1113,52 @@ export function buildExecutiveSummary({
   const strongestPillar = toPillarId(strongest.id);
   const opportunityPillar = attention?.pillar ?? weakestPillar;
   const opportunityScore = scoreByPillar[opportunityPillar] ?? weakest.score;
-  const scoreGap = Math.max(0, strongest.score - weakest.score);
-  const riskPillars = buildExecutiveRiskPillars(insights, pillarScores, weakest);
-  const weakestIsStrong = !isWeakPillar(weakestPillar);
+  // Every pillar clearing the "Forte" bar means there's nothing genuinely
+  // weak to flag — paragraph 2 should stay positive, not manufacture a gap.
+  const allPillarsStrong = !isWeakPillar(weakestPillar);
+  // The overall score reading strong (same bar) is a softer signal than every
+  // single pillar clearing it: there's still a real gap here, but a company
+  // already scoring well shouldn't get the same alarm-toned consequence
+  // clause as one that's still building its foundation.
+  const overallIsStrong = result.score >= 75;
   // When every pillar ties (most commonly all at 100), strongest and weakest
   // resolve to the same pillar — naming it as both the highlight and the gap
   // in the same sentence reads as self-contradictory, so this needs its own copy.
   const noDifferentiation = strongest.score === weakest.score;
-  // Three opportunity bands, not just weak vs. strong: a pillar at 90%+ has no
-  // real gap left to "close" (that copy reads as false, per Alessandro's
-  // feedback), and a pillar under 20% isn't missing consistency — it's missing
-  // the basics, so it needs a starting-point framing instead of a mid-journey one.
-  const opportunityTier: "critical" | "advanced" | "standard" =
-    opportunityScore < 20 ? "critical" : opportunityScore >= 90 ? "advanced" : "standard";
+
+  let strengths: string;
+  if (!isWeakPillar(strongestPillar)) {
+    strengths = noDifferentiation
+      ? `${EXEC_READINESS_STANCE[result.level] ?? ""} As cinco capacidades estão no mesmo nível, todas em patamar forte ou avançado — uma base equilibrada para ampliar o uso de IA.`
+      : `${EXEC_READINESS_STANCE[result.level] ?? ""} ${EXEC_PILLAR_LABEL[strongestPillar]} se destaca como o pilar mais maduro (${strongest.score}%). ${EXEC_STRENGTH_TEXT[strongestPillar]}`;
+  } else {
+    // Not even the strongest pillar clears the bar — nothing genuine to
+    // celebrate yet, so don't fabricate a highlight.
+    strengths = strongest.score < 20
+      ? `${EXEC_READINESS_STANCE[result.level] ?? ""} Nenhum pilar ultrapassa uma base mínima; a prioridade é estruturar fundamentos de dados, processos e responsabilidades antes de qualquer iniciativa de IA.`
+      : `${EXEC_READINESS_STANCE[result.level] ?? ""} Nenhum pilar atingiu um nível consistente até aqui; a prioridade é fortalecer as capacidades básicas antes de acelerar iniciativas de IA.`;
+  }
+
+  let opportunities: string;
+  if (allPillarsStrong) {
+    opportunities = noDifferentiation
+      ? "Todas as capacidades estão no mesmo nível elevado, sem um ponto de atenção isolado. O foco deve ser manter a consistência e capturar o retorno já disponível, em vez de corrigir fragilidades."
+      : `${EXEC_PILLAR_LABEL[opportunityPillar]} é o pilar com mais espaço para evoluir (${opportunityScore}%), ainda que já em um nível saudável. ${EXEC_OPPORTUNITY_ADVANCED_TEXT[opportunityPillar]}`;
+  } else {
+    const isCritical = opportunityScore < 20;
+    const leadIn = isCritical
+      ? `O ponto mais urgente é ${EXEC_PILLAR_LABEL[opportunityPillar]} (${opportunityScore}%).`
+      : `A maior oportunidade está em ${EXEC_PILLAR_LABEL[opportunityPillar]} (${opportunityScore}%).`;
+    const gapText = isCritical ? EXEC_OPPORTUNITY_CRITICAL_TEXT[opportunityPillar] : EXEC_OPPORTUNITY_TEXT[opportunityPillar];
+    // Subtle criticism when the overall score already reads strong: name the
+    // gap and why it matters, but skip the alarm-toned consequence clause.
+    const consequence = overallIsStrong ? "" : ` Sem avançar aqui, ${EXEC_RISK_TEXT[opportunityPillar]}.`;
+    opportunities = `${leadIn} ${gapText}${consequence}`;
+  }
 
   return {
-    currentSituation: [
-      safeClientText(EXEC_READINESS_STANCE[result.level] ?? "A leitura da empresa depende dos pontos fortes e fracos identificados no diagnóstico."),
-      noDifferentiation
-        ? safeClientText(`A pontuação geral foi ${result.score}/100; todos os pilares avaliados estão no mesmo patamar, em nível forte ou avançado, sem um ponto de atenção isolado.`)
-        : weakestIsStrong
-          ? safeClientText(`A pontuação geral foi ${result.score}/100; todos os pilares avaliados estão em nível forte ou avançado, com destaque para ${EXEC_PILLAR_LABEL[strongestPillar]} (${strongest.score}%) e ${EXEC_PILLAR_LABEL[weakestPillar]} como o que ainda tem mais espaço para evoluir (${weakest.score}%).`)
-          : safeClientText(`A pontuação geral foi ${result.score}/100; o ponto mais forte é ${EXEC_PILLAR_LABEL[strongestPillar]} (${strongest.score}%) e o principal limitador é ${EXEC_PILLAR_LABEL[weakestPillar]} (${weakest.score}%).`),
-      weakestIsStrong
-        ? safeClientText(`Com a base já consolidada, o ganho deixa de vir de corrigir fragilidades e passa a vir de escalar o que já funciona e acompanhar de perto as novas capacidades de IA para abrir casos de uso ainda mais poderosos.`)
-        // Even the strongest pillar is still below a working baseline — "coordinate
-        // priorities during execution" presumes execution is already happening,
-        // which isn't true yet. The framing needs to be "build the basics", not
-        // "fine-tune what's close together".
-        : strongest.score < 20
-          ? safeClientText(`Como nenhum pilar ultrapassa uma base mínima, o ganho não vem de ajustar prioridades entre eles, e sim de estruturar as fundações básicas de dados, processos e responsabilidades antes de iniciar qualquer iniciativa de IA.`)
-          : scoreGap >= 25
-            ? safeClientText(`Na prática, a capacidade em ${EXEC_PILLAR_LABEL[strongestPillar]} pode acelerar os primeiros movimentos, enquanto a limitação em ${EXEC_PILLAR_LABEL[weakestPillar]} tende a gerar retrabalho, lentidão ou risco nas iniciativas que dependerem dela.`)
-            : safeClientText(`Como os pilares estão relativamente próximos, o ganho virá menos de corrigir um único ponto e mais de coordenar prioridades, responsáveis e métricas durante a execução.`),
-    ],
-    risks: riskPillars.length > 0
-      ? riskPillars.map(pillar => safeClientText(EXEC_RISK_TEXT[pillar]))
-      : [safeClientText(EXEC_NO_RISK_TEXT)],
-    opportunity: opportunityTier === "advanced"
-      ? [
-          safeClientText(`${EXEC_PILLAR_LABEL[opportunityPillar]} já está no nível mais alto (${opportunityScore}%).`),
-          safeClientText(EXEC_OPPORTUNITY_ADVANCED_TEXT[opportunityPillar]),
-        ]
-      : opportunityTier === "critical"
-        ? [
-            safeClientText(`O ponto mais urgente é ${EXEC_PILLAR_LABEL[opportunityPillar]} (${opportunityScore}%).`),
-            safeClientText(EXEC_OPPORTUNITY_CRITICAL_TEXT[opportunityPillar]),
-          ]
-        : [
-            safeClientText(`A maior oportunidade está em ${EXEC_PILLAR_LABEL[opportunityPillar]} (${opportunityScore}%).`),
-            safeClientText(EXEC_OPPORTUNITY_TEXT[opportunityPillar]),
-          ],
-    immediateRecommendation: [
-      safeClientText("Adote Data Foundation como a primeira solução: uma base reutilizável de lake ou warehouse, qualidade, catálogo, acesso e governança para sustentar decisões e produtos de IA."),
-      safeClientText("Ela pode começar imediatamente, sem pré-requisito de maturidade, a partir de um único domínio de negócio com fontes e responsáveis claramente identificados."),
-    ],
+    strengths: safeClientText(strengths),
+    opportunities: safeClientText(opportunities),
   };
 }
 

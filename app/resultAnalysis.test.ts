@@ -33,6 +33,34 @@ describe("getReadinessProfile", () => {
   it("uses the uneven profile when the score spread is material", () => {
     expect(getReadinessProfile(scores({ dados: 40, estrategia: 66, pessoas: 51, governanca: 48, tecnologia: 72 }), { score: 53, level: "Prontidão Emergente", blocker: null }).id).toBe("uneven");
   });
+
+  it("never returns a warning-toned profile in the 75-84 range, even with one lagging pillar", () => {
+    // governanca=35 alone would otherwise trigger "governance-lag"; none of that
+    // should surface once the overall score reads strong.
+    const profile = getReadinessProfile(
+      scores({ dados: 90, estrategia: 90, pessoas: 90, governanca: 35, tecnologia: 90 }),
+      { score: 79, level: "Prontidão Alta", blocker: null },
+    );
+    expect(profile.id).toBe("strong-with-focus");
+    expect(profile.summary).toContain("Governança e Processo");
+  });
+
+  it("uses the top excellence bracket at 85+ overall with a lagging pillar", () => {
+    const profile = getReadinessProfile(
+      scores({ dados: 100, estrategia: 100, pessoas: 100, governanca: 35, tecnologia: 100 }),
+      { score: 87, level: "Prontidão Alta", blocker: null },
+    );
+    expect(profile.id).toBe("excellence-with-focus");
+    expect(profile.summary).toContain("Governança e Processo");
+  });
+
+  it("uses the top excellence bracket at 85+ overall when every pillar is strong", () => {
+    const profile = getReadinessProfile(
+      scores({ dados: 92, estrategia: 88, pessoas: 90, governanca: 85, tecnologia: 90 }),
+      { score: 89, level: "Prontidão Alta", blocker: null },
+    );
+    expect(profile.id).toBe("excellence");
+  });
 });
 
 describe("answer evidence", () => {

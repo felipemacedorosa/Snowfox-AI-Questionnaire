@@ -248,13 +248,47 @@ export function getReadinessProfile(pillarScores: PillarScore[], result: Assessm
   const scores = scoreMap(pillarScores);
   const values = Object.values(scores);
   const spread = Math.max(...values) - Math.min(...values);
+  const allPillarsStrong = values.every(score => score >= 75);
+  const [weakestId] = Object.entries(scores).sort((a, b) => a[1] - b[1])[0];
+  const weakestTitle = PILLAR_TITLES[weakestId as InsightPillarId];
 
-  if (values.every(score => score >= 75)) {
+  // 85+ overall is a distinct top bracket from the 75+ "strong" bracket below —
+  // it gets its own, more emphatic headline instead of sharing wording with a
+  // company that just barely cleared the "strong" bar.
+  if (result.score >= 85) {
+    if (allPillarsStrong) {
+      return {
+        id: "excellence",
+        title: "Prontidão de excelência",
+        summary: "A pontuação geral está entre as mais altas possíveis, com as cinco capacidades operando em nível avançado de forma consistente.",
+        implication: "A prioridade é sustentar esse padrão e usar a maturidade atual para liderar iniciativas mais ambiciosas de IA.",
+      };
+    }
+    return {
+      id: "excellence-with-focus",
+      title: "Prontidão de excelência, foco pontual",
+      summary: `A pontuação geral está entre as mais altas possíveis; ${weakestTitle} é o único pilar que ainda não acompanha esse nível.`,
+      implication: `Elevar ${weakestTitle} ao mesmo padrão dos demais completa um perfil já excepcional.`,
+    };
+  }
+  if (allPillarsStrong) {
     return {
       id: "integrated",
       title: "Prontidão integrada",
       summary: "As cinco capacidades estão suficientemente alinhadas para sustentar uma agenda mais ampla de IA.",
       implication: "A prioridade passa de preparar a base para gerir portfólio, valor, risco e melhoria contínua.",
+    };
+  }
+  // A strong overall score (75+, the same "Forte" bar used per-pillar elsewhere)
+  // should never surface a warning-toned headline — the profile below this
+  // point exists to call out gaps/imbalances, which misrepresents a company
+  // that's already doing well overall just because one pillar lags the rest.
+  if (result.score >= 75) {
+    return {
+      id: "strong-with-focus",
+      title: "Prontidão avançada, foco pontual",
+      summary: `A pontuação geral é forte e já sustenta uma agenda ampla de IA; ${weakestTitle} é o único pilar ainda abaixo do padrão dos demais.`,
+      implication: `Consolidar ${weakestTitle} deve destravar o potencial já construído nas outras capacidades, sem exigir recomeçar a base.`,
     };
   }
   if (result.score >= 60 && scores.governanca < 40) {
@@ -481,6 +515,20 @@ export function getOpportunityTracks(answers: AnswerRecord, pillarScores: Pillar
       startAction: "Escolher uma decisão recorrente com histórico suficiente e definir antecipadamente o resultado que o modelo deve melhorar.",
     },
   ];
+}
+
+// Data Foundation has no prerequisites and is always viable, so it's the
+// fallback recommendation. But when the company already clears the bar for a
+// higher-value track, that's the more useful "what to do now" — Predictive
+// Agents outranks Automation Agents since its checks require a stronger data
+// foundation to already be in place.
+export function selectPrimaryRecommendation(tracks: OpportunityTrack[]): OpportunityTrack {
+  const byId = Object.fromEntries(tracks.map(track => [track.id, track])) as Record<OpportunityTrack["id"], OpportunityTrack>;
+  return byId["predictive-agents"]?.status === "ready"
+    ? byId["predictive-agents"]
+    : byId["automation-agents"]?.status === "ready"
+      ? byId["automation-agents"]
+      : byId["data-foundation"];
 }
 
 export function getNextLevelTarget(result: AssessmentResult): NextLevelTarget {

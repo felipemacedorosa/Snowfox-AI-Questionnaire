@@ -4,7 +4,6 @@ import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import {
   ChevronDown,
-  Database,
   Download,
   ExternalLink,
   RotateCcw,
@@ -19,12 +18,12 @@ import {
   LEVEL_META,
 } from "@/app/data";
 import {
-  buildQuestionEvidence,
   getCriticalPath,
   getNextLevelTarget,
   getOpportunityTracks,
   getReadinessProfile,
   getRiskSignals,
+  selectPrimaryRecommendation,
 } from "@/app/resultAnalysis";
 import {
   buildExecutiveSummary,
@@ -35,10 +34,11 @@ import {
 } from "@/app/resultInsights";
 import {
   CriticalPathSection,
+  OPPORTUNITY_ICONS,
   OpportunityLibrarySection,
-  PillarDeepDiveSection,
   RiskViewSection,
 } from "@/components/results/DeepResultSections";
+import { PillarRadarChart } from "@/components/results/PillarRadarChart";
 import { ReportChapter, ReportNavigation } from "@/components/results/ReportNavigation";
 import { ReadinessNetwork } from "@/components/ui/ReadinessNetwork";
 
@@ -47,10 +47,10 @@ const CONTACT_URL = process.env.NEXT_PUBLIC_CONTACT_URL ?? "https://snowfox-ai.c
 
 const REPORT_CHAPTERS: ReportChapter[] = [
   { id: "summary", number: "01", label: "Resumo" },
-  { id: "system-map", number: "02", label: "Sistema" },
-  { id: "critical-path", number: "03", label: "Prioridades" },
-  { id: "risks", number: "04", label: "Riscos" },
-  { id: "pillars", number: "05", label: "Dimensões" },
+  { id: "recommendation", number: "02", label: "Recomendação" },
+  { id: "system-map", number: "03", label: "Sistema" },
+  { id: "critical-path", number: "04", label: "Prioridades" },
+  { id: "risks", number: "05", label: "Riscos" },
   { id: "opportunities", number: "06", label: "Oportunidades" },
   { id: "action-plan", number: "07", label: "Plano de ação" },
 ];
@@ -98,12 +98,13 @@ export function ResultsScreen({ answers, onRestart }: { answers: AnswerRecord; o
     () => buildQuarterlyRecommendations({ answers, pillarScores, result, strongest, weakest }),
     [answers, pillarScores, result, strongest, weakest]
   );
-  const evidence = useMemo(() => buildQuestionEvidence(answers), [answers]);
   const profile = useMemo(() => getReadinessProfile(pillarScores, result), [pillarScores, result]);
   const criticalPath = useMemo(() => getCriticalPath(answers, pillarScores, result), [answers, pillarScores, result]);
   const nextLevel = useMemo(() => getNextLevelTarget(result), [result]);
   const riskSignals = useMemo(() => getRiskSignals(answers, pillarScores), [answers, pillarScores]);
   const opportunityTracks = useMemo(() => getOpportunityTracks(answers, pillarScores), [answers, pillarScores]);
+  const primaryRecommendation = useMemo(() => selectPrimaryRecommendation(opportunityTracks), [opportunityTracks]);
+  const RecommendationIcon = OPPORTUNITY_ICONS[primaryRecommendation.id];
   const dateStr = useMemo(
     () => new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "long", year: "numeric" }).format(new Date()),
     []
@@ -206,36 +207,38 @@ export function ResultsScreen({ answers, onRestart }: { answers: AnswerRecord; o
             <div className="report-section-heading">
               <div><span className="report-section-number">01</span><h2>Resumo executivo</h2></div>
             </div>
-            <div className="executive-grid">
-              <article className="executive-lead">
-                <span className="report-label">Situação atual</span>
-                <p className="executive-lead-copy">{executiveSummary.currentSituation[0]}</p>
-                <p>{executiveSummary.currentSituation[1]}</p>
-                <p>{executiveSummary.currentSituation[2]}</p>
-              </article>
-              <article className="executive-block executive-risk-block">
-                <span className="report-label">Principais riscos</span>
-                <ul>{executiveSummary.risks.map((risk, index) => <li key={index}>{risk}</li>)}</ul>
-              </article>
-              <article className="executive-block">
-                <span className="report-label">Maior oportunidade</span>
-                {executiveSummary.opportunity.map((line, index) => <p key={index}>{line}</p>)}
-              </article>
-              <article className="executive-block executive-recommendation-block executive-data-foundation">
-                <Database size={22} aria-hidden="true" />
-                <div>
-                  <span className="report-label">O que a Snowfox recomenda</span>
-                  <h3>Data Foundation</h3>
-                  {executiveSummary.immediateRecommendation.map((line, index) => <p key={index}>{line}</p>)}
-                </div>
-                <div className="solution-availability"><strong>Começar agora</strong><span>Sem pré-requisitos</span></div>
-              </article>
+            <div className="executive-summary-layout">
+              <div className="executive-summary-body">
+                <p>{executiveSummary.strengths}</p>
+                <p>{executiveSummary.opportunities}</p>
+              </div>
+              <div className="executive-summary-chart">
+                <PillarRadarChart pillarScores={pillarScores} />
+              </div>
+            </div>
+          </motion.section>
+
+          <motion.section className="report-section recommendation-section" id="recommendation" {...revealMotion}>
+            <div className="report-section-heading">
+              <div><span className="report-section-number">02</span><h2>O que a Snowfox recomenda</h2></div>
+            </div>
+            <div className="executive-data-foundation">
+              <RecommendationIcon size={22} aria-hidden="true" />
+              <div>
+                <h3>{primaryRecommendation.title}</h3>
+                <p>{primaryRecommendation.summary}</p>
+                <p>{primaryRecommendation.startAction}</p>
+              </div>
+              <div className="solution-availability">
+                <strong>Começar agora</strong>
+                <span>{primaryRecommendation.id === "data-foundation" ? "Sem pré-requisitos" : "Pré-requisitos atendidos"}</span>
+              </div>
             </div>
           </motion.section>
 
           <motion.section className="report-section readiness-map-section" id="system-map" {...revealMotion}>
             <div className="report-section-heading">
-              <div><span className="report-section-number">02</span><h2>Mapa do sistema</h2></div>
+              <div><span className="report-section-number">03</span><h2>Mapa do sistema</h2></div>
             </div>
             <div className="readiness-map-layout">
               <ReadinessNetwork
@@ -265,7 +268,6 @@ export function ResultsScreen({ answers, onRestart }: { answers: AnswerRecord; o
 
           <CriticalPathSection gates={criticalPath} nextLevel={nextLevel} />
           <RiskViewSection signals={riskSignals} />
-          <PillarDeepDiveSection pillarScores={pillarScores} evidence={evidence} activePillarId={selectedPillarId} onSelect={setActivePillarId} />
           <OpportunityLibrarySection tracks={opportunityTracks} />
 
           <motion.section className="report-section roadmap-section" id="action-plan" {...revealMotion}>

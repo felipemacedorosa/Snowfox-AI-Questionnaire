@@ -7,6 +7,7 @@ const nextConfig: NextConfig = {
   env: {
     NEXT_PUBLIC_BASE_PATH: "/Snowfox-AI-Questionnaire",
   },
+  allowedDevOrigins: ["english-col-authorization-pour.trycloudflare.com"],
 };
 
 export default nextConfig;
