@@ -30,6 +30,7 @@ import {
   buildExecutiveSummary,
   buildQuarterlyRecommendations,
   InsightPillarId,
+  isWeakPillarScore,
   QuarterlyRecommendation,
 } from "@/app/resultInsights";
 import {
@@ -204,7 +205,6 @@ export function ResultsScreen({ answers, onRestart }: { answers: AnswerRecord; o
           <motion.section className="report-section executive-section" id="summary" {...revealMotion}>
             <div className="report-section-heading">
               <div><span className="report-section-number">01</span><h2>Resumo executivo</h2></div>
-              <span className="report-section-aside">Uma leitura para decisão</span>
             </div>
             <div className="executive-grid">
               <article className="executive-lead">
@@ -236,7 +236,6 @@ export function ResultsScreen({ answers, onRestart }: { answers: AnswerRecord; o
           <motion.section className="report-section readiness-map-section" id="system-map" {...revealMotion}>
             <div className="report-section-heading">
               <div><span className="report-section-number">02</span><h2>Mapa do sistema</h2></div>
-              <span className="report-section-aside">Cinco capacidades conectadas</span>
             </div>
             <div className="readiness-map-layout">
               <ReadinessNetwork
@@ -250,8 +249,14 @@ export function ResultsScreen({ answers, onRestart }: { answers: AnswerRecord; o
                 <h3>{profile.title}</h3>
                 <p>{profile.implication}</p>
                 <div className="readiness-map-signals">
-                  <div><span>Maior força</span><strong>{strongest.title}</strong><b>{strongest.score}%</b></div>
-                  <div><span>Principal limitador</span><strong>{weakest.title}</strong><b>{weakest.score}%</b></div>
+                  {strongest.score === weakest.score ? (
+                    <div><span>Nível consolidado</span><strong>Todos os pilares</strong><b>{strongest.score}%</b></div>
+                  ) : (
+                    <>
+                      <div><span>Maior força</span><strong>{strongest.title}</strong><b>{strongest.score}%</b></div>
+                      <div><span>{isWeakPillarScore(weakest.score) ? "Principal limitador" : "Espaço para evoluir"}</span><strong>{weakest.title}</strong><b>{weakest.score}%</b></div>
+                    </>
+                  )}
                 </div>
                 <p className="readiness-map-note">Linhas destacadas mostram relações tocadas pela dimensão selecionada. Conexões em alerta passam por capacidades abaixo de 40%.</p>
               </aside>
@@ -266,7 +271,6 @@ export function ResultsScreen({ answers, onRestart }: { answers: AnswerRecord; o
           <motion.section className="report-section roadmap-section" id="action-plan" {...revealMotion}>
             <div className="report-section-heading">
               <div><span className="report-section-number">07</span><h2>Plano de ação</h2></div>
-              <span className="report-section-aside">Três trimestres, uma sequência</span>
             </div>
             <p className="report-section-intro">A ordem reduz dependências antes de ampliar investimento. Os papéis e métricas são referências para estruturar a conversa interna.</p>
             <div className="roadmap-list">

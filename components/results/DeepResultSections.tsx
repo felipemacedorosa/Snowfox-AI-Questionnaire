@@ -28,11 +28,10 @@ import {
 } from "@/app/resultAnalysis";
 import { InsightPillarId } from "@/app/resultInsights";
 
-function ReportHeading({ number, title, aside }: { number: string; title: string; aside: string }) {
+function ReportHeading({ number, title }: { number: string; title: string }) {
   return (
     <div className="report-section-heading">
       <div><span className="report-section-number">{number}</span><h2>{title}</h2></div>
-      <span className="report-section-aside">{aside}</span>
     </div>
   );
 }
@@ -53,7 +52,7 @@ export function CriticalPathSection({ gates, nextLevel }: { gates: CriticalPathG
   const revealMotion = useReportReveal();
   return (
     <motion.section className="report-section critical-path-section" id="critical-path" {...revealMotion}>
-      <ReportHeading number="03" title="Caminho crítico" aside="O que precisa mudar primeiro" />
+      <ReportHeading number="03" title="Caminho crítico" />
       <div className="critical-path-summary">
         <div>
           <span className="report-label">Próximo patamar</span>
@@ -149,7 +148,7 @@ export function RiskViewSection({ signals }: { signals: RiskSignal[] }) {
   const revealMotion = useReportReveal();
   return (
     <motion.section className="report-section risk-view-section" id="risks" {...revealMotion}>
-      <ReportHeading number="04" title="Topologia de riscos" aside="Urgência sem falsa precisão" />
+      <ReportHeading number="04" title="Topologia de riscos" />
       <p className="report-section-intro">Os sinais são organizados pelo efeito sobre a capacidade de escalar, não por uma probabilidade inventada. Abra cada leitura para ver a evidência que a sustenta.</p>
       <div className="risk-lanes">
         {RISK_BANDS.map(band => {
@@ -243,7 +242,7 @@ export function PillarDeepDiveSection({
 
   return (
     <motion.section className="report-section pillar-deep-dive-section" id="pillars" {...revealMotion}>
-      <ReportHeading number="05" title="Diagnóstico por dimensão" aside="Das respostas às capacidades" />
+      <ReportHeading number="05" title="Diagnóstico por dimensão" />
       <div className="pillar-deep-dive-layout screen-only">
         <div className="pillar-deep-tabs" role="tablist" aria-label="Dimensões do diagnóstico">
           {pillarScores.map((pillar, index) => {
@@ -280,7 +279,7 @@ export function OpportunityLibrarySection({ tracks }: { tracks: OpportunityTrack
   const revealMotion = useReportReveal();
   return (
     <motion.section className="report-section opportunity-section" id="opportunities" {...revealMotion}>
-      <ReportHeading number="06" title="Biblioteca de oportunidades" aside="Hipóteses para validar" />
+      <ReportHeading number="06" title="Biblioteca de oportunidades" />
       <p className="report-section-intro"><strong>Data Foundation é a solução recomendada e pode começar imediatamente, independentemente do nível atual de prontidão.</strong> Automation Agents e Predictive Agents continuam condicionados às capacidades necessárias para operar com segurança e valor.</p>
       <div className="opportunity-tracks">
         {tracks.map(track => {
