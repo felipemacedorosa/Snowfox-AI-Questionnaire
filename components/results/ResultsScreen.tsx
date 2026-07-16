@@ -41,6 +41,8 @@ import {
 import { PillarRadarChart } from "@/components/results/PillarRadarChart";
 import { ReportChapter, ReportNavigation } from "@/components/results/ReportNavigation";
 import { ReadinessNetwork } from "@/components/ui/ReadinessNetwork";
+// TESTING FEATURE — safe to delete. See DebugAnswersAppendix.tsx for removal steps.
+import { DebugAnswersAppendix } from "@/components/results/DebugAnswersAppendix";
 
 const BASE = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
 const CONTACT_URL = process.env.NEXT_PUBLIC_CONTACT_URL ?? "https://snowfox-ai.com";
@@ -299,6 +301,9 @@ export function ResultsScreen({ answers, onRestart }: { answers: AnswerRecord; o
               })}
             </div>
           </motion.section>
+
+          {/* TESTING FEATURE — safe to delete, see DebugAnswersAppendix.tsx */}
+          <DebugAnswersAppendix answers={answers} />
 
           <motion.footer className="results-footer no-print" initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true, amount: 0.2 }} transition={{ duration: 0.42 }}>
             <div className="footer-cta-copy"><span className="section-kicker"><span className="kicker-line" /> Próxima conversa</span><h2>Transforme a leitura em uma agenda de IA concreta.</h2><p>Leve este diagnóstico para uma conversa com quem pode ajudar sua organização a decidir o que preparar, testar e escalar.</p></div>
