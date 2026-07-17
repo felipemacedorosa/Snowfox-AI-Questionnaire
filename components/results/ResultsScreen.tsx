@@ -238,7 +238,7 @@ export function ResultsScreen({ answers, onRestart }: { answers: AnswerRecord; o
 
           <CriticalPathSection gates={criticalPath} nextLevel={nextLevel} />
           <RiskViewSection signals={riskSignals} />
-          <OpportunityLibrarySection tracks={opportunityTracks} />
+          <OpportunityLibrarySection tracks={opportunityTracks} primaryId={primaryRecommendation.id} />
 
           <motion.section className="report-section roadmap-section" id="action-plan" {...revealMotion}>
             <div className="report-section-heading">

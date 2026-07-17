@@ -169,6 +169,7 @@ const UI_PT = {
       immediateEntry: "Entrada imediata",
       immediateEntryDesc: "Sem requisitos prévios de maturidade, tecnologia ou governança.",
       firstMove: "Primeiro movimento",
+      snowfoxPickLabel: "O que a Snowfox recomenda agora",
     },
     reportNav: {
       chaptersAriaLabel: "Capítulos do relatório",
@@ -334,6 +335,7 @@ const UI_EN: typeof UI_PT = {
       immediateEntry: "Immediate entry",
       immediateEntryDesc: "No prior requirements for maturity, technology, or governance.",
       firstMove: "First move",
+      snowfoxPickLabel: "What Snowfox recommends now",
     },
     reportNav: {
       chaptersAriaLabel: "Report chapters",

@@ -13,6 +13,7 @@ import {
   FileSearch,
   Gauge,
   ShieldAlert,
+  Star,
   Target,
 } from "lucide-react";
 import { motion, useReducedMotion } from "motion/react";
@@ -181,7 +182,7 @@ export const OPPORTUNITY_ICONS = {
   "predictive-agents": BrainCircuit,
 };
 
-export function OpportunityLibrarySection({ tracks }: { tracks: OpportunityTrack[] }) {
+export function OpportunityLibrarySection({ tracks, primaryId }: { tracks: OpportunityTrack[]; primaryId: OpportunityTrack["id"] }) {
   const revealMotion = useReportReveal();
   const { t } = useLanguage();
   return (
@@ -192,13 +193,18 @@ export function OpportunityLibrarySection({ tracks }: { tracks: OpportunityTrack
         {tracks.map(track => {
           const Icon = OPPORTUNITY_ICONS[track.id];
           const isDataFoundation = track.id === "data-foundation";
+          // Data Foundation always carries its own "recommended" badge (it has
+          // no prerequisites), so the extra flag below only adds signal when
+          // the section 02 pick is a *different* track.
+          const isSnowfoxPick = track.id === primaryId && !isDataFoundation;
           return (
-            <article className={`opportunity-track opportunity-${track.status} opportunity-track-${track.id}`} key={track.id}>
+            <article className={`opportunity-track opportunity-${track.status} opportunity-track-${track.id}${isSnowfoxPick ? " opportunity-track-highlighted" : ""}`} key={track.id}>
               <div className="opportunity-track-heading">
                 <Icon size={19} aria-hidden="true" />
                 <div><strong>{track.title}</strong><span>{track.subtitle}</span></div>
                 <b>{track.statusLabel}</b>
               </div>
+              {isSnowfoxPick && <div className="opportunity-snowfox-pick"><Star size={12} aria-hidden="true" /><span>{t.deepSections.snowfoxPickLabel}</span></div>}
               <p className="opportunity-summary">{track.summary}</p>
               <div className="opportunity-track-body">
                 <div><span className="report-label">{t.deepSections.examples}</span><ul>{track.examples.map(example => <li key={example}>{example}</li>)}</ul></div>
