@@ -408,7 +408,7 @@ export function getReadinessProfile(pillarScores: PillarScore[], result: Assessm
       implication: "The organization should use its strengths to unlock the weakest link, not scale everything at once.",
     } : {
       id: "uneven",
-      title: "Maturidade desigual",
+      title: "Maturidade incipiente",
       summary: "Algumas capacidades já sustentam avanço, enquanto outras ainda criam dependências relevantes.",
       implication: "A organização deve usar seus pontos fortes para destravar o elo mais fraco, não escalar tudo ao mesmo tempo.",
     };
