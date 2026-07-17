@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useLanguage } from "@/app/LanguageContext";
 
 export interface ReportChapter {
   id: string;
@@ -9,6 +10,7 @@ export interface ReportChapter {
 }
 
 export function ReportNavigation({ chapters }: { chapters: ReportChapter[] }) {
+  const { t } = useLanguage();
   const [activeId, setActiveId] = useState(chapters[0]?.id ?? "");
 
   useEffect(() => {
@@ -51,8 +53,8 @@ export function ReportNavigation({ chapters }: { chapters: ReportChapter[] }) {
   }, [activeId]);
 
   return (
-    <aside className="report-chapter-nav no-print" aria-label="Capítulos do relatório">
-      <span className="report-chapter-nav-title">Relatório</span>
+    <aside className="report-chapter-nav no-print" aria-label={t.reportNav.chaptersAriaLabel}>
+      <span className="report-chapter-nav-title">{t.reportNav.title}</span>
       <nav>
         {chapters.map(chapter => (
           <a

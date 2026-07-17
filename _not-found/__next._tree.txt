@@ -1,2 +1,2 @@
-:HL["/Snowfox-AI-Questionnaire/_next/static/chunks/40zq5ey_kixxm.css","style"]
-0:{"tree":{"name":"","param":null,"prefetchHints":16,"slots":{"children":{"name":"/_not-found","param":null,"prefetchHints":0,"slots":{"children":{"name":"__PAGE__","param":null,"prefetchHints":0,"slots":null}}}}},"staleTime":300,"buildId":"JoO75v95MZ4kK7pmWwhSA"}
+:HL["/Snowfox-AI-Questionnaire/_next/static/chunks/1z5lq43la71a6.css","style"]
+0:{"tree":{"name":"","param":null,"prefetchHints":16,"slots":{"children":{"name":"/_not-found","param":null,"prefetchHints":0,"slots":{"children":{"name":"__PAGE__","param":null,"prefetchHints":0,"slots":null}}}}},"staleTime":300,"buildId":"pfJseH3XyhnN_D0HpVwlR"}

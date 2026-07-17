@@ -10,9 +10,10 @@
  *      `DebugAnswersAppendix` import and its <DebugAnswersAppendix /> usage.
  *   3. In app/globals.css, remove the "DEBUG ANSWERS APPENDIX" rule block.
  */
-import { AnswerRecord, ALL_QUESTIONS, Question } from "@/app/data";
+import { AnswerRecord, getAllQuestions, LocalizedQuestion } from "@/app/data";
+import { useLanguage } from "@/app/LanguageContext";
 
-function formatAnswer(q: Question, value: AnswerRecord[string] | undefined): string | null {
+function formatAnswer(q: LocalizedQuestion, value: AnswerRecord[string] | undefined): string | null {
   if (value === undefined || value === null) return null;
 
   if (q.type === "text") {
@@ -35,9 +36,10 @@ function formatAnswer(q: Question, value: AnswerRecord[string] | undefined): str
 }
 
 export function DebugAnswersAppendix({ answers }: { answers: AnswerRecord }) {
-  const rows = ALL_QUESTIONS
+  const { lang, t } = useLanguage();
+  const rows = getAllQuestions(lang)
     .map(q => ({ q, answer: formatAnswer(q, answers[q.id]) }))
-    .filter((row): row is { q: Question; answer: string } => row.answer !== null);
+    .filter((row): row is { q: LocalizedQuestion; answer: string } => row.answer !== null);
 
   if (rows.length === 0) return null;
 
@@ -46,16 +48,16 @@ export function DebugAnswersAppendix({ answers }: { answers: AnswerRecord }) {
       <div className="report-section-heading">
         <div>
           <span className="report-section-number">DEBUG</span>
-          <h2>Respostas registradas (recurso de teste)</h2>
+          <h2>{t.debug.heading}</h2>
         </div>
       </div>
       <p className="report-section-intro">
-        Anexo temporário para testes: lista todas as respostas registradas nesta sessão. Não faz parte do relatório final.
+        {t.debug.intro}
       </p>
       <dl className="debug-answers-list">
         {rows.map(({ q, answer }) => (
           <div key={q.id} className="debug-answers-row">
-            <dt>{q.id} — {q.text}</dt>
+            <dt>{q.id}: {q.text}</dt>
             <dd>{answer}</dd>
           </div>
         ))}

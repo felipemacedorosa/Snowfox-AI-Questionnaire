@@ -10,6 +10,7 @@ import {
   Tooltip,
 } from "recharts";
 import { PillarScore } from "@/app/data";
+import { useLanguage } from "@/app/LanguageContext";
 
 // Mirrors the accent colors used per pillar in ReadinessNetwork.tsx so the
 // radar overview reads as the same visual language as the rest of the report.
@@ -22,6 +23,7 @@ const PILLAR_ACCENT: Record<string, string> = {
 };
 
 export function PillarRadarChart({ pillarScores }: { pillarScores: PillarScore[] }) {
+  const { t } = useLanguage();
   const data = pillarScores.map(pillar => ({ id: pillar.id, pillar: pillar.title, score: pillar.score }));
   const colorByLabel = Object.fromEntries(
     pillarScores.map(pillar => [pillar.title, PILLAR_ACCENT[pillar.id] ?? "#7b4ed2"])
@@ -53,7 +55,7 @@ export function PillarRadarChart({ pillarScores }: { pillarScores: PillarScore[]
           />
           <PolarRadiusAxis domain={[0, 100]} tick={false} axisLine={false} />
           <Radar
-            name="Pontuação"
+            name={t.chart.score}
             dataKey="score"
             stroke="#7b4ed2"
             fill="#7b4ed2"
@@ -75,7 +77,7 @@ export function PillarRadarChart({ pillarScores }: { pillarScores: PillarScore[]
             }}
           />
           <Tooltip
-            formatter={value => [`${value}%`, "Pontuação"]}
+            formatter={value => [`${value}%`, t.chart.score]}
             contentStyle={{
               background: "#fff",
               border: "1px solid #dedcd5",

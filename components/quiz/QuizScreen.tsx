@@ -26,14 +26,15 @@ import {
   getAssessmentProgress,
   getQuestionFlowState,
   getSectionProgress,
+  getSections,
   isQuestionAnswered,
   isQuestionVisible,
-  SECTIONS,
-  Question,
-  SingleQuestion,
-  MultiQuestion,
-  TextQuestion,
+  LocalizedQuestion,
+  LocalizedSingleQuestion,
+  LocalizedMultiQuestion,
+  LocalizedTextQuestion,
 } from "@/app/data";
+import { useLanguage } from "@/app/LanguageContext";
 import { NavBtn } from "@/components/NavBtn";
 import type { SaveState } from "@/components/Navbar";
 
@@ -63,7 +64,7 @@ const reducedQuestionVariants: Variants = {
   exit: { opacity: 1, x: 0 },
 };
 
-function firstQuestionId(questions: Question[], answers: AnswerRecord) {
+function firstQuestionId(questions: LocalizedQuestion[], answers: AnswerRecord) {
   return questions.find(question =>
     question.type !== "text" && !isQuestionAnswered(question, answers)
   )?.id ?? questions[0]?.id ?? "";
@@ -86,8 +87,10 @@ export function QuizScreen({
   onBack: () => void;
   onNext: () => void;
 }) {
-  const sec = SECTIONS[section];
-  const isLastSection = section === SECTIONS.length - 1;
+  const { lang, t } = useLanguage();
+  const sections = useMemo(() => getSections(lang), [lang]);
+  const sec = sections[section];
+  const isLastSection = section === sections.length - 1;
   const visibleQs = useMemo(
     () => sec.questions.filter(question => isQuestionVisible(question, sec.questions, answers)),
     [answers, sec]
@@ -169,10 +172,10 @@ export function QuizScreen({
       return;
     }
 
-    if (getSectionProgress(SECTIONS[state.section], state.answers).complete) {
+    if (getSectionProgress(sections[state.section], state.answers).complete) {
       onNext();
     }
-  }, [bringCardIntoView, clearAdvance, onNext]);
+  }, [bringCardIntoView, clearAdvance, onNext, sections]);
 
   const goBack = useCallback(() => {
     clearAdvance();
@@ -186,7 +189,7 @@ export function QuizScreen({
     onBack();
   }, [bringCardIntoView, clearAdvance, onBack]);
 
-  const handleSingleSelect = useCallback((question: SingleQuestion, value: number) => {
+  const handleSingleSelect = useCallback((question: LocalizedSingleQuestion, value: number) => {
     clearAdvance();
     const state = flowRef.current;
     const selected = state.answers[question.id];
@@ -196,8 +199,8 @@ export function QuizScreen({
     }
 
     onAnswer(question.id, value);
-    const sourceIndex = SECTIONS[state.section].questions.findIndex(item => item.id === question.id);
-    const revealsFollowUp = SECTIONS[state.section].questions
+    const sourceIndex = sections[state.section].questions.findIndex(item => item.id === question.id);
+    const revealsFollowUp = sections[state.section].questions
       .slice(sourceIndex + 1)
       .some(item => item.showIf?.qId === question.id && item.showIf.values.includes(value));
     const hasVisibleNext = state.currentIndex < state.visibleQs.length - 1;
@@ -209,9 +212,9 @@ export function QuizScreen({
         goForward();
       }, prefersReducedMotion ? 80 : AUTO_ADVANCE_MS);
     }
-  }, [clearAdvance, goForward, onAnswer, prefersReducedMotion]);
+  }, [clearAdvance, goForward, onAnswer, prefersReducedMotion, sections]);
 
-  const handleMultiToggle = useCallback((question: MultiQuestion, optValue: number, isNone: boolean) => {
+  const handleMultiToggle = useCallback((question: LocalizedMultiQuestion, optValue: number, isNone: boolean) => {
     const current = Array.isArray(flowRef.current.answers[question.id])
       ? flowRef.current.answers[question.id] as number[]
       : [];
@@ -232,8 +235,8 @@ export function QuizScreen({
     if (section === previousSection.current) return;
     clearAdvance();
     const movingBack = section < previousSection.current;
-    const sectionQuestions = SECTIONS[section].questions.filter(question =>
-      isQuestionVisible(question, SECTIONS[section].questions, answers)
+    const sectionQuestions = sections[section].questions.filter(question =>
+      isQuestionVisible(question, sections[section].questions, answers)
     );
     setDirection(movingBack ? -1 : 1);
     setCursorId(
@@ -242,7 +245,7 @@ export function QuizScreen({
         : firstQuestionId(sectionQuestions, answers)
     );
     previousSection.current = section;
-  }, [clearAdvance, section]);
+  }, [clearAdvance, section, sections, answers]);
 
   useEffect(() => {
     if (visibleQs.length === 0 || visibleQs.some(question => question.id === cursorId)) return;
@@ -267,21 +270,21 @@ export function QuizScreen({
   if (!currentQuestion) return null;
 
   const nextLabel = isFinalQuestion
-    ? isLastSection ? "Ver resultado" : "Próxima dimensão"
-    : "Continuar";
+    ? isLastSection ? t.quiz.viewResult : t.quiz.nextDimension
+    : t.quiz.continue;
 
   return (
     <div className="quiz-layout page-frame" id="assessment-navigation">
-      <aside className="assessment-rail" aria-label="Navegação da avaliação">
+      <aside className="assessment-rail" aria-label={t.quiz.navAriaLabel}>
         <div className="rail-heading">
           <div>
-            <span className="section-kicker"><span className="kicker-line" /> Rota da avaliação</span>
-            <strong>5 dimensões</strong>
+            <span className="section-kicker"><span className="kicker-line" /> {t.quiz.railKicker}</span>
+            <strong>{t.quiz.railTotal}</strong>
           </div>
           <motion.span key={assessmentProgress.percent} className="rail-total" initial={{ opacity: 0.35, y: 5 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.22 }}>{assessmentProgress.percent}%</motion.span>
         </div>
         <ol className="section-list">
-          {SECTIONS.map((item, index) => {
+          {sections.map((item, index) => {
             const progress = getSectionProgress(item, answers);
             const isCurrent = index === section;
             return (
@@ -293,7 +296,7 @@ export function QuizScreen({
                   aria-current={isCurrent ? "step" : undefined}
                 >
                   <span className="section-item-number">{progress.complete ? <motion.span style={{ display: "grid", placeItems: "center" }} initial={{ scale: 0.4, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ type: "spring", stiffness: 500, damping: 24 }}><Check size={14} aria-hidden="true" /></motion.span> : `0${index + 1}`}</span>
-                  <span className="section-item-copy"><strong>{item.title}</strong><small>{progress.answered}/{progress.total} concluídas</small></span>
+                  <span className="section-item-copy"><strong>{item.title}</strong><small>{t.quiz.completedOf(progress.answered, progress.total)}</small></span>
                   <ChevronRight size={15} aria-hidden="true" />
                 </button>
               </li>
@@ -302,7 +305,7 @@ export function QuizScreen({
         </ol>
         <div className="rail-footer">
           <LockKeyhole size={15} aria-hidden="true" />
-          <span>Suas respostas ficam neste dispositivo.</span>
+          <span>{t.quiz.railFooter}</span>
         </div>
       </aside>
 
@@ -316,17 +319,17 @@ export function QuizScreen({
         transition={{ duration: prefersReducedMotion ? 0 : 0.38, ease: [0.22, 1, 0.36, 1] }}
       >
         <div className="question-panel-topline">
-          <span>Pilar {sec.pillar} de {SECTIONS.length}</span>
+          <span>{t.quiz.pillarOf(sec.pillar, sections.length)}</span>
           <span className={`save-state save-state-${saveState}`} aria-live="polite">
             <Save size={13} aria-hidden="true" />
-            {saveState === "unavailable" ? "Sessão local" : saveState === "saving" ? "Salvando..." : saveState === "saved" ? "Salvo agora" : "Pronto para salvar"}
+            {saveState === "unavailable" ? t.quiz.saveLocal : saveState === "saving" ? t.quiz.saveSaving : saveState === "saved" ? t.quiz.saveSaved : t.quiz.saveReady}
           </span>
         </div>
 
         <header className="question-header question-header-flow">
           <div className="question-header-meta">
-            <span className="section-kicker"><span className="kicker-line" /> Dimensão {String(sec.pillar).padStart(2, "0")}</span>
-            <span>{sectionProgress.answered} de {sectionProgress.total} concluídas</span>
+            <span className="section-kicker"><span className="kicker-line" /> {t.quiz.dimensionLabel(String(sec.pillar).padStart(2, "0"))}</span>
+            <span>{t.quiz.completedOfLong(sectionProgress.answered, sectionProgress.total)}</span>
           </div>
           <h1 id="questionnaire-title">{sec.title}</h1>
           <p>{sec.desc}</p>
@@ -334,7 +337,7 @@ export function QuizScreen({
 
         <nav
           className="question-position-track"
-          aria-label={`Perguntas da dimensão. Pergunta atual: ${currentStepIndex + 1} de ${sec.questions.length}`}
+          aria-label={t.quiz.questionNavAriaLabel(currentStepIndex + 1, sec.questions.length)}
         >
           {sec.questions.map((question, stepIndex) => {
             const flowState = getQuestionFlowState(question, sec.questions, answers);
@@ -346,10 +349,10 @@ export function QuizScreen({
               question.type === "text" || isQuestionAnswered(question, answers)
             );
             const stepLabel = isSkipped
-              ? `Pergunta ${stepIndex + 1}, não aplicável e concluída automaticamente`
+              ? t.quiz.stepSkipped(stepIndex + 1)
               : isPending
-                ? `Pergunta ${stepIndex + 1}, aguardando resposta anterior`
-                : `Ir para a pergunta ${stepIndex + 1}`;
+                ? t.quiz.stepPending(stepIndex + 1)
+                : t.quiz.stepGoTo(stepIndex + 1);
 
             return (
               <button
@@ -394,13 +397,13 @@ export function QuizScreen({
         <footer className="question-footer question-flow-footer">
           <div className="question-footer-status" aria-live="polite">
             {currentAnswered
-              ? <><Check size={16} aria-hidden="true" /> Resposta salva</>
+              ? <><Check size={16} aria-hidden="true" /> {t.quiz.answerSaved}</>
               : currentQuestion.type === "text"
-                ? <><FileText size={14} aria-hidden="true" /> Contexto opcional</>
-                : <><Circle size={13} aria-hidden="true" /> Selecione uma resposta</>}
+                ? <><FileText size={14} aria-hidden="true" /> {t.quiz.optionalContext}</>
+                : <><Circle size={13} aria-hidden="true" /> {t.quiz.selectAnAnswer}</>}
           </div>
           <div className="question-footer-actions">
-            <NavBtn variant="back" onClick={goBack}>{currentIndex === 0 && section === 0 ? "Início" : "Voltar"}</NavBtn>
+            <NavBtn variant="back" onClick={goBack}>{currentIndex === 0 && section === 0 ? t.quiz.home : t.quiz.back}</NavBtn>
             <NavBtn variant="next" disabled={!canContinue || pendingAdvance} onClick={goForward}>{nextLabel}</NavBtn>
           </div>
         </footer>
@@ -420,17 +423,18 @@ function QuestionCard({
   onMultiToggle,
 }: {
   headingRef: React.RefObject<HTMLHeadingElement | null>;
-  question: Question;
+  question: LocalizedQuestion;
   index: number;
   total: number;
   answers: AnswerRecord;
   onAnswer: (qid: string, val: number | number[] | string | -1) => void;
-  onSingleSelect: (question: SingleQuestion, value: number) => void;
-  onMultiToggle: (question: MultiQuestion, value: number, isNone: boolean) => void;
+  onSingleSelect: (question: LocalizedSingleQuestion, value: number) => void;
+  onMultiToggle: (question: LocalizedMultiQuestion, value: number, isNone: boolean) => void;
 }) {
+  const { t } = useLanguage();
   return (
     <>
-      <div className="question-number">Pergunta {String(index + 1).padStart(2, "0")} <span>/ {String(total).padStart(2, "0")}</span></div>
+      <div className="question-number">{t.quiz.questionNumber(String(index + 1).padStart(2, "0"), String(total).padStart(2, "0"))} <span>{t.quiz.questionOfTotal(String(total).padStart(2, "0"))}</span></div>
       <h2 ref={headingRef} tabIndex={-1}>{question.text}</h2>
       {question.type === "single" && <SingleOptions question={question} answers={answers} onSelect={onSingleSelect} />}
       {question.type === "multi" && <MultiOptions question={question} answers={answers} onToggle={onMultiToggle} />}
@@ -444,13 +448,14 @@ function SingleOptions({
   answers,
   onSelect,
 }: {
-  question: SingleQuestion;
+  question: LocalizedSingleQuestion;
   answers: AnswerRecord;
-  onSelect: (question: SingleQuestion, value: number) => void;
+  onSelect: (question: LocalizedSingleQuestion, value: number) => void;
 }) {
+  const { t } = useLanguage();
   const selected = typeof answers[question.id] === "number" ? answers[question.id] as number : undefined;
   return (
-    <div className={`options-list${question.options.length >= 4 ? " is-dense" : ""}`} role="group" aria-label={`Opções para: ${question.text}`}>
+    <div className={`options-list${question.options.length >= 4 ? " is-dense" : ""}`} role="group" aria-label={t.quiz.optionsAriaLabel(question.text)}>
       {question.options.map((option, index) => {
         const isSelected = selected === option.value;
         return (
@@ -480,13 +485,14 @@ function MultiOptions({
   answers,
   onToggle,
 }: {
-  question: MultiQuestion;
+  question: LocalizedMultiQuestion;
   answers: AnswerRecord;
-  onToggle: (question: MultiQuestion, value: number, isNone: boolean) => void;
+  onToggle: (question: LocalizedMultiQuestion, value: number, isNone: boolean) => void;
 }) {
+  const { t } = useLanguage();
   const selected = Array.isArray(answers[question.id]) ? answers[question.id] as number[] : [];
   return (
-    <div className={`options-list${question.options.length >= 4 ? " is-dense" : ""}`} role="group" aria-label={`Opções para: ${question.text}`}>
+    <div className={`options-list${question.options.length >= 4 ? " is-dense" : ""}`} role="group" aria-label={t.quiz.optionsAriaLabel(question.text)}>
       {question.options.map(option => {
         const isSelected = selected.includes(option.value);
         return (
@@ -506,7 +512,7 @@ function MultiOptions({
           </motion.button>
         );
       })}
-      <p className="multi-answer-note">Selecione todas que se aplicam.</p>
+      <p className="multi-answer-note">{t.quiz.multiSelectNote}</p>
     </div>
   );
 }
@@ -516,22 +522,23 @@ function TextInput({
   answers,
   onAnswer,
 }: {
-  question: TextQuestion;
+  question: LocalizedTextQuestion;
   answers: AnswerRecord;
   onAnswer: (qid: string, value: string) => void;
 }) {
+  const { t } = useLanguage();
   const value = typeof answers[question.id] === "string" ? answers[question.id] as string : "";
   return (
     <div className="text-answer">
-      <div className="text-answer-label"><FileText size={15} aria-hidden="true" /> Contexto adicional</div>
+      <div className="text-answer-label"><FileText size={15} aria-hidden="true" /> {t.quiz.additionalContext}</div>
       <textarea
         className="text-input"
-        placeholder={question.placeholder ?? "Digite sua resposta..."}
+        placeholder={question.placeholder ?? t.quiz.textPlaceholder}
         value={value}
         onChange={event => onAnswer(question.id, event.target.value)}
         rows={5}
       />
-      <p>Opcional. Sua resposta fica salva, mas não afeta a pontuação.</p>
+      <p>{t.quiz.textNote}</p>
     </div>
   );
 }

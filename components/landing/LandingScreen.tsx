@@ -4,15 +4,16 @@ import { useState } from "react";
 import { ArrowRight, Clock3, Compass, FileText, RotateCcw, ShieldCheck, Sparkles } from "lucide-react";
 import { motion } from "motion/react";
 import { InsightPillarId } from "@/app/resultInsights";
-import { PILLAR_CONFIG, SECTIONS } from "@/app/data";
+import { getPillarConfig, getSections } from "@/app/data";
+import { useLanguage } from "@/app/LanguageContext";
 import { ReadinessNetwork } from "@/components/ui/ReadinessNetwork";
 
 const PILLAR_DETAILS = [
-  { id: "dados" as const, label: "Dados", description: "Qualidade, acesso e histórico para decisões confiáveis.", marker: "01" },
-  { id: "estrategia" as const, label: "Estratégia", description: "Prioridade executiva, casos de uso e valor mensurável.", marker: "02" },
-  { id: "pessoas" as const, label: "Pessoas e Cultura", description: "Capacidade, adoção e disposição para mudar o trabalho.", marker: "03" },
-  { id: "governanca" as const, label: "Governança e Processo", description: "Responsabilidades, segurança e operação responsável.", marker: "04" },
-  { id: "tecnologia" as const, label: "Tecnologia", description: "Integrações, produção, monitoramento e escala.", marker: "05" },
+  { id: "dados" as const, description: { pt: "Qualidade, acesso e histórico para decisões confiáveis.", en: "Quality, access, and history for reliable decisions." }, marker: "01" },
+  { id: "estrategia" as const, description: { pt: "Prioridade executiva, casos de uso e valor mensurável.", en: "Executive priority, use cases, and measurable value." }, marker: "02" },
+  { id: "pessoas" as const, description: { pt: "Capacidade, adoção e disposição para mudar o trabalho.", en: "Capacity, adoption, and willingness to change how work gets done." }, marker: "03" },
+  { id: "governanca" as const, description: { pt: "Responsabilidades, segurança e operação responsável.", en: "Responsibilities, security, and responsible operation." }, marker: "04" },
+  { id: "tecnologia" as const, description: { pt: "Integrações, produção, monitoramento e escala.", en: "Integrations, production, monitoring, and scale." }, marker: "05" },
 ];
 
 export function LandingScreen({
@@ -30,7 +31,10 @@ export function LandingScreen({
   onResume: () => void;
   onReset: () => void;
 }) {
-  const savedSectionTitle = SECTIONS[savedSection]?.title ?? "Avaliação";
+  const { lang, t } = useLanguage();
+  const sections = getSections(lang);
+  const pillarConfig = getPillarConfig(lang);
+  const savedSectionTitle = sections[savedSection]?.title ?? t.landing.fallbackSectionTitle;
   const [activePillarId, setActivePillarId] = useState<InsightPillarId>("estrategia");
 
   return (
@@ -42,27 +46,27 @@ export function LandingScreen({
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
         >
-          <div className="section-kicker"><span className="kicker-line" /> Snowfox AI · Diagnóstico executivo</div>
-          <h1>Diagnóstico de prontidão para IA.</h1>
+          <div className="section-kicker"><span className="kicker-line" /> {t.landing.kicker}</div>
+          <h1>{t.landing.title}</h1>
           <p className="landing-lede">
-            Enxergue como estratégia, dados, pessoas, governança e tecnologia se conectam e transforme respostas dispersas em uma agenda de decisão concreta.
+            {t.landing.lede}
           </p>
           <div className="landing-actions">
             <motion.button type="button" className="button-primary button-large" onClick={hasDraft ? onResume : onStart} whileTap={{ scale: 0.98 }}>
-              {hasDraft ? "Continuar avaliação" : "Começar avaliação"}
+              {hasDraft ? t.landing.continueAssessment : t.landing.startAssessment}
               <ArrowRight size={17} aria-hidden="true" />
             </motion.button>
             {hasDraft && (
               <button type="button" className="button-secondary" onClick={onStart}>
                 <RotateCcw size={15} aria-hidden="true" />
-                Começar de novo
+                {t.landing.startOver}
               </button>
             )}
           </div>
-          <div className="landing-proof-row" aria-label="Características da avaliação">
-            <span><Clock3 size={15} aria-hidden="true" /> 15 min</span>
-            <span><Compass size={15} aria-hidden="true" /> 5 dimensões</span>
-            <span><FileText size={15} aria-hidden="true" /> Relatório executivo</span>
+          <div className="landing-proof-row" aria-label={t.landing.proofAriaLabel}>
+            <span><Clock3 size={15} aria-hidden="true" /> {t.landing.proofDuration}</span>
+            <span><Compass size={15} aria-hidden="true" /> {t.landing.proofDimensions}</span>
+            <span><FileText size={15} aria-hidden="true" /> {t.landing.proofReport}</span>
           </div>
         </motion.div>
 
@@ -71,27 +75,27 @@ export function LandingScreen({
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1, duration: 0.65, ease: [0.22, 1, 0.36, 1] }}
-          aria-label="Prévia da avaliação em cinco dimensões"
+          aria-label={t.landing.previewAriaLabel}
         >
           <div className="landing-network-topline">
-            <span>Mapa de prontidão</span>
-            <strong>cinco capacidades, um sistema</strong>
+            <span>{t.landing.readinessMap}</span>
+            <strong>{t.landing.readinessMapSub}</strong>
           </div>
           <ReadinessNetwork mode="preview" activePillarId={activePillarId} onActivePillarChange={setActivePillarId} />
         </motion.div>
       </section>
 
       {hasDraft && (
-        <section className="resume-strip page-frame" aria-label="Avaliação salva">
+        <section className="resume-strip page-frame" aria-label={t.landing.draftAriaLabel}>
           <div className="resume-strip-icon"><Sparkles size={18} aria-hidden="true" /></div>
           <div>
-            <strong>{savedScreen === "results" ? "Seu relatório está pronto." : `Você parou em ${savedSectionTitle}.`}</strong>
-            <span>{savedScreen === "results" ? "Retome a leitura de prontidão de onde deixou." : "A avaliação fica salva neste dispositivo para você continuar quando quiser."}</span>
+            <strong>{savedScreen === "results" ? t.landing.draftReportReady : t.landing.draftStoppedAt(savedSectionTitle)}</strong>
+            <span>{savedScreen === "results" ? t.landing.draftResumeReport : t.landing.draftResumeQuiz}</span>
           </div>
           <button type="button" className="button-quiet" onClick={onResume}>
-            {savedScreen === "results" ? "Ver relatório" : "Retomar"} <ArrowRight size={15} aria-hidden="true" />
+            {savedScreen === "results" ? t.landing.viewReport : t.landing.resume} <ArrowRight size={15} aria-hidden="true" />
           </button>
-          <button type="button" className="icon-button icon-button-muted" onClick={onReset} aria-label="Excluir avaliação salva" title="Excluir avaliação salva">
+          <button type="button" className="icon-button icon-button-muted" onClick={onReset} aria-label={t.landing.deleteDraftLabel} title={t.landing.deleteDraftLabel}>
             <RotateCcw size={15} aria-hidden="true" />
           </button>
         </section>
@@ -100,22 +104,22 @@ export function LandingScreen({
       <section className="landing-method-band" id="how-it-works">
         <div className="landing-method page-frame">
           <div className="method-intro">
-            <div className="section-kicker"><span className="kicker-line" /> Como funciona</div>
-            <h2>Da percepção ao próximo passo.</h2>
-            <p>O diagnóstico organiza a conversa antes que a organização invista em mais uma iniciativa isolada.</p>
+            <div className="section-kicker"><span className="kicker-line" /> {t.landing.howItWorksKicker}</div>
+            <h2>{t.landing.howItWorksTitle}</h2>
+            <p>{t.landing.howItWorksLede}</p>
           </div>
           <div className="method-steps">
             <motion.div className="method-step" initial={{ opacity: 0, y: 12 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.5 }} transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}>
               <span>01</span>
-              <div><strong>Responda com contexto</strong><p>As perguntas foram desenhadas para refletir decisões, não apenas ferramentas.</p></div>
+              <div><strong>{t.landing.step1Title}</strong><p>{t.landing.step1Desc}</p></div>
             </motion.div>
             <motion.div className="method-step" initial={{ opacity: 0, y: 12 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.5 }} transition={{ delay: 0.08, duration: 0.5, ease: [0.22, 1, 0.36, 1] }}>
               <span>02</span>
-              <div><strong>Enxergue o sistema</strong><p>Dados, estratégia, pessoas, governança e tecnologia aparecem em conjunto.</p></div>
+              <div><strong>{t.landing.step2Title}</strong><p>{t.landing.step2Desc}</p></div>
             </motion.div>
             <motion.div className="method-step" initial={{ opacity: 0, y: 12 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.5 }} transition={{ delay: 0.16, duration: 0.5, ease: [0.22, 1, 0.36, 1] }}>
               <span>03</span>
-              <div><strong>Saia com uma agenda</strong><p>O resultado destaca riscos, alavancas e uma sequência de ação para os próximos trimestres.</p></div>
+              <div><strong>{t.landing.step3Title}</strong><p>{t.landing.step3Desc}</p></div>
             </motion.div>
           </div>
         </div>
@@ -124,23 +128,23 @@ export function LandingScreen({
       <section className="landing-dimensions page-frame" id="landing-dimensions">
         <div className="dimensions-heading">
           <div>
-            <div className="section-kicker"><span className="kicker-line" /> As cinco dimensões</div>
-            <h2>Prontidão é um sistema, não uma pontuação isolada.</h2>
+            <div className="section-kicker"><span className="kicker-line" /> {t.landing.dimensionsKicker}</div>
+            <h2>{t.landing.dimensionsTitle}</h2>
           </div>
-          <p>Explore as lentes que estruturam a conversa e revelam onde a organização pode avançar com mais segurança.</p>
+          <p>{t.landing.dimensionsLede}</p>
         </div>
         <div className="dimension-grid">
           {PILLAR_DETAILS.map((pillar, index) => {
-            const config = PILLAR_CONFIG[index];
+            const config = pillarConfig[index];
             return (
-              <motion.button type="button" className="dimension-item" key={pillar.label} initial={{ opacity: 0, y: 14 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.35 }} transition={{ delay: index * 0.06, duration: 0.5, ease: [0.22, 1, 0.36, 1] }} onClick={() => {
+              <motion.button type="button" className="dimension-item" key={pillar.id} initial={{ opacity: 0, y: 14 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.35 }} transition={{ delay: index * 0.06, duration: 0.5, ease: [0.22, 1, 0.36, 1] }} onClick={() => {
                 setActivePillarId(pillar.id);
                 document.getElementById("landing-top")?.scrollIntoView({ behavior: "smooth" });
               }}>
                 <span className="dimension-index">{pillar.marker}</span>
                 <div className="dimension-copy">
                   <strong>{config.title}</strong>
-                  <span>{pillar.description}</span>
+                  <span>{pillar.description[lang]}</span>
                 </div>
                 <ArrowRight size={17} aria-hidden="true" />
               </motion.button>
@@ -152,11 +156,11 @@ export function LandingScreen({
       <motion.section className="landing-final page-frame" initial={{ opacity: 0, y: 14 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.5 }} transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}>
         <div className="landing-final-mark"><ShieldCheck size={20} aria-hidden="true" /></div>
         <div>
-          <h2>Uma conversa melhor começa com uma pergunta melhor.</h2>
-          <p>O diagnóstico é privado, sem login, e pode ser retomado neste dispositivo.</p>
+          <h2>{t.landing.finalTitle}</h2>
+          <p>{t.landing.finalLede}</p>
         </div>
         <button type="button" className="button-primary" onClick={hasDraft ? onResume : onStart}>
-          {hasDraft ? "Continuar" : "Iniciar agora"}
+          {hasDraft ? t.landing.finalContinue : t.landing.finalStart}
           <ArrowRight size={16} aria-hidden="true" />
         </button>
       </motion.section>

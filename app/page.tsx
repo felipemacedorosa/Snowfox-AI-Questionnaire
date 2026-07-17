@@ -6,7 +6,8 @@ import { LandingScreen } from "@/components/landing/LandingScreen";
 import { Navbar, type AppScreen, type SaveState } from "@/components/Navbar";
 import { QuizScreen } from "@/components/quiz/QuizScreen";
 import { ResultsScreen } from "@/components/results/ResultsScreen";
-import { AnswerRecord, SECTIONS, clearDependentAnswers } from "./data";
+import { AnswerRecord, SECTIONS, clearDependentAnswers, getSections } from "./data";
+import { useLanguage } from "./LanguageContext";
 // DEV SHORTCUT (remove with app/devShortcuts.ts): see effect below.
 import { buildStrategyGapTestAnswers } from "./devShortcuts";
 
@@ -51,6 +52,7 @@ export default function Home() {
   const [saveState, setSaveState] = useState<SaveState>("idle");
   const [resumeScreen, setResumeScreen] = useState<"quiz" | "results" | null>(null);
   const prefersReducedMotion = useReducedMotion();
+  const { lang, t } = useLanguage();
 
   const draftExists = useMemo(
     () => resumeScreen !== null || Object.keys(answers).length > 0 || screen === "results",
@@ -180,10 +182,10 @@ export default function Home() {
   }, [goTo]);
 
   if (!hydrated) {
-    return <div className="loading-screen" aria-label="Carregando avaliação" />;
+    return <div className="loading-screen" aria-label={t.loading} />;
   }
 
-  const sectionLabel = SECTIONS[section]?.title ?? "Avaliação";
+  const sectionLabel = getSections(lang)[section]?.title ?? t.landing.fallbackSectionTitle;
 
   return (
     <div className="app-shell">

@@ -15,8 +15,10 @@ import {
   applyBlockerRules,
   calculateOverallScore,
   calculatePillarScores,
+  getLevelLabel,
   LEVEL_META,
 } from "@/app/data";
+import { useLanguage } from "@/app/LanguageContext";
 import {
   getCriticalPath,
   getNextLevelTarget,
@@ -28,8 +30,6 @@ import {
 import {
   buildExecutiveSummary,
   buildQuarterlyRecommendations,
-  InsightPillarId,
-  isWeakPillarScore,
   QuarterlyRecommendation,
 } from "@/app/resultInsights";
 import {
@@ -40,22 +40,11 @@ import {
 } from "@/components/results/DeepResultSections";
 import { PillarRadarChart } from "@/components/results/PillarRadarChart";
 import { ReportChapter, ReportNavigation } from "@/components/results/ReportNavigation";
-import { ReadinessNetwork } from "@/components/ui/ReadinessNetwork";
 // TESTING FEATURE — safe to delete. See DebugAnswersAppendix.tsx for removal steps.
 import { DebugAnswersAppendix } from "@/components/results/DebugAnswersAppendix";
 
 const BASE = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
 const CONTACT_URL = process.env.NEXT_PUBLIC_CONTACT_URL ?? "https://snowfox-ai.com";
-
-const REPORT_CHAPTERS: ReportChapter[] = [
-  { id: "summary", number: "01", label: "Resumo" },
-  { id: "recommendation", number: "02", label: "Recomendação" },
-  { id: "system-map", number: "03", label: "Sistema" },
-  { id: "critical-path", number: "04", label: "Prioridades" },
-  { id: "risks", number: "05", label: "Riscos" },
-  { id: "opportunities", number: "06", label: "Oportunidades" },
-  { id: "action-plan", number: "07", label: "Plano de ação" },
-];
 
 const reveal = {
   initial: { opacity: 0, y: 18 },
@@ -65,51 +54,60 @@ const reveal = {
 };
 
 function RoadmapDetailContent({ item }: { item: QuarterlyRecommendation }) {
+  const { t } = useLanguage();
   return (
     <>
-      <div className="roadmap-action-copy"><p>{item.action}</p><p><strong>Resultado esperado:</strong> {item.outcome}.</p></div>
+      <div className="roadmap-action-copy"><p>{item.action}</p><p><strong>{t.results.expectedOutcome}</strong> {item.outcome}.</p></div>
       <dl className="roadmap-action-meta">
-        <div><dt>Responsável sugerido</dt><dd>{item.ownerRole}</dd></div>
-        <div><dt>Esforço</dt><dd>{item.effort}</dd></div>
-        <div><dt>Dependência</dt><dd>{item.dependency}</dd></div>
-        <div><dt>Medida de sucesso</dt><dd>{item.successMetric}</dd></div>
+        <div><dt>{t.results.suggestedOwner}</dt><dd>{item.ownerRole}</dd></div>
+        <div><dt>{t.results.effort}</dt><dd>{item.effort}</dd></div>
+        <div><dt>{t.results.dependency}</dt><dd>{item.dependency}</dd></div>
+        <div><dt>{t.results.successMetric}</dt><dd>{item.successMetric}</dd></div>
       </dl>
     </>
   );
 }
 
 export function ResultsScreen({ answers, onRestart }: { answers: AnswerRecord; onRestart: () => void }) {
+  const { lang, t } = useLanguage();
   const [displayScore, setDisplayScore] = useState(0);
-  const [activePillarId, setActivePillarId] = useState<InsightPillarId | "">("");
   const [expandedRoadmap, setExpandedRoadmap] = useState("q1");
   const prefersReducedMotion = useReducedMotion();
   const revealMotion = prefersReducedMotion ? { initial: false as const } : reveal;
 
-  const pillarScores = useMemo(() => calculatePillarScores(answers), [answers]);
+  const REPORT_CHAPTERS: ReportChapter[] = useMemo(() => [
+    { id: "summary", number: "01", label: t.results.summaryHeading },
+    { id: "recommendation", number: "02", label: t.results.recommendationHeading },
+    { id: "critical-path", number: "03", label: t.deepSections.criticalPathHeading },
+    { id: "risks", number: "04", label: t.deepSections.riskHeading },
+    { id: "opportunities", number: "05", label: t.deepSections.opportunityHeading },
+    { id: "action-plan", number: "06", label: t.results.actionPlanHeading },
+  ], [t]);
+
+  const pillarScores = useMemo(() => calculatePillarScores(answers, lang), [answers, lang]);
   const overallScore = useMemo(() => calculateOverallScore(answers), [answers]);
-  const result = useMemo(() => applyBlockerRules(overallScore, pillarScores), [overallScore, pillarScores]);
+  const result = useMemo(() => applyBlockerRules(overallScore, pillarScores, lang), [overallScore, pillarScores, lang]);
   const strongest = pillarScores.reduce((current, item) => item.score > current.score ? item : current);
   const weakest = pillarScores.reduce((current, item) => item.score < current.score ? item : current);
-  const selectedPillarId = activePillarId || weakest.id as InsightPillarId;
   const meta = LEVEL_META[result.level];
   const executiveSummary = useMemo(
-    () => buildExecutiveSummary({ answers, pillarScores, result, strongest, weakest }),
-    [answers, pillarScores, result, strongest, weakest]
+    () => buildExecutiveSummary({ answers, pillarScores, result, strongest, weakest, lang }),
+    [answers, pillarScores, result, strongest, weakest, lang]
   );
   const quarterlyRecommendations = useMemo(
-    () => buildQuarterlyRecommendations({ answers, pillarScores, result, strongest, weakest }),
-    [answers, pillarScores, result, strongest, weakest]
+    () => buildQuarterlyRecommendations({ answers, pillarScores, result, strongest, weakest, lang }),
+    [answers, pillarScores, result, strongest, weakest, lang]
   );
-  const profile = useMemo(() => getReadinessProfile(pillarScores, result), [pillarScores, result]);
-  const criticalPath = useMemo(() => getCriticalPath(answers, pillarScores, result), [answers, pillarScores, result]);
-  const nextLevel = useMemo(() => getNextLevelTarget(result), [result]);
-  const riskSignals = useMemo(() => getRiskSignals(answers, pillarScores), [answers, pillarScores]);
-  const opportunityTracks = useMemo(() => getOpportunityTracks(answers, pillarScores), [answers, pillarScores]);
+  const profile = useMemo(() => getReadinessProfile(pillarScores, result, lang), [pillarScores, result, lang]);
+  const criticalPath = useMemo(() => getCriticalPath(answers, pillarScores, result, lang), [answers, pillarScores, result, lang]);
+  const nextLevel = useMemo(() => getNextLevelTarget(result, lang), [result, lang]);
+  const riskSignals = useMemo(() => getRiskSignals(answers, pillarScores, lang), [answers, pillarScores, lang]);
+  const opportunityTracks = useMemo(() => getOpportunityTracks(answers, pillarScores, lang), [answers, pillarScores, lang]);
   const primaryRecommendation = useMemo(() => selectPrimaryRecommendation(opportunityTracks), [opportunityTracks]);
   const RecommendationIcon = OPPORTUNITY_ICONS[primaryRecommendation.id];
   const dateStr = useMemo(
-    () => new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "long", year: "numeric" }).format(new Date()),
-    []
+    () => new Intl.DateTimeFormat(lang === "en" ? "en-US" : "pt-BR", { day: "2-digit", month: "long", year: "numeric" }).format(new Date()),
+    [lang]
   );
 
   useEffect(() => {
@@ -181,22 +179,22 @@ export function ResultsScreen({ answers, onRestart }: { answers: AnswerRecord; o
                 <span>snowfox <b>AI</b></span>
               </div>
               <div className="results-hero-actions no-print">
-                <span>Relatório personalizado · {dateStr}</span>
-                <button type="button" className="hero-tool-button" onClick={() => window.print()} title="Exportar relatório em PDF">
-                  <Download size={15} aria-hidden="true" /> <span>Exportar PDF</span>
+                <span>{t.results.reportDate(dateStr)}</span>
+                <button type="button" className="hero-tool-button" onClick={() => window.print()} title={t.results.exportPdfTitle}>
+                  <Download size={15} aria-hidden="true" /> <span>{t.results.exportPdf}</span>
                 </button>
               </div>
             </motion.div>
 
             <div className="results-hero-grid">
               <motion.div className="score-column" initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.16, duration: 0.42 }}>
-                <span className="section-kicker section-kicker-light"><span className="kicker-line" /> Leitura de prontidão</span>
+                <span className="section-kicker section-kicker-light"><span className="kicker-line" /> {t.results.readingKicker}</span>
                 <div className="score-value"><span>{displayScore}</span><small>/100</small></div>
-                <div className="score-track" role="progressbar" aria-label={`Pontuação de ${overallScore} em 100`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={overallScore}><span style={{ width: `${overallScore}%` }} /></div>
-                <div className="score-meta"><span className={`level-tag level-${meta.key}`}>{result.level}</span><span>{dateStr}</span></div>
+                <div className="score-track" role="progressbar" aria-label={t.results.scoreAriaLabel(overallScore)} aria-valuemin={0} aria-valuemax={100} aria-valuenow={overallScore}><span style={{ width: `${overallScore}%` }} /></div>
+                <div className="score-meta"><span className={`level-tag level-${meta.key}`}>{getLevelLabel(result.level, lang)}</span><span>{dateStr}</span></div>
               </motion.div>
               <motion.div className="results-hero-reading" initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25, duration: 0.42 }}>
-                <span className="results-profile-label">Perfil de prontidão</span>
+                <span className="results-profile-label">{t.results.profileLabel}</span>
                 <h1>{profile.title}</h1>
                 <p className="results-hero-summary">{profile.summary}</p>
                 <p className="results-profile-implication">{profile.implication}</p>
@@ -207,7 +205,7 @@ export function ResultsScreen({ answers, onRestart }: { answers: AnswerRecord; o
 
           <motion.section className="report-section executive-section" id="summary" {...revealMotion}>
             <div className="report-section-heading">
-              <div><span className="report-section-number">01</span><h2>Resumo executivo</h2></div>
+              <div><span className="report-section-number">01</span><h2>{t.results.summaryHeading}</h2></div>
             </div>
             <div className="executive-summary-layout">
               <div className="executive-summary-body">
@@ -222,7 +220,7 @@ export function ResultsScreen({ answers, onRestart }: { answers: AnswerRecord; o
 
           <motion.section className="report-section recommendation-section" id="recommendation" {...revealMotion}>
             <div className="report-section-heading">
-              <div><span className="report-section-number">02</span><h2>O que a Snowfox recomenda</h2></div>
+              <div><span className="report-section-number">02</span><h2>{t.results.recommendationHeading}</h2></div>
             </div>
             <div className="executive-data-foundation">
               <RecommendationIcon size={22} aria-hidden="true" />
@@ -232,39 +230,9 @@ export function ResultsScreen({ answers, onRestart }: { answers: AnswerRecord; o
                 <p>{primaryRecommendation.startAction}</p>
               </div>
               <div className="solution-availability">
-                <strong>Começar agora</strong>
-                <span>{primaryRecommendation.id === "data-foundation" ? "Sem pré-requisitos" : "Pré-requisitos atendidos"}</span>
+                <strong>{t.results.startNow}</strong>
+                <span>{primaryRecommendation.id === "data-foundation" ? t.results.noPrerequisites : t.results.prerequisitesMet}</span>
               </div>
-            </div>
-          </motion.section>
-
-          <motion.section className="report-section readiness-map-section" id="system-map" {...revealMotion}>
-            <div className="report-section-heading">
-              <div><span className="report-section-number">03</span><h2>Mapa do sistema</h2></div>
-            </div>
-            <div className="readiness-map-layout">
-              <ReadinessNetwork
-                mode="scored"
-                scores={pillarScores}
-                activePillarId={selectedPillarId}
-                onActivePillarChange={setActivePillarId}
-              />
-              <aside className="readiness-map-reading">
-                <span className="report-label">Como ler o sistema</span>
-                <h3>{profile.title}</h3>
-                <p>{profile.implication}</p>
-                <div className="readiness-map-signals">
-                  {strongest.score === weakest.score ? (
-                    <div><span>Nível consolidado</span><strong>Todos os pilares</strong><b>{strongest.score}%</b></div>
-                  ) : (
-                    <>
-                      <div><span>Maior força</span><strong>{strongest.title}</strong><b>{strongest.score}%</b></div>
-                      <div><span>{isWeakPillarScore(weakest.score) ? "Principal limitador" : "Espaço para evoluir"}</span><strong>{weakest.title}</strong><b>{weakest.score}%</b></div>
-                    </>
-                  )}
-                </div>
-                <p className="readiness-map-note">Linhas destacadas mostram relações tocadas pela dimensão selecionada. Conexões em alerta passam por capacidades abaixo de 40%.</p>
-              </aside>
             </div>
           </motion.section>
 
@@ -274,9 +242,9 @@ export function ResultsScreen({ answers, onRestart }: { answers: AnswerRecord; o
 
           <motion.section className="report-section roadmap-section" id="action-plan" {...revealMotion}>
             <div className="report-section-heading">
-              <div><span className="report-section-number">07</span><h2>Plano de ação</h2></div>
+              <div><span className="report-section-number">06</span><h2>{t.results.actionPlanHeading}</h2></div>
             </div>
-            <p className="report-section-intro">A ordem reduz dependências antes de ampliar investimento. Os papéis e métricas são referências para estruturar a conversa interna.</p>
+            <p className="report-section-intro">{t.results.actionPlanIntro}</p>
             <div className="roadmap-list">
               {quarterlyRecommendations.map((item, index) => {
                 const isExpanded = expandedRoadmap === item.id;
@@ -306,12 +274,12 @@ export function ResultsScreen({ answers, onRestart }: { answers: AnswerRecord; o
           <DebugAnswersAppendix answers={answers} />
 
           <motion.footer className="results-footer no-print" initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true, amount: 0.2 }} transition={{ duration: 0.42 }}>
-            <div className="footer-cta-copy"><span className="section-kicker"><span className="kicker-line" /> Próxima conversa</span><h2>Transforme a leitura em uma agenda de IA concreta.</h2><p>Leve este diagnóstico para uma conversa com quem pode ajudar sua organização a decidir o que preparar, testar e escalar.</p></div>
+            <div className="footer-cta-copy"><span className="section-kicker"><span className="kicker-line" /> {t.results.nextConversationKicker}</span><h2>{t.results.footerTitle}</h2><p>{t.results.footerLede}</p></div>
             <div className="footer-actions">
-              <a className="button-primary button-large" href={CONTACT_URL} target="_blank" rel="noreferrer">Falar com um especialista <ExternalLink size={16} aria-hidden="true" /></a>
-              <button type="button" className="button-secondary" onClick={onRestart}><RotateCcw size={15} aria-hidden="true" /> Refazer avaliação</button>
+              <a className="button-primary button-large" href={CONTACT_URL} target="_blank" rel="noreferrer">{t.results.talkToSpecialist} <ExternalLink size={16} aria-hidden="true" /></a>
+              <button type="button" className="button-secondary" onClick={onRestart}><RotateCcw size={15} aria-hidden="true" /> {t.results.restart}</button>
             </div>
-            <div className="footer-meta"><span>Snowfox AI</span><span>Diagnóstico de prontidão para IA</span><span>snowfox-ai.com</span></div>
+            <div className="footer-meta"><span>Snowfox AI</span><span>{t.results.footerTagline}</span><span>snowfox-ai.com</span></div>
           </motion.footer>
         </div>
       </div>

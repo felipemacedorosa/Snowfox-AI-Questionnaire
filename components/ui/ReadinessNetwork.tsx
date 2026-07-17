@@ -17,6 +17,8 @@ import {
 } from "motion/react";
 import { PillarScore } from "@/app/data";
 import { InsightPillarId } from "@/app/resultInsights";
+import { Bilingual, bi, pick } from "@/app/i18n";
+import { useLanguage } from "@/app/LanguageContext";
 
 type NetworkMode = "preview" | "scored";
 type Point = { x: number; y: number };
@@ -25,9 +27,9 @@ type NetworkPointId = InsightPillarId | "outcome";
 interface NetworkNode {
   id: InsightPillarId;
   index: string;
-  label: string;
-  shortLabel: string;
-  description: string;
+  label: Bilingual;
+  shortLabel: Bilingual;
+  description: Bilingual;
   color: string;
   textColor: string;
   position: Point;
@@ -37,9 +39,12 @@ const NODES: NetworkNode[] = [
   {
     id: "estrategia",
     index: "01",
-    label: "Estratégia",
-    shortLabel: "Estratégia",
-    description: "Prioridade executiva, tese de valor e direção para o portfólio.",
+    label: bi("Estratégia", "Strategy"),
+    shortLabel: bi("Estratégia", "Strategy"),
+    description: bi(
+      "Prioridade executiva, tese de valor e direção para o portfólio.",
+      "Executive priority, value thesis, and direction for the portfolio."
+    ),
     color: "#9c78e8",
     textColor: "#6b3cb1",
     position: { x: 50, y: 13 },
@@ -47,9 +52,12 @@ const NODES: NetworkNode[] = [
   {
     id: "dados",
     index: "02",
-    label: "Dados",
-    shortLabel: "Dados",
-    description: "Qualidade, acesso, histórico e confiança para decisões e modelos.",
+    label: bi("Dados", "Data"),
+    shortLabel: bi("Dados", "Data"),
+    description: bi(
+      "Qualidade, acesso, histórico e confiança para decisões e modelos.",
+      "Quality, access, history, and trust for decisions and models."
+    ),
     color: "#67c5a5",
     textColor: "#256b52",
     position: { x: 16, y: 38 },
@@ -57,9 +65,12 @@ const NODES: NetworkNode[] = [
   {
     id: "governanca",
     index: "03",
-    label: "Governança e Processo",
-    shortLabel: "Govern.",
-    description: "Responsabilidades, controles, segurança e operação responsável.",
+    label: bi("Governança e Processo", "Governance and Process"),
+    shortLabel: bi("Govern.", "Govern."),
+    description: bi(
+      "Responsabilidades, controles, segurança e operação responsável.",
+      "Responsibilities, controls, security, and responsible operation."
+    ),
     color: "#e1b35f",
     textColor: "#76500f",
     position: { x: 84, y: 38 },
@@ -67,9 +78,12 @@ const NODES: NetworkNode[] = [
   {
     id: "pessoas",
     index: "04",
-    label: "Pessoas e Cultura",
-    shortLabel: "Pessoas",
-    description: "Capacidade interna, adoção e mudança na forma de trabalhar.",
+    label: bi("Pessoas e Cultura", "People and Culture"),
+    shortLabel: bi("Pessoas", "People"),
+    description: bi(
+      "Capacidade interna, adoção e mudança na forma de trabalhar.",
+      "In-house capacity, adoption, and changes to how work gets done."
+    ),
     color: "#df8b91",
     textColor: "#93404a",
     position: { x: 23, y: 78 },
@@ -77,9 +91,12 @@ const NODES: NetworkNode[] = [
   {
     id: "tecnologia",
     index: "05",
-    label: "Tecnologia",
-    shortLabel: "Tecnologia",
-    description: "Integração, produção, monitoramento e escala técnica.",
+    label: bi("Tecnologia", "Technology"),
+    shortLabel: bi("Tecnologia", "Technology"),
+    description: bi(
+      "Integração, produção, monitoramento e escala técnica.",
+      "Integration, production, monitoring, and technical scale."
+    ),
     color: "#8fa9bf",
     textColor: "#49677f",
     position: { x: 77, y: 78 },
@@ -110,6 +127,7 @@ function DraggableNode({
   disabled,
   onActivate,
   onMove,
+  lang,
 }: {
   node: NetworkNode;
   active: boolean;
@@ -118,6 +136,7 @@ function DraggableNode({
   disabled: boolean;
   onActivate: () => void;
   onMove: (point: Point) => void;
+  lang: "pt" | "en";
 }) {
   const x = useMotionValue(0);
   const y = useMotionValue(0);
@@ -151,7 +170,7 @@ function DraggableNode({
     >
       <span className="readiness-node-index">{node.index}</span>
       <span className="readiness-node-copy">
-        <strong>{node.shortLabel}</strong>
+        <strong>{pick(node.shortLabel, lang)}</strong>
         {score !== undefined && <small>{score}%</small>}
       </span>
     </motion.button>
@@ -171,6 +190,7 @@ export function ReadinessNetwork({
   onActivePillarChange?: (pillar: InsightPillarId) => void;
   className?: string;
 }) {
+  const { lang } = useLanguage();
   const containerRef = useRef<HTMLDivElement>(null);
   const prefersReducedMotion = useReducedMotion();
   const [size, setSize] = useState({ width: 0, height: 0 });
@@ -267,8 +287,8 @@ export function ReadinessNetwork({
         </svg>
 
         <div className="readiness-core" style={{ left: `${OUTCOME_POSITION.x}%`, top: `${OUTCOME_POSITION.y}%` }}>
-          <span>IA</span>
-          <small>em operação</small>
+          <span>{lang === "en" ? "AI" : "IA"}</span>
+          <small>{lang === "en" ? "in operation" : "em operação"}</small>
         </div>
 
         {NODES.map(node => (
@@ -281,6 +301,7 @@ export function ReadinessNetwork({
             disabled={Boolean(prefersReducedMotion)}
             onActivate={() => activate(node.id)}
             onMove={point => updateOffset(node.id, point)}
+            lang={lang}
           />
         ))}
       </div>
@@ -288,8 +309,8 @@ export function ReadinessNetwork({
       <div className="readiness-network-readout" aria-live="polite">
         <span style={{ color: mode === "scored" ? activeNode.textColor : activeNode.color }}>{activeNode.index}</span>
         <div>
-          <strong>{activeNode.label}</strong>
-          <p>{activeNode.description}</p>
+          <strong>{pick(activeNode.label, lang)}</strong>
+          <p>{pick(activeNode.description, lang)}</p>
         </div>
         {mode === "scored" && <b style={{ color: activeNode.textColor }}>{scoreById[activeNode.id] ?? 0}%</b>}
       </div>
