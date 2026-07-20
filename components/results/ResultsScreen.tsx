@@ -230,8 +230,12 @@ export function ResultsScreen({ answers, onRestart }: { answers: AnswerRecord; o
                 <p>{primaryRecommendation.startAction}</p>
               </div>
               <div className="solution-availability">
-                <strong>{t.results.startNow}</strong>
-                <span>{primaryRecommendation.id === "data-foundation" ? t.results.noPrerequisites : t.results.prerequisitesMet}</span>
+                <strong>{primaryRecommendation.id === "data-foundation" || primaryRecommendation.status === "ready" ? t.results.startNow : t.results.prepareFirst}</strong>
+                <span>
+                  {primaryRecommendation.id === "data-foundation"
+                    ? t.results.noPrerequisites
+                    : primaryRecommendation.status === "ready" ? t.results.prerequisitesMet : t.results.prerequisitesPending}
+                </span>
               </div>
             </div>
           </motion.section>

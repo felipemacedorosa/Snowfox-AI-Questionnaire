@@ -573,12 +573,21 @@ export function getOpportunityTracks(answers: AnswerRecord, pillarScores: Pillar
     { label: lang === "en" ? "Data maturity ≥ 60" : "Maturidade de Dados ≥ 60", met: scores.dados >= 60 },
     { label: lang === "en" ? "Technology ≥ 40" : "Tecnologia ≥ 40", met: scores.tecnologia >= 40 },
   ];
+  // A data lake/warehouse or downstream data marts already in place means the
+  // foundation has already been built — recommending it from scratch would be
+  // redundant, so either answer disqualifies "recommended" in favor of "maintain".
+  const dataFoundationChecks = [
+    { label: lang === "en" ? "Structured data lake or warehouse" : "Data lake ou warehouse estruturado", met: answers.dados_q8 === 2 },
+    { label: lang === "en" ? "Data marts ready for business consumption" : "Data marts prontos para consumo do negócio", met: answers.dados_q9 === 2 },
+  ];
+  const hasDataFoundation = dataFoundationChecks.some(item => item.met);
 
   const automationMet = automationChecks.filter(item => item.met).length;
   const automationStatus: OpportunityStatus = automationMet === automationChecks.length
     ? "ready" : automationMet >= 3 ? "prepare" : "defer";
   const predictiveStatus: OpportunityStatus = predictiveChecks.every(item => item.met)
     ? "ready" : scores.dados >= 40 && scores.tecnologia >= 40 ? "prepare" : "defer";
+  const dataFoundationStatus: OpportunityStatus = hasDataFoundation ? "maintain" : "recommended";
 
   if (lang === "en") {
     return [
@@ -586,12 +595,16 @@ export function getOpportunityTracks(answers: AnswerRecord, pillarScores: Pillar
         id: "data-foundation",
         title: "Data Foundation",
         subtitle: "Lake, warehouse, quality, and governance",
-        status: "recommended",
-        statusLabel: statusLabel("recommended", lang),
-        summary: "Data Foundation is the recommended solution at any readiness level. It creates the reusable foundation for decisions, automations, and models without requiring a minimum maturity to get started.",
+        status: dataFoundationStatus,
+        statusLabel: statusLabel(dataFoundationStatus, lang),
+        summary: hasDataFoundation
+          ? "The organization already has a data lake, warehouse, or data marts in place. The priority now is to maintain quality and governance and extend coverage to new domains, not to rebuild the foundation from scratch."
+          : "Data Foundation is the recommended solution at any readiness level. It creates the reusable foundation for decisions, automations, and models without requiring a minimum maturity to get started.",
         examples: ["A lake or warehouse oriented around critical domains", "Catalog, quality, and lineage", "Governed access and reusable integrations"],
-        prerequisites: [],
-        startAction: "Start now with one business domain and organize its sources, owners, quality, access, and lake or warehouse architecture.",
+        prerequisites: hasDataFoundation ? dataFoundationChecks : [],
+        startAction: hasDataFoundation
+          ? "Map coverage, quality, and governance gaps in the current foundation and prioritize extending it to the next business domain."
+          : "Start now with one business domain and organize its sources, owners, quality, access, and lake or warehouse architecture.",
       },
       {
         id: "automation-agents",
@@ -627,12 +640,16 @@ export function getOpportunityTracks(answers: AnswerRecord, pillarScores: Pillar
       id: "data-foundation",
       title: "Data Foundation",
       subtitle: "Lake, warehouse, qualidade e governança",
-      status: "recommended",
-      statusLabel: statusLabel("recommended", lang),
-      summary: "Data Foundation é a solução recomendada para qualquer nível de prontidão. Ela cria a base reutilizável para decisões, automações e modelos sem exigir uma maturidade mínima para começar.",
+      status: dataFoundationStatus,
+      statusLabel: statusLabel(dataFoundationStatus, lang),
+      summary: hasDataFoundation
+        ? "A organização já possui data lake, data warehouse ou data marts estruturados. A prioridade agora é manter a qualidade e a governança e ampliar a cobertura para novos domínios, não reconstruir a base do zero."
+        : "Data Foundation é a solução recomendada para qualquer nível de prontidão. Ela cria a base reutilizável para decisões, automações e modelos sem exigir uma maturidade mínima para começar.",
       examples: ["Lake ou warehouse orientado a domínios críticos", "Catálogo, qualidade e linhagem", "Acesso governado e integrações reutilizáveis"],
-      prerequisites: [],
-      startAction: "Começar agora por um domínio de negócio e organizar suas fontes, responsáveis, qualidade, acesso e arquitetura de lake ou warehouse.",
+      prerequisites: hasDataFoundation ? dataFoundationChecks : [],
+      startAction: hasDataFoundation
+        ? "Mapear lacunas de cobertura, qualidade e governança na base atual e priorizar a expansão para o próximo domínio de negócio."
+        : "Começar agora por um domínio de negócio e organizar suas fontes, responsáveis, qualidade, acesso e arquitetura de lake ou warehouse.",
     },
     {
       id: "automation-agents",
@@ -664,17 +681,28 @@ export function getOpportunityTracks(answers: AnswerRecord, pillarScores: Pillar
 }
 
 // Data Foundation has no prerequisites and is always viable, so it's the
-// fallback recommendation. But when the company already clears the bar for a
-// higher-value track, that's the more useful "what to do now" — Predictive
-// Agents outranks Automation Agents since its checks require a stronger data
-// foundation to already be in place.
+// fallback recommendation — but only while it's still actually worth
+// recommending. When the company already reported a data lake/warehouse or
+// data marts, its status flips to "maintain" and it's dropped from the
+// fallback entirely: recommending it again would be redundant, so the
+// closer-to-ready of the two agent tracks is used instead, even if neither
+// has fully cleared its checks yet — that's still the more useful "what's
+// next" than repeating a track they've already built. When the company
+// clears the bar for a higher-value track outright, that's the more useful
+// "what to do now" — Predictive Agents outranks Automation Agents since its
+// checks require a stronger data foundation to already be in place.
+const READINESS_RANK: Record<OpportunityStatus, number> = {
+  ready: 0, prepare: 1, defer: 2, recommended: 3, maintain: 4, priority: 5,
+};
+
 export function selectPrimaryRecommendation(tracks: OpportunityTrack[]): OpportunityTrack {
   const byId = Object.fromEntries(tracks.map(track => [track.id, track])) as Record<OpportunityTrack["id"], OpportunityTrack>;
-  return byId["predictive-agents"]?.status === "ready"
-    ? byId["predictive-agents"]
-    : byId["automation-agents"]?.status === "ready"
-      ? byId["automation-agents"]
-      : byId["data-foundation"];
+  if (byId["predictive-agents"]?.status === "ready") return byId["predictive-agents"];
+  if (byId["automation-agents"]?.status === "ready") return byId["automation-agents"];
+  if (byId["data-foundation"]?.status !== "maintain") return byId["data-foundation"];
+  return READINESS_RANK[byId["automation-agents"].status] <= READINESS_RANK[byId["predictive-agents"].status]
+    ? byId["automation-agents"]
+    : byId["predictive-agents"];
 }
 
 export function getNextLevelTarget(result: AssessmentResult, lang: Lang = DEFAULT_LANG): NextLevelTarget {

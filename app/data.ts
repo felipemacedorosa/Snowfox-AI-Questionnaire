@@ -247,6 +247,29 @@ export const SECTIONS: Section[] = [
           { value: 5, label: bi("Muito confortável", "Very comfortable"), note: bi("Você confia totalmente nos dados para tomar decisões.", "You fully trust the data to make decisions."), score: 4 },
         ],
       },
+      {
+        id: "dados_q8", pillar: "dados", type: "single",
+        text: bi(
+          "A organização já possui um data lake ou data warehouse estruturado?",
+          "Does the organization already have a structured data lake or data warehouse?"
+        ),
+        options: [
+          { value: 1, label: bi("Não", "No"), note: bi("A organização ainda não possui um data lake ou data warehouse estruturado.", "The organization doesn't yet have a structured data lake or data warehouse."), score: 0 },
+          { value: 2, label: bi("Sim", "Yes"), note: bi("A organização já possui um data lake ou data warehouse estruturado.", "The organization already has a structured data lake or data warehouse."), score: 0 },
+        ],
+      },
+      {
+        id: "dados_q9", pillar: "dados", type: "single",
+        text: bi(
+          "Esses dados já estão organizados em data marts prontos para consumo pelas áreas de negócio?",
+          "Is that data already organized into data marts ready for consumption by business teams?"
+        ),
+        showIf: { qId: "dados_q8", values: [2] },
+        options: [
+          { value: 1, label: bi("Não", "No"), note: bi("Os dados ainda não estão organizados em data marts para consumo direto das áreas de negócio.", "The data isn't yet organized into data marts for direct consumption by business teams."), score: 0 },
+          { value: 2, label: bi("Sim", "Yes"), note: bi("Os dados já estão organizados em data marts prontos para consumo pelas áreas de negócio.", "The data is already organized into data marts ready for consumption by business teams."), score: 0 },
+        ],
+      },
     ],
   },
   {
@@ -435,7 +458,7 @@ export const SECTIONS: Section[] = [
           { value: 1, label: bi("Engenharia de Dados", "Data Engineering"), note: bi("Responsável por coletar, organizar e garantir a qualidade dos dados da empresa, é a base sem a qual nenhuma solução de IA funciona bem.", "Responsible for collecting, organizing, and ensuring the quality of the company's data, it's the foundation without which no AI solution works well."), score: 0.9 },
           { value: 2, label: bi("Engenharia de IA generativa", "Generative AI Engineering"), note: bi("Responsável por construir soluções que geram conteúdo, respondem perguntas e automatizam comunicação, como assistentes virtuais, resumos automáticos e geração de texto ou imagem.", "Responsible for building solutions that generate content, answer questions, and automate communication, such as virtual assistants, automatic summaries, and text or image generation."), score: 0.7 },
           { value: 3, label: bi("Engenharia de IA tradicional", "Traditional AI Engineering"), note: bi("Responsável por criar modelos que aprendem com dados históricos para prever comportamentos, detectar padrões e automatizar decisões complexas.", "Responsible for building models that learn from historical data to predict behavior, detect patterns, and automate complex decisions."), score: 0.7 },
-          { value: 4, label: bi("Engenharia de Cloud / Segurança", "Cloud / Security Engineering"), note: bi("Responsável por criar modelos que aprendem com dados históricos para prever comportamentos, detectar padrões e automatizar decisões complexas.", "Responsible for building models that learn from historical data to predict behavior, detect patterns, and automate complex decisions."), score: 0.7 },
+          { value: 4, label: bi("Engenharia de Cloud / Segurança", "Cloud / Security Engineering"), note: bi("Responsável por garantir a infraestrutura, a escalabilidade e a segurança dos sistemas que sustentam as soluções de IA, incluindo proteção de dados e conformidade.", "Responsible for ensuring the infrastructure, scalability, and security of the systems that support AI solutions, including data protection and compliance."), score: 0.7 },
           { value: 5, label: bi("Nenhuma das anteriores", "None of the above"), note: bi("A organização não possui expertise interna em nenhuma dessas áreas.", "The organization has no in-house expertise in any of these areas."), score: 0, isNone: true },
         ],
       },
@@ -901,14 +924,18 @@ export function getReadinessLevel(score: number): string {
 }
 
 export function applyBlockerRules(weightedScore: number, pillarScores: PillarScore[], lang: Lang = DEFAULT_LANG): AssessmentResult {
-  let level = getReadinessLevel(weightedScore);
+  // The readiness tag always reflects the overall score band directly, with
+  // no pillar-based override — a weak pillar surfaces as a blocker note
+  // alongside the tag, not as a downgrade of it.
+  const level = getReadinessLevel(weightedScore);
   let blocker: string | null = null;
   let blockerPillar: string | null = null;
+  let blockerSeverity = Infinity;
   const byId = Object.fromEntries(pillarScores.map(p => [p.id, p]));
 
-  function capAt(cap: string, pillar: string, msg: Bilingual) {
-    if (LEVEL_ORDER.indexOf(level) > LEVEL_ORDER.indexOf(cap)) {
-      level = cap;
+  function flag(severityRank: number, pillar: string, msg: Bilingual) {
+    if (severityRank < blockerSeverity) {
+      blockerSeverity = severityRank;
       blockerPillar = pillar;
       blocker = lang === "en"
         ? "Your overall score is promising, but " + msg.en
@@ -916,15 +943,15 @@ export function applyBlockerRules(weightedScore: number, pillarScores: PillarSco
     }
   }
 
-  if (byId.tecnologia?.score < 40) capAt("Prontidão Moderada", "tecnologia", bi(
+  if (byId.tecnologia?.score < 40) flag(2, "tecnologia", bi(
     "sua pontuação em Tecnologia limita a capacidade atual de implantar IA além de pilotos.",
     "your Technology score limits your current ability to deploy AI beyond pilots."
   ));
-  if (byId.dados?.score      < 40) capAt("Prontidão Emergente",  "dados", bi(
+  if (byId.dados?.score      < 40) flag(1, "dados", bi(
     "sua pontuação em Dados limita a capacidade atual de escalar IA de forma confiável.",
     "your Data score limits your current ability to scale AI reliably."
   ));
-  if (byId.governanca?.score < 40) capAt("Prontidão Emergente",  "governanca", bi(
+  if (byId.governanca?.score < 40) flag(1, "governanca", bi(
     "sua pontuação em Governança e Processo limita a capacidade atual de gerenciar IA de forma responsável em escala.",
     "your Governance and Process score limits your current ability to manage AI responsibly at scale."
   ));
