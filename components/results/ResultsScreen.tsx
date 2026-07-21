@@ -20,8 +20,6 @@ import {
 } from "@/app/data";
 import { useLanguage } from "@/app/LanguageContext";
 import {
-  getCriticalPath,
-  getNextLevelTarget,
   getOpportunityTracks,
   getReadinessProfile,
   getRiskSignals,
@@ -33,8 +31,6 @@ import {
   QuarterlyRecommendation,
 } from "@/app/resultInsights";
 import {
-  CriticalPathSection,
-  OPPORTUNITY_ICONS,
   OpportunityLibrarySection,
   RiskViewSection,
 } from "@/components/results/DeepResultSections";
@@ -77,11 +73,9 @@ export function ResultsScreen({ answers, onRestart }: { answers: AnswerRecord; o
 
   const REPORT_CHAPTERS: ReportChapter[] = useMemo(() => [
     { id: "summary", number: "01", label: t.results.summaryHeading },
-    { id: "recommendation", number: "02", label: t.results.recommendationHeading },
-    { id: "critical-path", number: "03", label: t.deepSections.criticalPathHeading },
-    { id: "risks", number: "04", label: t.deepSections.riskHeading },
-    { id: "opportunities", number: "05", label: t.deepSections.opportunityHeading },
-    { id: "action-plan", number: "06", label: t.results.actionPlanHeading },
+    { id: "risks", number: "02", label: t.deepSections.riskHeading },
+    { id: "opportunities", number: "03", label: t.deepSections.opportunityHeading },
+    { id: "action-plan", number: "04", label: t.results.actionPlanHeading },
   ], [t]);
 
   const pillarScores = useMemo(() => calculatePillarScores(answers, lang), [answers, lang]);
@@ -99,12 +93,9 @@ export function ResultsScreen({ answers, onRestart }: { answers: AnswerRecord; o
     [answers, pillarScores, result, strongest, weakest, lang]
   );
   const profile = useMemo(() => getReadinessProfile(pillarScores, result, lang), [pillarScores, result, lang]);
-  const criticalPath = useMemo(() => getCriticalPath(answers, pillarScores, result, lang), [answers, pillarScores, result, lang]);
-  const nextLevel = useMemo(() => getNextLevelTarget(result, lang), [result, lang]);
   const riskSignals = useMemo(() => getRiskSignals(answers, pillarScores, lang), [answers, pillarScores, lang]);
   const opportunityTracks = useMemo(() => getOpportunityTracks(answers, pillarScores, lang), [answers, pillarScores, lang]);
   const primaryRecommendation = useMemo(() => selectPrimaryRecommendation(opportunityTracks), [opportunityTracks]);
-  const RecommendationIcon = OPPORTUNITY_ICONS[primaryRecommendation.id];
   const dateStr = useMemo(
     () => new Intl.DateTimeFormat(lang === "en" ? "en-US" : "pt-BR", { day: "2-digit", month: "long", year: "numeric" }).format(new Date()),
     [lang]
@@ -218,35 +209,12 @@ export function ResultsScreen({ answers, onRestart }: { answers: AnswerRecord; o
             </div>
           </motion.section>
 
-          <motion.section className="report-section recommendation-section" id="recommendation" {...revealMotion}>
-            <div className="report-section-heading">
-              <div><span className="report-section-number">02</span><h2>{t.results.recommendationHeading}</h2></div>
-            </div>
-            <div className="executive-data-foundation">
-              <RecommendationIcon size={22} aria-hidden="true" />
-              <div>
-                <h3>{primaryRecommendation.title}</h3>
-                <p>{primaryRecommendation.summary}</p>
-                <p>{primaryRecommendation.startAction}</p>
-              </div>
-              <div className="solution-availability">
-                <strong>{primaryRecommendation.id === "data-foundation" || primaryRecommendation.status === "ready" ? t.results.startNow : t.results.prepareFirst}</strong>
-                <span>
-                  {primaryRecommendation.id === "data-foundation"
-                    ? t.results.noPrerequisites
-                    : primaryRecommendation.status === "ready" ? t.results.prerequisitesMet : t.results.prerequisitesPending}
-                </span>
-              </div>
-            </div>
-          </motion.section>
-
-          <CriticalPathSection gates={criticalPath} nextLevel={nextLevel} />
           <RiskViewSection signals={riskSignals} />
           <OpportunityLibrarySection tracks={opportunityTracks} primaryId={primaryRecommendation.id} />
 
           <motion.section className="report-section roadmap-section" id="action-plan" {...revealMotion}>
             <div className="report-section-heading">
-              <div><span className="report-section-number">06</span><h2>{t.results.actionPlanHeading}</h2></div>
+              <div><span className="report-section-number">04</span><h2>{t.results.actionPlanHeading}</h2></div>
             </div>
             <p className="report-section-intro">{t.results.actionPlanIntro}</p>
             <div className="roadmap-list">

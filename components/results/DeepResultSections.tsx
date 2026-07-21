@@ -3,7 +3,6 @@
 import { useState } from "react";
 import {
   AlertTriangle,
-  ArrowRight,
   Bot,
   BrainCircuit,
   Check,
@@ -18,8 +17,6 @@ import {
 import { motion, useReducedMotion } from "motion/react";
 import { useLanguage } from "@/app/LanguageContext";
 import {
-  CriticalPathGate,
-  NextLevelTarget,
   OpportunityTrack,
   RiskBand,
   RiskSignal,
@@ -43,48 +40,6 @@ const reveal = {
 function useReportReveal() {
   const prefersReducedMotion = useReducedMotion();
   return prefersReducedMotion ? { initial: false as const } : reveal;
-}
-
-export function CriticalPathSection({ gates, nextLevel }: { gates: CriticalPathGate[]; nextLevel: NextLevelTarget }) {
-  const revealMotion = useReportReveal();
-  const { t } = useLanguage();
-  return (
-    <motion.section className="report-section critical-path-section" id="critical-path" {...revealMotion}>
-      <ReportHeading number="03" title={t.deepSections.criticalPathHeading} />
-      <div className="critical-path-summary">
-        <div>
-          <span className="report-label">{t.deepSections.nextLevelLabel}</span>
-          <strong>{nextLevel.label ?? t.deepSections.nextLevelConsolidated}</strong>
-        </div>
-        {nextLevel.threshold !== null && (
-          <p>{t.deepSections.nextLevelHint}</p>
-        )}
-      </div>
-      {gates.length === 0 ? (
-        <p className="report-section-intro">{t.deepSections.noGates}</p>
-      ) : (
-      <div className="critical-path-flow">
-        {gates.map((gate, index) => (
-          <article className={`critical-gate${gate.isBlocker ? " is-blocker" : ""}`} key={gate.id}>
-            <div className="critical-gate-topline">
-              <span>0{index + 1}</span>
-              <strong>{gate.pillarTitle}</strong>
-              {gate.isBlocker && <b>{t.deepSections.mainBlocker}</b>}
-            </div>
-            <p className="critical-gate-question">{gate.question}</p>
-            <div className="critical-gate-shift">
-              <span><small>{t.deepSections.currentState}</small>{gate.currentState}</span>
-              <ArrowRight size={16} aria-hidden="true" />
-              <span><small>{t.deepSections.targetState}</small>{gate.targetState}</span>
-            </div>
-            <p className="critical-gate-reason">{gate.reason}</p>
-            <div className="critical-gate-dependency"><span>{t.deepSections.requiredBefore}</span>{gate.dependency}</div>
-          </article>
-        ))}
-      </div>
-      )}
-    </motion.section>
-  );
 }
 
 const RISK_LANE_PAGE_SIZE = 5;
@@ -151,7 +106,7 @@ export function RiskViewSection({ signals }: { signals: RiskSignal[] }) {
   };
   return (
     <motion.section className="report-section risk-view-section" id="risks" {...revealMotion}>
-      <ReportHeading number="04" title={t.deepSections.riskHeading} />
+      <ReportHeading number="02" title={t.deepSections.riskHeading} />
       <p className="report-section-intro">{t.deepSections.riskIntro}</p>
       <div className="risk-lanes">
         {riskBands.map(band => {
@@ -191,7 +146,7 @@ export function OpportunityLibrarySection({ tracks, primaryId }: { tracks: Oppor
   const dataFoundationRecommended = tracks.find(t => t.id === "data-foundation")?.status === "recommended";
   return (
     <motion.section className="report-section opportunity-section" id="opportunities" {...revealMotion}>
-      <ReportHeading number="05" title={t.deepSections.opportunityHeading} />
+      <ReportHeading number="03" title={t.deepSections.opportunityHeading} />
       <p className="report-section-intro">
         <strong>{dataFoundationRecommended ? t.deepSections.opportunityIntroStrong : t.deepSections.opportunityIntroMaintainStrong}</strong>{" "}
         {dataFoundationRecommended ? t.deepSections.opportunityIntroRest : t.deepSections.opportunityIntroMaintainRest}
