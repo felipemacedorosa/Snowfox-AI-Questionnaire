@@ -986,6 +986,12 @@ export function getDataRiskFlag(answers: AnswerRecord): boolean {
   return typeof val === "number" && val <= 2;
 }
 
+// A data lake/warehouse or downstream data marts already in place means the
+// data foundation has already been built, not something to start from scratch.
+export function hasDataFoundation(answers: AnswerRecord): boolean {
+  return answers.dados_q8 === 2 || answers.dados_q9 === 2;
+}
+
 // ---------------------------------------------------------------------
 // Localization helpers: produce plain-string copies of the bilingual
 // content above for rendering and for generated-copy consumers.

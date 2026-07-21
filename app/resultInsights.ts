@@ -22,7 +22,7 @@
 // `scoreCondition` are maintainer-facing traceability notes, never rendered
 // to the end user, so they stay in Portuguese only.
 
-import { AnswerRecord, AssessmentResult, PillarScore, PILLAR_CONFIG, RECOMMENDATIONS, getPillarTier } from "@/app/data";
+import { AnswerRecord, AssessmentResult, PillarScore, PILLAR_CONFIG, RECOMMENDATIONS, getPillarTier, hasDataFoundation } from "@/app/data";
 import { Bilingual, DEFAULT_LANG, Lang, bi, pick } from "@/app/i18n";
 
 export type InsightPillarId = "dados" | "estrategia" | "pessoas" | "governanca" | "tecnologia";
@@ -1165,6 +1165,56 @@ const QUARTERLY_PILLAR_ACTIONS: Record<InsightPillarId, QuarterlyPillarAction> =
   },
 };
 
+type QuarterlyTier = "stabilize" | "pilot" | "scale";
+
+// Picks how far along a pillar already is so Q2/Q3 read as the next step for
+// that maturity, instead of always describing a first pilot or a first scale-up.
+function quarterlyTier(score: number): QuarterlyTier {
+  if (score < 40) return "stabilize";
+  if (score < 75) return "pilot";
+  return "scale";
+}
+
+function quarterlyTierCopy(entry: QuarterlyPillarAction, tier: QuarterlyTier) {
+  return {
+    title: entry[`${tier}Title`],
+    action: entry[`${tier}Action`],
+    outcome: entry[`${tier}Outcome`],
+  };
+}
+
+// Q1 is framed as either building the data foundation from zero or extending
+// one that already exists — an org that already has a lake/warehouse or data
+// marts shouldn't be told to "start now" as if beginning its AI journey.
+const DATA_FOUNDATION_Q1 = {
+  start: {
+    focus: bi("Iniciar Data Foundation", "Start Data Foundation"),
+    title: bi("Construir a base de dados para IA", "Build the data foundation for AI"),
+    action: bi(
+      "Começar agora por um domínio de negócio e estruturar lake ou warehouse, qualidade, catálogo, acesso e governança como uma base reutilizável.",
+      "Start now with one business domain and structure a lake or warehouse, quality, catalog, access, and governance as a reusable foundation."
+    ),
+    outcome: bi(
+      "dados confiáveis e acessíveis para decisões, automações e modelos futuros",
+      "reliable, accessible data for future decisions, automations, and models"
+    ),
+    dependency: bi("Nenhuma pré-condição de maturidade", "No maturity precondition"),
+  },
+  extend: {
+    focus: bi("Consolidar Data Foundation", "Consolidate Data Foundation"),
+    title: bi("Ampliar a base de dados para novos domínios", "Extend the data foundation to new domains"),
+    action: bi(
+      "Mapear lacunas de cobertura, qualidade e governança na base atual e priorizar a expansão para o próximo domínio de negócio.",
+      "Map coverage, quality, and governance gaps in the current foundation and prioritize extending it to the next business domain."
+    ),
+    outcome: bi(
+      "cobertura mais ampla de dados confiáveis, prontos para sustentar novas decisões, automações e modelos",
+      "broader coverage of reliable data, ready to support new decisions, automations, and models"
+    ),
+    dependency: bi("Lacunas de cobertura da base atual mapeadas", "Coverage gaps in the current foundation mapped"),
+  },
+};
+
 interface ActionMetaEntry {
   ownerRole: Bilingual;
   dependency: Bilingual;
@@ -1504,17 +1554,28 @@ export function buildQuarterlyRecommendations({
   const secondCopy = QUARTERLY_PILLAR_ACTIONS[secondPillar];
   const thirdCopy = QUARTERLY_PILLAR_ACTIONS[thirdPillar];
 
+  // Each quarter's copy tier (stabilize/pilot/scale) follows that specific
+  // pillar's own score, so a company that's already mature there gets asked
+  // to scale, not to run a first pilot as if starting from zero.
+  const scoreByPillar = Object.fromEntries(pillarScores.map(p => [p.id, p.score])) as Record<InsightPillarId, number>;
+  const secondTierCopy = quarterlyTierCopy(secondCopy, quarterlyTier(scoreByPillar[secondPillar] ?? weakest.score));
+  const thirdTierCopy = quarterlyTierCopy(thirdCopy, quarterlyTier(scoreByPillar[thirdPillar] ?? strongest.score));
+
+  // Q1 talks about building the data foundation from zero or extending one
+  // that's already there, depending on what the company actually reported.
+  const q1Copy = hasDataFoundation(answers) ? DATA_FOUNDATION_Q1.extend : DATA_FOUNDATION_Q1.start;
+
   if (lang === "en") {
     return [
       {
         id: "q1",
         period: "Next quarter",
-        focus: "Start Data Foundation",
-        title: "Build the data foundation for AI",
-        action: "Start now with one business domain and structure a lake or warehouse, quality, catalog, access, and governance as a reusable foundation.",
-        outcome: "reliable, accessible data for future decisions, automations, and models",
+        focus: pick(q1Copy.focus, lang),
+        title: pick(q1Copy.title, lang),
+        action: pick(q1Copy.action, lang),
+        outcome: pick(q1Copy.outcome, lang),
         ownerRole: pick(ACTION_META.dados.ownerRole, lang),
-        dependency: "No maturity precondition",
+        dependency: pick(q1Copy.dependency, lang),
         effort: pick(EFFORT_LABEL.medium, lang),
         successMetric: pick(ACTION_META.dados.successMetric, lang),
       },
@@ -1522,9 +1583,9 @@ export function buildQuarterlyRecommendations({
         id: "q2",
         period: "Following quarter",
         focus: safeClientText(`Execute ${pick(EXEC_PILLAR_LABEL[secondPillar], lang)}`, lang),
-        title: safeClientText(opportunity?.title ?? pick(secondCopy.pilotTitle, lang), lang),
-        action: safeClientText(`Turn last quarter's learning into execution: ${pick(secondCopy.pilotAction, lang)}.`, lang),
-        outcome: safeClientText(pick(secondCopy.pilotOutcome, lang), lang),
+        title: safeClientText(opportunity?.title ?? pick(secondTierCopy.title, lang), lang),
+        action: safeClientText(`Turn last quarter's learning into execution: ${pick(secondTierCopy.action, lang)}.`, lang),
+        outcome: safeClientText(pick(secondTierCopy.outcome, lang), lang),
         ownerRole: pick(ACTION_META[secondPillar].ownerRole, lang),
         dependency: `Completion of the first quarter; ${pick(ACTION_META[secondPillar].dependency, lang).toLowerCase()}`,
         effort: pick(EFFORT_LABEL.medium, lang),
@@ -1534,11 +1595,11 @@ export function buildQuarterlyRecommendations({
         id: "q3",
         period: "Third quarter",
         focus: safeClientText(`Scale ${pick(EXEC_PILLAR_LABEL[thirdPillar], lang)}`, lang),
-        title: safeClientText(strength ? `Scale from ${strength.title}` : pick(thirdCopy.scaleTitle, lang), lang),
-        action: safeClientText(`Use this foundation to expand maturity: ${pick(thirdCopy.scaleAction, lang)}.`, lang),
-        outcome: safeClientText(pick(thirdCopy.scaleOutcome, lang), lang),
+        title: safeClientText(strength ? `Scale from ${strength.title}` : pick(thirdTierCopy.title, lang), lang),
+        action: safeClientText(`Use this foundation to expand maturity: ${pick(thirdTierCopy.action, lang)}.`, lang),
+        outcome: safeClientText(pick(thirdTierCopy.outcome, lang), lang),
         ownerRole: pick(ACTION_META[thirdPillar].ownerRole, lang),
-        dependency: `Pilot learnings documented; ${pick(ACTION_META[thirdPillar].dependency, lang).toLowerCase()}`,
+        dependency: `Previous quarter's work documented; ${pick(ACTION_META[thirdPillar].dependency, lang).toLowerCase()}`,
         effort: pick(EFFORT_LABEL.high, lang),
         successMetric: pick(ACTION_META[thirdPillar].successMetric, lang),
       },
@@ -1549,12 +1610,12 @@ export function buildQuarterlyRecommendations({
     {
       id: "q1",
       period: "Próximo trimestre",
-      focus: "Iniciar Data Foundation",
-      title: "Construir a base de dados para IA",
-      action: "Começar agora por um domínio de negócio e estruturar lake ou warehouse, qualidade, catálogo, acesso e governança como uma base reutilizável.",
-      outcome: "dados confiáveis e acessíveis para decisões, automações e modelos futuros",
+      focus: pick(q1Copy.focus, lang),
+      title: pick(q1Copy.title, lang),
+      action: pick(q1Copy.action, lang),
+      outcome: pick(q1Copy.outcome, lang),
       ownerRole: pick(ACTION_META.dados.ownerRole, lang),
-      dependency: "Nenhuma pré-condição de maturidade",
+      dependency: pick(q1Copy.dependency, lang),
       effort: pick(EFFORT_LABEL.medium, lang),
       successMetric: pick(ACTION_META.dados.successMetric, lang),
     },
@@ -1562,9 +1623,9 @@ export function buildQuarterlyRecommendations({
       id: "q2",
       period: "Trimestre seguinte",
       focus: safeClientText(`Executar ${pick(EXEC_PILLAR_LABEL[secondPillar], lang)}`, lang),
-      title: safeClientText(opportunity?.title ?? pick(secondCopy.pilotTitle, lang), lang),
-      action: safeClientText(`Converter o aprendizado do trimestre anterior em execução: ${pick(secondCopy.pilotAction, lang)}.`, lang),
-      outcome: safeClientText(pick(secondCopy.pilotOutcome, lang), lang),
+      title: safeClientText(opportunity?.title ?? pick(secondTierCopy.title, lang), lang),
+      action: safeClientText(`Converter o aprendizado do trimestre anterior em execução: ${pick(secondTierCopy.action, lang)}.`, lang),
+      outcome: safeClientText(pick(secondTierCopy.outcome, lang), lang),
       ownerRole: pick(ACTION_META[secondPillar].ownerRole, lang),
       dependency: `Conclusão do primeiro trimestre; ${pick(ACTION_META[secondPillar].dependency, lang).toLocaleLowerCase("pt-BR")}`,
       effort: pick(EFFORT_LABEL.medium, lang),
@@ -1574,11 +1635,11 @@ export function buildQuarterlyRecommendations({
       id: "q3",
       period: "Terceiro trimestre",
       focus: safeClientText(`Escalar ${pick(EXEC_PILLAR_LABEL[thirdPillar], lang)}`, lang),
-      title: safeClientText(strength ? `Escalar a partir de ${strength.title}` : pick(thirdCopy.scaleTitle, lang), lang),
-      action: safeClientText(`Usar essa base para ampliar a maturidade: ${pick(thirdCopy.scaleAction, lang)}.`, lang),
-      outcome: safeClientText(pick(thirdCopy.scaleOutcome, lang), lang),
+      title: safeClientText(strength ? `Escalar a partir de ${strength.title}` : pick(thirdTierCopy.title, lang), lang),
+      action: safeClientText(`Usar essa base para ampliar a maturidade: ${pick(thirdTierCopy.action, lang)}.`, lang),
+      outcome: safeClientText(pick(thirdTierCopy.outcome, lang), lang),
       ownerRole: pick(ACTION_META[thirdPillar].ownerRole, lang),
-      dependency: `Aprendizados do piloto documentados; ${pick(ACTION_META[thirdPillar].dependency, lang).toLocaleLowerCase("pt-BR")}`,
+      dependency: `Trabalho do trimestre anterior documentado; ${pick(ACTION_META[thirdPillar].dependency, lang).toLocaleLowerCase("pt-BR")}`,
       effort: pick(EFFORT_LABEL.high, lang),
       successMetric: pick(ACTION_META[thirdPillar].successMetric, lang),
     },

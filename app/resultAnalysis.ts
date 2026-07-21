@@ -6,6 +6,7 @@ import {
   getQuestionMax,
   getQuestionScore,
   getSections,
+  hasDataFoundation,
   isQuestionVisible,
   LEVEL_ORDER,
   LocalizedMultiQuestion,
@@ -580,14 +581,14 @@ export function getOpportunityTracks(answers: AnswerRecord, pillarScores: Pillar
     { label: lang === "en" ? "Structured data lake or warehouse" : "Data lake ou warehouse estruturado", met: answers.dados_q8 === 2 },
     { label: lang === "en" ? "Data marts ready for business consumption" : "Data marts prontos para consumo do negócio", met: answers.dados_q9 === 2 },
   ];
-  const hasDataFoundation = dataFoundationChecks.some(item => item.met);
+  const foundationExists = hasDataFoundation(answers);
 
   const automationMet = automationChecks.filter(item => item.met).length;
   const automationStatus: OpportunityStatus = automationMet === automationChecks.length
     ? "ready" : automationMet >= 3 ? "prepare" : "defer";
   const predictiveStatus: OpportunityStatus = predictiveChecks.every(item => item.met)
     ? "ready" : scores.dados >= 40 && scores.tecnologia >= 40 ? "prepare" : "defer";
-  const dataFoundationStatus: OpportunityStatus = hasDataFoundation ? "maintain" : "recommended";
+  const dataFoundationStatus: OpportunityStatus = foundationExists ? "maintain" : "recommended";
 
   if (lang === "en") {
     return [
@@ -597,12 +598,12 @@ export function getOpportunityTracks(answers: AnswerRecord, pillarScores: Pillar
         subtitle: "Lake, warehouse, quality, and governance",
         status: dataFoundationStatus,
         statusLabel: statusLabel(dataFoundationStatus, lang),
-        summary: hasDataFoundation
+        summary: foundationExists
           ? "The organization already has a data lake, warehouse, or data marts in place. The priority now is to maintain quality and governance and extend coverage to new domains, not to rebuild the foundation from scratch."
           : "Data Foundation is the recommended solution at any readiness level. It creates the reusable foundation for decisions, automations, and models without requiring a minimum maturity to get started.",
         examples: ["A lake or warehouse oriented around critical domains", "Catalog, quality, and lineage", "Governed access and reusable integrations"],
-        prerequisites: hasDataFoundation ? dataFoundationChecks : [],
-        startAction: hasDataFoundation
+        prerequisites: foundationExists ? dataFoundationChecks : [],
+        startAction: foundationExists
           ? "Map coverage, quality, and governance gaps in the current foundation and prioritize extending it to the next business domain."
           : "Start now with one business domain and organize its sources, owners, quality, access, and lake or warehouse architecture.",
       },
@@ -642,12 +643,12 @@ export function getOpportunityTracks(answers: AnswerRecord, pillarScores: Pillar
       subtitle: "Lake, warehouse, qualidade e governança",
       status: dataFoundationStatus,
       statusLabel: statusLabel(dataFoundationStatus, lang),
-      summary: hasDataFoundation
+      summary: foundationExists
         ? "A organização já possui data lake, data warehouse ou data marts estruturados. A prioridade agora é manter a qualidade e a governança e ampliar a cobertura para novos domínios, não reconstruir a base do zero."
         : "Data Foundation é a solução recomendada para qualquer nível de prontidão. Ela cria a base reutilizável para decisões, automações e modelos sem exigir uma maturidade mínima para começar.",
       examples: ["Lake ou warehouse orientado a domínios críticos", "Catálogo, qualidade e linhagem", "Acesso governado e integrações reutilizáveis"],
-      prerequisites: hasDataFoundation ? dataFoundationChecks : [],
-      startAction: hasDataFoundation
+      prerequisites: foundationExists ? dataFoundationChecks : [],
+      startAction: foundationExists
         ? "Mapear lacunas de cobertura, qualidade e governança na base atual e priorizar a expansão para o próximo domínio de negócio."
         : "Começar agora por um domínio de negócio e organizar suas fontes, responsáveis, qualidade, acesso e arquitetura de lake ou warehouse.",
     },
