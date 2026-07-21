@@ -1,3 +1,3 @@
 :HL["/Snowfox-AI-Questionnaire/_next/static/chunks/0k08a0ajf71qm.css","style"]
 :HC["/",""]
-0:{"tree":{"name":"","param":null,"prefetchHints":16,"slots":{"children":{"name":"__PAGE__","param":null,"prefetchHints":0,"slots":null}}},"staleTime":300,"buildId":"8LHEXbO3TRxGlqz4mZ2Fz"}
+0:{"tree":{"name":"","param":null,"prefetchHints":16,"slots":{"children":{"name":"__PAGE__","param":null,"prefetchHints":0,"slots":null}}},"staleTime":300,"buildId":"TpMYh7V9LbGGe0AE5bnIQ"}
