@@ -943,18 +943,25 @@ export function applyBlockerRules(weightedScore: number, pillarScores: PillarSco
     }
   }
 
-  if (byId.tecnologia?.score < 40) flag(2, "tecnologia", bi(
-    "sua pontuação em Tecnologia limita a capacidade atual de implantar IA além de pilotos.",
-    "your Technology score limits your current ability to deploy AI beyond pilots."
-  ));
-  if (byId.dados?.score      < 40) flag(1, "dados", bi(
-    "sua pontuação em Dados limita a capacidade atual de escalar IA de forma confiável.",
-    "your Data score limits your current ability to scale AI reliably."
-  ));
-  if (byId.governanca?.score < 40) flag(1, "governanca", bi(
-    "sua pontuação em Governança e Processo limita a capacidade atual de gerenciar IA de forma responsável em escala.",
-    "your Governance and Process score limits your current ability to manage AI responsibly at scale."
-  ));
+  // A "this limits your ability to scale" framing only makes sense when the
+  // overall score doesn't already contradict it — at 75+ ("Prontidão Alta")
+  // the company demonstrably is scaling, so a single weak pillar shouldn't
+  // be presented as blocking it. The weak pillar still surfaces elsewhere
+  // (executive summary opportunities, pillar detail) with softer wording.
+  if (weightedScore < 75) {
+    if (byId.tecnologia?.score < 40) flag(2, "tecnologia", bi(
+      "sua pontuação em Tecnologia limita a capacidade atual de implantar IA além de pilotos.",
+      "your Technology score limits your current ability to deploy AI beyond pilots."
+    ));
+    if (byId.dados?.score      < 40) flag(1, "dados", bi(
+      "sua pontuação em Dados limita a capacidade atual de escalar IA de forma confiável.",
+      "your Data score limits your current ability to scale AI reliably."
+    ));
+    if (byId.governanca?.score < 40) flag(1, "governanca", bi(
+      "sua pontuação em Governança e Processo limita a capacidade atual de gerenciar IA de forma responsável em escala.",
+      "your Governance and Process score limits your current ability to manage AI responsibly at scale."
+    ));
+  }
 
   return { score: weightedScore, level, blocker, blockerPillar };
 }

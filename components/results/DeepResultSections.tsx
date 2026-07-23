@@ -56,38 +56,43 @@ function useRiskBands() {
 function RiskLaneItems({ items, emptyText }: { items: RiskSignal[]; emptyText: string }) {
   const { t } = useLanguage();
   const [expanded, setExpanded] = useState(false);
-  const visibleItems = expanded ? items : items.slice(0, RISK_LANE_PAGE_SIZE);
-  const hiddenCount = items.length - visibleItems.length;
+  const hiddenCount = Math.max(0, items.length - RISK_LANE_PAGE_SIZE);
 
   if (items.length === 0) return <p className="risk-empty">{emptyText}</p>;
 
   return (
     <>
-      {visibleItems.map(item => (
-        <details className="risk-item" key={item.id}>
-          <summary>
-            <span><small>{item.pillarTitle}</small><strong>{item.title}</strong></span>
-            <span className="risk-item-urgency">{item.urgency}</span>
-            <ChevronDown size={16} aria-hidden="true" />
-          </summary>
-          <div className="risk-item-body">
-            <p>{item.detail}</p>
-            {item.evidence.length > 0 && (
-              <div className="risk-evidence">
-                <span><FileSearch size={13} aria-hidden="true" /> {t.deepSections.evidenceUsed}</span>
-                {item.evidence.map((line, index) => <p key={index}>{line}</p>)}
-              </div>
-            )}
-          </div>
-        </details>
-      ))}
-      {hiddenCount > 0 && (
-        <button type="button" className="risk-lane-toggle" onClick={() => setExpanded(true)}>
+      {items.map((item, index) => {
+        // Items past the fold stay in the DOM but are hidden on screen until
+        // "see more" is clicked; the PDF export reveals them all (globals.css).
+        const isOverflow = index >= RISK_LANE_PAGE_SIZE;
+        const hiddenOnScreen = isOverflow && !expanded;
+        return (
+          <details className={`risk-item${hiddenOnScreen ? " risk-item-overflow" : ""}`} key={item.id}>
+            <summary>
+              <span><small>{item.pillarTitle}</small><strong>{item.title}</strong></span>
+              <span className="risk-item-urgency">{item.urgency}</span>
+              <ChevronDown size={16} aria-hidden="true" />
+            </summary>
+            <div className="risk-item-body">
+              <p>{item.detail}</p>
+              {item.evidence.length > 0 && (
+                <div className="risk-evidence">
+                  <span><FileSearch size={13} aria-hidden="true" /> {t.deepSections.evidenceUsed}</span>
+                  {item.evidence.map((line, i) => <p key={i}>{line}</p>)}
+                </div>
+              )}
+            </div>
+          </details>
+        );
+      })}
+      {hiddenCount > 0 && !expanded && (
+        <button type="button" className="risk-lane-toggle no-print" onClick={() => setExpanded(true)}>
           {t.deepSections.seeMore(hiddenCount)}
         </button>
       )}
       {expanded && items.length > RISK_LANE_PAGE_SIZE && (
-        <button type="button" className="risk-lane-toggle" onClick={() => setExpanded(false)}>
+        <button type="button" className="risk-lane-toggle no-print" onClick={() => setExpanded(false)}>
           {t.deepSections.seeLess}
         </button>
       )}

@@ -1293,12 +1293,23 @@ const EXEC_READINESS_STANCE: Record<string, Bilingual> = {
     "The company has an intermediate foundation: it can move forward on selected initiatives, but still depends on fragile points."
   ),
   "Prontidão Alta": bi(
-    "A empresa está bem posicionada para ampliar o uso de dados e IA, desde que trate os pontos mais frágeis antes de escalar.",
-    "The company is well positioned to expand its use of data and AI, as long as it addresses its most fragile points before scaling."
+    "A empresa está bem posicionada para ampliar o uso de dados e IA, com pontos específicos que merecem atenção para sustentar esse ritmo.",
+    "The company is well positioned to expand its use of data and AI, with specific points that deserve attention to sustain that pace."
   ),
   "Prontidão Avançada": bi(
     "A empresa apresenta maturidade alta para usar dados e IA de forma mais ampla.",
     "The company shows high maturity for using data and AI more broadly."
+  ),
+};
+
+// When the overall score already reads strong (>= 75), the executive summary's
+// FIRST paragraph should stay entirely positive — no caveats or points of
+// attention (those belong in paragraph 2). Only "Prontidão Alta" carries a
+// caution clause in its default stance; this drops it for the strong case.
+const EXEC_READINESS_STANCE_POSITIVE: Record<string, Bilingual> = {
+  "Prontidão Alta": bi(
+    "A empresa está bem posicionada para ampliar o uso de dados e IA.",
+    "The company is well positioned to expand its use of data and AI."
   ),
 };
 
@@ -1467,7 +1478,10 @@ export function buildExecutiveSummary({
   // resolve to the same pillar — naming it as both the highlight and the gap
   // in the same sentence reads as self-contradictory, so this needs its own copy.
   const noDifferentiation = strongest.score === weakest.score;
-  const stance = EXEC_READINESS_STANCE[result.level] ? pick(EXEC_READINESS_STANCE[result.level], lang) : "";
+  // Score >= 75 (overallIsStrong): open paragraph 1 with a positive-only stance
+  // so nothing negative appears in the executive summary's first paragraph.
+  const stanceSource = (overallIsStrong && EXEC_READINESS_STANCE_POSITIVE[result.level]) || EXEC_READINESS_STANCE[result.level];
+  const stance = stanceSource ? pick(stanceSource, lang) : "";
 
   let strengths: string;
   if (!isWeakPillar(strongestPillar)) {

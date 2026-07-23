@@ -179,10 +179,6 @@ const UI_PT = {
       chaptersAriaLabel: "Capítulos do relatório",
       title: "Relatório",
     },
-    debug: {
-      heading: "Respostas registradas (recurso de teste)",
-      intro: "Anexo temporário para testes: lista todas as respostas registradas nesta sessão. Não faz parte do relatório final.",
-    },
     chart: {
       score: "Pontuação",
     },
@@ -348,10 +344,6 @@ const UI_EN: typeof UI_PT = {
     reportNav: {
       chaptersAriaLabel: "Report chapters",
       title: "Report",
-    },
-    debug: {
-      heading: "Recorded answers (test feature)",
-      intro: "Temporary attachment for testing: lists every answer recorded in this session. Not part of the final report.",
     },
     chart: {
       score: "Score",

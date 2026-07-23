@@ -31,8 +31,8 @@ export function PillarRadarChart({ pillarScores }: { pillarScores: PillarScore[]
 
   return (
     <div className="pillar-radar-chart">
-      <ResponsiveContainer width="100%" height={300}>
-        <RadarChart data={data} outerRadius="68%">
+      <ResponsiveContainer width="100%" height={380}>
+        <RadarChart data={data} outerRadius="55%" margin={{ top: 24, right: 65, bottom: 24, left: 135 }}>
           <PolarGrid stroke="#dedcd5" />
           <PolarAngleAxis
             dataKey="pillar"
@@ -44,7 +44,7 @@ export function PillarRadarChart({ pillarScores }: { pillarScores: PillarScore[]
                   y={y}
                   textAnchor={textAnchor}
                   fill={colorByLabel[payload.value] ?? "#676862"}
-                  fontSize={11}
+                  fontSize={10}
                   fontWeight={600}
                   fontFamily="Montserrat, sans-serif"
                 >

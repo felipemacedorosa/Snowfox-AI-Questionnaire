@@ -1,9 +1,21 @@
 import { describe, expect, it } from "vitest";
 import {
+  applyBlockerRules,
   getQuestionFlowState,
   getSectionProgress,
+  PillarScore,
   SECTIONS,
 } from "./data";
+
+function pillarScores(overrides: Record<string, number>): PillarScore[] {
+  const weights: Record<string, number> = { dados: 0.25, estrategia: 0.2, pessoas: 0.15, governanca: 0.15, tecnologia: 0.25 };
+  return Object.entries(weights).map(([id, weight]) => ({
+    id,
+    title: id,
+    weight,
+    score: overrides[id] ?? 80,
+  }));
+}
 
 const strategy = SECTIONS.find(section => section.id === "estrategia")!;
 const technology = SECTIONS.find(section => section.id === "tecnologia")!;
@@ -40,5 +52,21 @@ describe("conditional questionnaire progress", () => {
 
     expect(progress.answered).toBe(progress.total);
     expect(progress.complete).toBe(true);
+  });
+});
+
+describe("blocker rules", () => {
+  it("flags a weak pillar as a blocker when the overall score is not strong", () => {
+    const result = applyBlockerRules(60, pillarScores({ tecnologia: 30 }));
+
+    expect(result.blocker).toContain("Tecnologia");
+    expect(result.blockerPillar).toBe("tecnologia");
+  });
+
+  it("does not frame a weak pillar as blocking scale once the overall score is strong", () => {
+    const result = applyBlockerRules(80, pillarScores({ tecnologia: 30 }));
+
+    expect(result.blocker).toBeNull();
+    expect(result.blockerPillar).toBeNull();
   });
 });
