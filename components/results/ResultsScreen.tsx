@@ -48,12 +48,9 @@ const CONTACT_URL = process.env.NEXT_PUBLIC_CONTACT_URL ?? "https://snowfox-ai.c
 
 const REPORT_CHAPTERS: ReportChapter[] = [
   { id: "summary", number: "01", label: "Resumo" },
-  { id: "system-map", number: "02", label: "Sistema" },
-  { id: "critical-path", number: "03", label: "Prioridades" },
-  { id: "risks", number: "04", label: "Riscos" },
-  { id: "pillars", number: "05", label: "Dimensões" },
-  { id: "opportunities", number: "06", label: "Oportunidades" },
-  { id: "action-plan", number: "07", label: "Plano de ação" },
+  { id: "risks", number: "02", label: "Riscos" },
+  { id: "opportunities", number: "03", label: "Oportunidades" },
+  { id: "action-plan", number: "04", label: "Plano de ação" },
 ];
 
 const reveal = {
