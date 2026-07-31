@@ -239,7 +239,7 @@ export function ResultsScreen({ answers, onRestart }: { answers: AnswerRecord; o
 
           <motion.section className="report-section readiness-map-section" id="system-map" {...revealMotion}>
             <div className="report-section-heading">
-              <div><span className="report-section-number">02</span><h2>Mapa do sistema</h2></div>
+              <div><h2>Mapa do sistema</h2></div>
               <span className="report-section-aside">Cinco capacidades conectadas</span>
             </div>
             <div className="readiness-map-layout">
@@ -269,7 +269,7 @@ export function ResultsScreen({ answers, onRestart }: { answers: AnswerRecord; o
 
           <motion.section className="report-section roadmap-section" id="action-plan" {...revealMotion}>
             <div className="report-section-heading">
-              <div><span className="report-section-number">07</span><h2>Plano de ação</h2></div>
+              <div><span className="report-section-number">04</span><h2>Plano de ação</h2></div>
               <span className="report-section-aside">Três trimestres, uma sequência</span>
             </div>
             <p className="report-section-intro">A ordem reduz dependências antes de ampliar investimento. Os papéis e métricas são referências para estruturar a conversa interna.</p>
