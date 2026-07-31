@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import {
+  Bot,
+  BrainCircuit,
   ChevronDown,
   Database,
   Download,
@@ -93,6 +95,8 @@ export function ResultsScreen({ answers, onRestart }: { answers: AnswerRecord; o
     () => buildExecutiveSummary({ answers, pillarScores, result, strongest, weakest }),
     [answers, pillarScores, result, strongest, weakest]
   );
+  const RecommendationIcon = executiveSummary.recommendationTitle === "Predictive Agents"
+    ? BrainCircuit : executiveSummary.recommendationTitle === "Automation Agents" ? Bot : Database;
   const quarterlyRecommendations = useMemo(
     () => buildQuarterlyRecommendations({ answers, pillarScores, result, strongest, weakest }),
     [answers, pillarScores, result, strongest, weakest]
@@ -222,13 +226,16 @@ export function ResultsScreen({ answers, onRestart }: { answers: AnswerRecord; o
                 {executiveSummary.opportunity.map((line, index) => <p key={index}>{line}</p>)}
               </article>
               <article className="executive-block executive-recommendation-block executive-data-foundation">
-                <Database size={22} aria-hidden="true" />
+                <RecommendationIcon size={22} aria-hidden="true" />
                 <div>
                   <span className="report-label">Solução recomendada</span>
-                  <h3>Data Foundation</h3>
+                  <h3>{executiveSummary.recommendationTitle}</h3>
                   {executiveSummary.immediateRecommendation.map((line, index) => <p key={index}>{line}</p>)}
                 </div>
-                <div className="solution-availability"><strong>Começar agora</strong><span>Sem pré-requisitos</span></div>
+                <div className="solution-availability">
+                  <strong>{executiveSummary.recommendationAction}</strong>
+                  <span>{executiveSummary.recommendationContext}</span>
+                </div>
               </article>
             </div>
           </motion.section>

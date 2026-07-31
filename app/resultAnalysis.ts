@@ -12,9 +12,10 @@ import {
   SingleQuestion,
 } from "./data";
 import {
+  insightMatches,
   InsightPillarId,
+  RESULT_INSIGHTS,
   ResultInsight,
-  selectResultInsights,
 } from "./resultInsights";
 
 export type EvidenceKind = "strength" | "gap" | "risk" | "context";
@@ -70,6 +71,7 @@ export interface OpportunityTrack {
   id: "data-foundation" | "automation-agents" | "predictive-agents";
   title: string;
   subtitle: string;
+  isFeatured: boolean;
   status: OpportunityStatus;
   statusLabel: string;
   summary: string;
@@ -326,12 +328,146 @@ function evidenceForInsight(insight: ResultInsight, evidence: QuestionEvidence[]
     .map(item => `${item.question} — ${item.answer}`);
 }
 
+interface DirectRiskRule {
+  id: string;
+  pillar: InsightPillarId;
+  questionIds: string[];
+  band: RiskBand;
+  blocksWhenPillarBelow?: number;
+  title: string;
+  detail: string;
+  matches: (answers: AnswerRecord) => boolean;
+}
+
+const DIRECT_RISK_RULES: DirectRiskRule[] = [
+  {
+    id: "dados-dependencia-pessoas-chave",
+    pillar: "dados",
+    questionIds: ["dados_q2"],
+    band: "blocks-scale",
+    title: "Acesso a dados depende de pessoas-chave",
+    detail: "Quando o acesso depende de pessoas ou ferramentas específicas, cada nova iniciativa herda uma fila manual e um ponto único de falha. Antes de escalar IA, a empresa precisa tornar as fontes prioritárias acessíveis por integrações e permissões repetíveis.",
+    matches: answers => answers.dados_q2 === 2,
+  },
+  {
+    id: "dados-historico-curto",
+    pillar: "dados",
+    questionIds: ["dados_q4"],
+    band: "weakens-delivery",
+    blocksWhenPillarBelow: 60,
+    title: "Histórico ainda curto para modelos confiáveis",
+    detail: "Poucos meses de histórico limitam a identificação de padrões e tornam a validação de modelos mais instável. O piloto deve começar com um recorte compatível com o histórico disponível enquanto a captura confiável continua.",
+    matches: answers => answers.dados_q4 === 2,
+  },
+  {
+    id: "dados-confianca-fragil",
+    pillar: "dados",
+    questionIds: ["dados_q7"],
+    band: "weakens-delivery",
+    blocksWhenPillarBelow: 60,
+    title: "Confiança nos dados ainda é frágil",
+    detail: "Usar os números com bastante insegurança reduz a adoção de qualquer recomendação automatizada. Qualidade, rastreabilidade e tratamento visível de erros precisam fazer parte do piloto para que a IA não amplifique dúvidas já existentes.",
+    matches: answers => answers.dados_q7 === 2,
+  },
+  {
+    id: "governanca-processos-parciais",
+    pillar: "governanca",
+    questionIds: ["gov_q1"],
+    band: "weakens-delivery",
+    blocksWhenPillarBelow: 60,
+    title: "Processos críticos só estão parcialmente documentados",
+    detail: "Sem etapas, exceções e responsáveis claramente mapeados, o escopo de uma automação muda durante a entrega e aumenta o risco de atraso. O processo escolhido para o piloto deve ser documentado antes da implementação.",
+    matches: answers => answers.gov_q1 === 2,
+  },
+];
+
+function evidenceForQuestions(questionIds: string[], evidence: QuestionEvidence[]): string[] {
+  return questionIds
+    .map(id => evidence.find(item => item.id === id))
+    .filter((item): item is QuestionEvidence => Boolean(item))
+    .map(item => `${item.question} — ${item.answer}`);
+}
+
+function riskUrgency(band: RiskBand): string {
+  return band === "blocks-scale" ? "Tratar agora" : band === "weakens-delivery" ? "Próximo ciclo" : "Monitorar";
+}
+
+const EVIDENCE_GAP_TITLES: Record<string, string> = {
+  dados_q1: "Dados ainda são parciais para decisões críticas",
+  dados_q3: "Crescimento ainda depende do aumento do quadro",
+  dados_q5: "Dados nem sempre chegam no ritmo da decisão",
+  est_q1: "Visão de valor para IA ainda é parcial",
+  est_q1a: "Áreas de maior retorno ainda não foram mapeadas",
+  est_q1a1: "Roadmap de IA ainda não está documentado",
+  est_q1a1a: "Roadmap é revisado com pouca frequência",
+  est_q1b: "Valor econômico da IA ainda é pouco claro",
+  est_q2: "IA ainda está concentrada em ganhos de produtividade",
+  est_q3: "Patrocínio executivo ainda é irregular",
+  est_q3a: "Iniciativas de IA sofrem atrasos frequentes",
+  pess_q1: "Comunicação da liderança ainda é inconsistente",
+  pess_q2: "Experimentação com IA ainda é pouco frequente",
+  pess_q2a: "Testes de IA ainda são informais",
+  pess_q3: "Capacidade interna de IA ainda é limitada",
+  pess_q4: "Adoção enfrenta resistência à mudança",
+  pess_q5: "Critérios para escolher IA ainda são incompletos",
+  pess_q5a: "Priorização de iniciativas ainda é informal",
+  pess_q6: "Capacitação em IA ainda é informal",
+  tec_q1: "Portfólio de IA ainda tem pouca experiência prática",
+  tec_q1b: "Primeiro piloto ainda depende de preparação técnica",
+  tec_q1c: "Projetos existentes não estão evoluindo ativamente",
+  tec_q1d: "Portfólio técnico ainda é pouco diversificado",
+  tec_q1e: "Integração com sistemas internos ainda é parcial",
+  tec_q1f: "Projetos ainda não comprovaram valor mensurável",
+  tec_q1g: "Soluções ainda exigem retrabalho para expandir",
+  tec_q2a: "Portfólio de IA não é atualizado com frequência",
+  tec_q2b: "Soluções de IA ainda são pouco integradas",
+  tec_q2c: "Portfólio técnico ainda é pouco diversificado",
+  tec_q2d: "Integração com sistemas internos ainda é parcial",
+  tec_q2e: "Portfólio ainda não comprova valor mensurável",
+  tec_q2f: "Soluções ainda exigem retrabalho para expandir",
+};
+
+function sensitiveDataSignal(
+  answers: AnswerRecord,
+  evidence: QuestionEvidence[],
+  scores: Record<InsightPillarId, number>,
+): RiskSignal | null {
+  const exposure = answers.dados_q6;
+  if (typeof exposure !== "number" || exposure > 2) return null;
+
+  const governance = answers.gov_q2;
+  const band: RiskBand = governance === 1 || (governance === 2 && scores.governanca < 60)
+    ? "blocks-scale"
+    : governance === 2 ? "weakens-delivery" : "monitor";
+  const detail = governance === 1
+    ? "A empresa reconhece que um vazamento teria impacto relevante, mas ainda não definiu controles ou responsáveis específicos para IA. Antes de ampliar o uso, é necessário mapear os dados sensíveis, onde estão, quem pode acessá-los e quais processos exigem revisão humana."
+    : governance === 2
+      ? "O impacto potencial de um vazamento é relevante e os controles atuais ainda são genéricos. O piloto deve mapear os dados sensíveis utilizados e adaptar acesso, privacidade, registro e revisão humana ao risco específico de IA."
+      : "A exposição potencial é relevante, mas existem controles específicos de IA. Preserve o mapeamento de dados sensíveis, o acesso mínimo e a revisão dos controles a cada nova expansão.";
+
+  return {
+    id: "dados-sensiveis-e-controles",
+    pillar: "governanca",
+    pillarTitle: PILLAR_TITLES.governanca,
+    title: band === "monitor" ? "Controles para dados sensíveis precisam acompanhar a expansão" : "Dados sensíveis exigem controles focados no caso de uso",
+    detail,
+    band,
+    urgency: riskUrgency(band),
+    evidence: evidenceForQuestions(["dados_q6", "gov_q2"], evidence),
+  };
+}
+
 export function getRiskSignals(answers: AnswerRecord, pillarScores: PillarScore[]): RiskSignal[] {
   const evidence = buildQuestionEvidence(answers);
   const scores = scoreMap(pillarScores);
-  const insights = selectResultInsights(answers, pillarScores, { min: 5, max: 8 });
+  const matched = RESULT_INSIGHTS.filter(insight => insightMatches(insight, answers));
+  const diagnosticInsights = matched.filter(insight => insight.priority <= 2);
+  const monitorInsights = matched
+    .filter(insight => insight.priority === 3)
+    .sort((a, b) => scores[b.pillar] - scores[a.pillar])
+    .slice(0, 3);
 
-  return insights.map(insight => {
+  const signals: RiskSignal[] = [...diagnosticInsights, ...monitorInsights].map(insight => {
     const blocksScale = insight.type === "risco-critico" && (insight.priority === 1 || scores[insight.pillar] < 40);
     const band: RiskBand = blocksScale
       ? "blocks-scale"
@@ -343,10 +479,104 @@ export function getRiskSignals(answers: AnswerRecord, pillarScores: PillarScore[
       title: insight.title,
       detail: insight.insight,
       band,
-      urgency: band === "blocks-scale" ? "Tratar agora" : band === "weakens-delivery" ? "Próximo ciclo" : "Monitorar",
+      urgency: riskUrgency(band),
       evidence: evidenceForInsight(insight, evidence),
     };
-  }).sort((a, b) => {
+  });
+
+  const coveredQuestionIds = new Set(
+    diagnosticInsights.flatMap(insight => insight.answerMatch.map(condition => condition.questionId))
+  );
+
+  for (const rule of DIRECT_RISK_RULES) {
+    if (!rule.matches(answers)) continue;
+    rule.questionIds.forEach(id => coveredQuestionIds.add(id));
+    const band: RiskBand = rule.blocksWhenPillarBelow !== undefined && scores[rule.pillar] < rule.blocksWhenPillarBelow
+      ? "blocks-scale"
+      : rule.band;
+    signals.push({
+      id: rule.id,
+      pillar: rule.pillar,
+      pillarTitle: PILLAR_TITLES[rule.pillar],
+      title: rule.title,
+      detail: rule.detail,
+      band,
+      urgency: riskUrgency(band),
+      evidence: evidenceForQuestions(rule.questionIds, evidence),
+    });
+  }
+
+  const securitySignal = sensitiveDataSignal(answers, evidence, scores);
+  if (securitySignal) {
+    coveredQuestionIds.add("dados_q6");
+    coveredQuestionIds.add("gov_q2");
+    signals.push(securitySignal);
+  }
+
+  // High-impact exposure is context, not a maturity gap by itself. It only
+  // becomes a topology signal through the combined control rule above.
+  coveredQuestionIds.add("dados_q6");
+
+  const genericCandidates = evidence
+    .filter(item => item.normalizedScore !== null && item.normalizedScore < 60 && !coveredQuestionIds.has(item.id))
+    .sort((a, b) => (a.normalizedScore ?? 100) - (b.normalizedScore ?? 100));
+
+  // Specific authored diagnostics remain complete. Generic evidence only fills
+  // blind spots so every weak pillar gets up to two concrete signals, instead
+  // of turning every below-average answer into a repetitive risk card.
+  for (const pillarScore of pillarScores) {
+    const pillar = toPillarId(pillarScore.id);
+    if (pillarScore.score >= 75) continue;
+    const existingCount = signals.filter(signal => signal.pillar === pillar && signal.band !== "monitor").length;
+    const slots = Math.max(0, 2 - existingCount);
+    const additions = genericCandidates.filter(item => item.pillar === pillar).slice(0, slots);
+    for (const item of additions) {
+      const band: RiskBand = item.normalizedScore === 0 && scores[item.pillar] < 40
+        ? "blocks-scale"
+        : "weakens-delivery";
+      signals.push({
+        id: `evidence-gap-${item.id}`,
+        pillar: item.pillar,
+        pillarTitle: PILLAR_TITLES[item.pillar],
+        title: EVIDENCE_GAP_TITLES[item.id] ?? `${PILLAR_TITLES[item.pillar]} ainda exige evolução`,
+        detail: [
+          item.answerNote,
+          item.targetState ? `O próximo patamar de capacidade é ${item.targetState}.` : PILLAR_REASON[item.pillar],
+        ].filter(Boolean).join(" "),
+        band,
+        urgency: riskUrgency(band),
+        evidence: [`${item.question} — ${item.answer}`],
+      });
+    }
+  }
+
+  const readinessScore = pillarScores.reduce((total, pillar) => total + pillar.score * pillar.weight, 0);
+  if (readinessScore < 60 && !signals.some(signal => signal.band === "blocks-scale")) {
+    const promotable = signals.findIndex(signal => signal.band === "weakens-delivery");
+    if (promotable >= 0) {
+      signals[promotable] = { ...signals[promotable], band: "blocks-scale", urgency: riskUrgency("blocks-scale") };
+    } else {
+      const weakest = [...pillarScores].sort((a, b) => a.score - b.score)[0];
+      if (weakest) {
+        const pillar = toPillarId(weakest.id);
+        const weakestEvidence = evidence
+          .filter(item => item.pillar === pillar && item.normalizedScore !== null)
+          .sort((a, b) => (a.normalizedScore ?? 100) - (b.normalizedScore ?? 100))[0];
+        signals.push({
+          id: `pillar-scale-gap-${pillar}`,
+          pillar,
+          pillarTitle: PILLAR_TITLES[pillar],
+          title: `${PILLAR_TITLES[pillar]} limita a escala`,
+          detail: PILLAR_REASON[pillar],
+          band: "blocks-scale",
+          urgency: riskUrgency("blocks-scale"),
+          evidence: weakestEvidence ? [`${weakestEvidence.question} — ${weakestEvidence.answer}`] : [],
+        });
+      }
+    }
+  }
+
+  return signals.sort((a, b) => {
     const order: Record<RiskBand, number> = { "blocks-scale": 0, "weakens-delivery": 1, monitor: 2 };
     if (order[a.band] !== order[b.band]) return order[a.band] - order[b.band];
     return scores[a.pillar] - scores[b.pillar];
@@ -381,48 +611,77 @@ export function getOpportunityTracks(answers: AnswerRecord, pillarScores: Pillar
   ];
 
   const automationMet = automationChecks.filter(item => item.met).length;
-  const automationStatus: OpportunityStatus = automationMet === automationChecks.length
+  const readinessScore = pillarScores.reduce((total, pillar) => total + pillar.score * pillar.weight, 0);
+  const provenPortfolio = readinessScore >= 75 && answers.tec_q1 === 3 && answers.tec_q2e === 2;
+  const matureDataFoundation = scores.dados >= 75;
+  const predictiveReady = predictiveChecks.every(item => item.met);
+  const automationStatus: OpportunityStatus = provenPortfolio
+    ? "maintain" : automationMet === automationChecks.length
     ? "ready" : automationMet >= 3 ? "prepare" : "defer";
-  const predictiveStatus: OpportunityStatus = predictiveChecks.every(item => item.met)
+  const predictiveStatus: OpportunityStatus = provenPortfolio && predictiveReady
+    ? "maintain" : predictiveReady
     ? "ready" : scores.dados >= 40 && scores.tecnologia >= 40 ? "prepare" : "defer";
+  const dataFoundationStatus: OpportunityStatus = matureDataFoundation ? "maintain" : "recommended";
+  const featuredTrack: OpportunityTrack["id"] = provenPortfolio
+    ? predictiveReady ? "predictive-agents" : "automation-agents"
+    : "data-foundation";
 
   return [
     {
       id: "data-foundation",
       title: "Data Foundation",
       subtitle: "Lake, warehouse, qualidade e governança",
-      status: "recommended",
-      statusLabel: statusLabel("recommended"),
-      summary: "Data Foundation é a solução recomendada para qualquer nível de prontidão. Ela cria a base reutilizável para decisões, automações e modelos sem exigir uma maturidade mínima para começar.",
+      isFeatured: featuredTrack === "data-foundation",
+      status: dataFoundationStatus,
+      statusLabel: statusLabel(dataFoundationStatus),
+      summary: matureDataFoundation
+        ? "A organização já demonstra uma base de dados madura. A prioridade agora é preservar qualidade e governança, ampliar a cobertura para novos domínios e evitar reconstruir a fundação a cada iniciativa."
+        : "Data Foundation é a solução recomendada para o estágio atual. Ela cria a base reutilizável para decisões, automações e modelos sem exigir uma maturidade mínima para começar.",
       examples: ["Lake ou warehouse orientado a domínios críticos", "Catálogo, qualidade e linhagem", "Acesso governado e integrações reutilizáveis"],
       prerequisites: [],
-      startAction: "Começar agora por um domínio de negócio e organizar suas fontes, responsáveis, qualidade, acesso e arquitetura de lake ou warehouse.",
+      startAction: matureDataFoundation
+        ? "Mapear lacunas de cobertura, qualidade e governança na base atual e priorizar a expansão para o próximo domínio de negócio."
+        : "Começar agora por um domínio de negócio e organizar suas fontes, responsáveis, qualidade, acesso e arquitetura de lake ou warehouse.",
     },
     {
       id: "automation-agents",
       title: "Automation Agents",
       subtitle: "LLMs para automatizar trabalho e conhecimento",
+      isFeatured: featuredTrack === "automation-agents",
       status: automationStatus,
-      statusLabel: statusLabel(automationStatus),
-      summary: automationStatus === "ready"
+      statusLabel: provenPortfolio ? "Escalar e reutilizar" : statusLabel(automationStatus),
+      summary: provenPortfolio
+        ? "A organização já tem experiência prática com agentes. O foco agora é expandir os fluxos que provaram valor, reutilizar integrações e controles e operar custo, qualidade e adoção como um portfólio."
+        : automationStatus === "ready"
         ? "A organização reúne condições mínimas para testar agentes em um fluxo delimitado, com revisão humana e resultado observável."
         : "Agentes podem gerar valor, mas o primeiro piloto deve esperar ou acompanhar melhorias de processo, governança, adoção e integração.",
-      examples: ["Atendimento e triagem assistidos", "Leitura e produção de documentos", "Agentes de conhecimento e fluxos internos"],
+      examples: provenPortfolio
+        ? ["Expandir agentes bem-sucedidos para novas áreas", "Reutilizar conhecimento, integrações e controles", "Operar qualidade, custo e adoção do portfólio"]
+        : ["Atendimento e triagem assistidos", "Leitura e produção de documentos", "Agentes de conhecimento e fluxos internos"],
       prerequisites: automationChecks,
-      startAction: "Selecionar uma tarefa repetitiva com entradas claras, exceções conhecidas, revisão humana e uma métrica de tempo ou qualidade.",
+      startAction: provenPortfolio
+        ? "Selecionar o agente com melhor resultado mensurável e expandi-lo para um fluxo adjacente, reaproveitando integrações, avaliações, controles e monitoramento."
+        : "Selecionar uma tarefa repetitiva com entradas claras, exceções conhecidas, revisão humana e uma métrica de tempo ou qualidade.",
     },
     {
       id: "predictive-agents",
       title: "Predictive Agents",
       subtitle: "Machine Learning e Deep Learning tradicionais",
+      isFeatured: featuredTrack === "predictive-agents",
       status: predictiveStatus,
-      statusLabel: statusLabel(predictiveStatus),
-      summary: predictiveStatus === "ready"
+      statusLabel: provenPortfolio && predictiveReady ? "Expandir portfólio" : statusLabel(predictiveStatus),
+      summary: provenPortfolio && predictiveReady
+        ? "A base de dados, o histórico e a experiência de entrega permitem ampliar o portfólio preditivo. A prioridade é levar modelos a mais decisões recorrentes e padronizar monitoramento, retreinamento e mensuração de valor."
+        : predictiveStatus === "ready"
         ? "Dados e capacidade técnica permitem explorar modelos preditivos em decisões com histórico, resultado observável e rotina de monitoramento."
         : "Casos preditivos dependem de histórico, acesso e qualidade suficientes; sem isso, a incerteza do modelo tende a superar o valor esperado.",
-      examples: ["Previsão de demanda e capacidade", "Churn, propensão e recomendação", "Anomalias, risco e otimização"],
+      examples: provenPortfolio && predictiveReady
+        ? ["Expandir previsão para novos produtos ou regiões", "Levar propensão e recomendação a mais jornadas", "Reutilizar variáveis, monitoramento e retreinamento"]
+        : ["Previsão de demanda e capacidade", "Churn, propensão e recomendação", "Anomalias, risco e otimização"],
       prerequisites: predictiveChecks,
-      startAction: "Escolher uma decisão recorrente com histórico suficiente e definir antecipadamente o resultado que o modelo deve melhorar.",
+      startAction: provenPortfolio && predictiveReady
+        ? "Priorizar a próxima decisão recorrente com impacto relevante e expandir o melhor padrão preditivo existente, com meta incremental e monitoramento comum ao portfólio."
+        : "Escolher uma decisão recorrente com histórico suficiente e definir antecipadamente o resultado que o modelo deve melhorar.",
     },
   ];
 }

@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import {
   AlertTriangle,
   ArrowRight,
@@ -91,6 +92,52 @@ const RISK_BANDS: Array<{ id: RiskBand; label: string; description: string; icon
   { id: "monitor", label: "Monitorar e preservar", description: "Forças e sinais que precisam continuar visíveis.", icon: Gauge },
 ];
 
+const RISK_LANE_PAGE_SIZE = 5;
+
+const RISK_BAND_EMPTY_TEXT: Record<RiskBand, string> = {
+  "blocks-scale": "Com base nas respostas, nenhum sinal bloqueia a escala no momento.",
+  "weakens-delivery": "Com base nas respostas, nenhum sinal reduz adoção, velocidade ou valor no momento.",
+  monitor: "Não há força ou sinal adicional para monitorar nesta leitura.",
+};
+
+function RiskLaneItems({ items, band }: { items: RiskSignal[]; band: RiskBand }) {
+  const [expanded, setExpanded] = useState(false);
+  const hiddenCount = Math.max(0, items.length - RISK_LANE_PAGE_SIZE);
+
+  if (items.length === 0) return <p className="risk-empty">{RISK_BAND_EMPTY_TEXT[band]}</p>;
+
+  return (
+    <>
+      {items.map((item, index) => {
+        const hiddenOnScreen = index >= RISK_LANE_PAGE_SIZE && !expanded;
+        return (
+          <details className={`risk-item${hiddenOnScreen ? " risk-item-overflow" : ""}`} key={item.id}>
+            <summary>
+              <span><small>{item.pillarTitle}</small><strong>{item.title}</strong></span>
+              <span className="risk-item-urgency">{item.urgency}</span>
+              <ChevronDown size={16} aria-hidden="true" />
+            </summary>
+            <div className="risk-item-body">
+              <p>{item.detail}</p>
+              {item.evidence.length > 0 && (
+                <div className="risk-evidence">
+                  <span><FileSearch size={13} aria-hidden="true" /> Evidência utilizada</span>
+                  {item.evidence.map((line, evidenceIndex) => <p key={evidenceIndex}>{line}</p>)}
+                </div>
+              )}
+            </div>
+          </details>
+        );
+      })}
+      {hiddenCount > 0 && (
+        <button type="button" className="risk-lane-toggle no-print" onClick={() => setExpanded(current => !current)}>
+          {expanded ? "Ver menos" : `Ver mais (${hiddenCount})`}
+        </button>
+      )}
+    </>
+  );
+}
+
 export function RiskViewSection({ signals }: { signals: RiskSignal[] }) {
   const revealMotion = useReportReveal();
   return (
@@ -109,25 +156,7 @@ export function RiskViewSection({ signals }: { signals: RiskSignal[] }) {
                 <b>{items.length}</b>
               </div>
               <div className="risk-lane-items">
-                {items.length === 0 && <p className="risk-empty">Nenhum sinal selecionado nesta faixa.</p>}
-                {items.map(item => (
-                  <details className="risk-item" key={item.id}>
-                    <summary>
-                      <span><small>{item.pillarTitle}</small><strong>{item.title}</strong></span>
-                      <span className="risk-item-urgency">{item.urgency}</span>
-                      <ChevronDown size={16} aria-hidden="true" />
-                    </summary>
-                    <div className="risk-item-body">
-                      <p>{item.detail}</p>
-                      {item.evidence.length > 0 && (
-                        <div className="risk-evidence">
-                          <span><FileSearch size={13} aria-hidden="true" /> Evidência utilizada</span>
-                          {item.evidence.map((line, index) => <p key={index}>{line}</p>)}
-                        </div>
-                      )}
-                    </div>
-                  </details>
-                ))}
+                <RiskLaneItems items={items} band={band.id} />
               </div>
             </div>
           );
@@ -234,16 +263,23 @@ const OPPORTUNITY_ICONS = {
 
 export function OpportunityLibrarySection({ tracks }: { tracks: OpportunityTrack[] }) {
   const revealMotion = useReportReveal();
+  const dataFoundation = tracks.find(track => track.id === "data-foundation");
+  const scalingPortfolio = tracks.some(track => track.id !== "data-foundation" && track.status === "maintain");
+  const intro = scalingPortfolio
+    ? "A organização já reúne base madura e experiência prática com IA. A prioridade agora é escalar soluções comprovadas, expandir o portfólio e padronizar governança, monitoramento e reutilização."
+    : dataFoundation?.status === "maintain"
+      ? "A base de dados já apresenta maturidade relevante. A prioridade passa a ser manter e ampliar essa fundação, enquanto agentes de automação e modelos preditivos avançam conforme suas capacidades específicas."
+      : "Data Foundation é a solução recomendada para o estágio atual e pode começar imediatamente. Automation Agents e Predictive Agents continuam condicionados às capacidades necessárias para operar com segurança e valor.";
   return (
     <motion.section className="report-section opportunity-section" id="opportunities" {...revealMotion}>
       <ReportHeading number="06" title="Biblioteca de oportunidades" aside="Hipóteses para validar" />
-      <p className="report-section-intro"><strong>Data Foundation é a solução recomendada e pode começar imediatamente, independentemente do nível atual de prontidão.</strong> Automation Agents e Predictive Agents continuam condicionados às capacidades necessárias para operar com segurança e valor.</p>
+      <p className="report-section-intro"><strong>{intro}</strong></p>
       <div className="opportunity-tracks">
         {tracks.map(track => {
           const Icon = OPPORTUNITY_ICONS[track.id];
           const isDataFoundation = track.id === "data-foundation";
           return (
-            <article className={`opportunity-track opportunity-${track.status} opportunity-track-${track.id}`} key={track.id}>
+            <article className={`opportunity-track opportunity-${track.status} opportunity-track-${track.id}${track.isFeatured ? " is-featured" : ""}`} key={track.id}>
               <div className="opportunity-track-heading">
                 <Icon size={19} aria-hidden="true" />
                 <div><strong>{track.title}</strong><span>{track.subtitle}</span></div>
@@ -253,7 +289,14 @@ export function OpportunityLibrarySection({ tracks }: { tracks: OpportunityTrack
               <div className="opportunity-track-body">
                 <div><span className="report-label">Exemplos</span><ul>{track.examples.map(example => <li key={example}>{example}</li>)}</ul></div>
                 {track.prerequisites.length > 0 && <div><span className="report-label">Pré-requisitos observados</span><ul className="opportunity-checks">{track.prerequisites.map(item => <li key={item.label} className={item.met ? "is-met" : ""}>{item.met ? <Check size={13} aria-hidden="true" /> : <Circle size={11} aria-hidden="true" />}{item.label}</li>)}</ul></div>}
-                {isDataFoundation && <div className="data-foundation-entry"><Check size={14} aria-hidden="true" /><span><b>Entrada imediata</b>Sem requisitos prévios de maturidade, tecnologia ou governança.</span></div>}
+                {isDataFoundation && (
+                  <div className="data-foundation-entry">
+                    <Check size={14} aria-hidden="true" />
+                    {track.status === "maintain"
+                      ? <span><b>Base existente</b>Priorize qualidade, governança e expansão para novos domínios.</span>
+                      : <span><b>Entrada imediata</b>Sem requisitos prévios de maturidade, tecnologia ou governança.</span>}
+                  </div>
+                )}
               </div>
               <div className="opportunity-start"><Target size={15} aria-hidden="true" /><span><b>Primeiro movimento</b>{track.startAction}</span></div>
             </article>

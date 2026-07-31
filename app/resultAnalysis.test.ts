@@ -8,6 +8,7 @@ import {
   getReadinessProfile,
   getRiskSignals,
 } from "./resultAnalysis";
+import { buildExecutiveSummary, buildQuarterlyRecommendations } from "./resultInsights";
 
 function scores(overrides: Partial<Record<string, number>> = {}): PillarScore[] {
   return [
@@ -69,6 +70,31 @@ describe("critical path and risks", () => {
     const signals = getRiskSignals(answers, scores({ dados: 20 }));
     expect(signals.some(signal => signal.pillar === "dados" && signal.band === "blocks-scale")).toBe(true);
   });
+
+  it("surfaces the scale blockers and delivery gaps named in the assessment feedback", () => {
+    const answers: AnswerRecord = {
+      dados_q2: 2,
+      dados_q4: 2,
+      dados_q6: 1,
+      dados_q7: 2,
+      gov_q1: 2,
+      gov_q2: 1,
+    };
+    const signals = getRiskSignals(answers, scores({ dados: 45, governanca: 35 }));
+
+    expect(signals.find(signal => signal.id === "dados-dependencia-pessoas-chave")?.band).toBe("blocks-scale");
+    expect(signals.find(signal => signal.id === "dados-sensiveis-e-controles")?.band).toBe("blocks-scale");
+    expect(signals.find(signal => signal.id === "dados-historico-curto")?.band).toBe("blocks-scale");
+    expect(signals.find(signal => signal.id === "dados-confianca-fragil")?.band).toBe("blocks-scale");
+    expect(signals.find(signal => signal.id === "governanca-processos-parciais")?.band).toBe("blocks-scale");
+  });
+
+  it("never leaves a sub-60 profile without a scale blocker", () => {
+    const answers: AnswerRecord = { dados_q1: 2, est_q1: 2, pess_q4: 3, gov_q1: 3, tec_q1: 1, tec_q1b: 2 };
+    const signals = getRiskSignals(answers, scores({ dados: 50, estrategia: 50, pessoas: 50, governanca: 50, tecnologia: 45 }));
+
+    expect(signals.some(signal => signal.band === "blocks-scale")).toBe(true);
+  });
 });
 
 describe("opportunity tracks", () => {
@@ -86,6 +112,81 @@ describe("opportunity tracks", () => {
       prerequisites: [],
     });
     expect(tracks.find(track => track.id === "predictive-agents")?.status).toBe("defer");
+  });
+
+  it("moves an experienced high-readiness portfolio from testing to expansion", () => {
+    const answers: AnswerRecord = {
+      dados_q1: 3,
+      dados_q2: 5,
+      dados_q4: 4,
+      tec_q1: 3,
+      tec_q2e: 2,
+    };
+    const tracks = getOpportunityTracks(answers, scores({ dados: 96, estrategia: 92, pessoas: 90, governanca: 91, tecnologia: 95 }));
+    const automation = tracks.find(track => track.id === "automation-agents")!;
+    const predictive = tracks.find(track => track.id === "predictive-agents")!;
+
+    expect(tracks.find(track => track.id === "data-foundation")).toMatchObject({ status: "maintain", statusLabel: "Manter e expandir" });
+    expect(automation.statusLabel).toBe("Escalar e reutilizar");
+    expect(`${automation.summary} ${automation.startAction}`).not.toMatch(/testar|primeiro piloto/i);
+    expect(predictive).toMatchObject({ isFeatured: true, statusLabel: "Expandir portfólio" });
+    expect(`${predictive.summary} ${predictive.startAction}`).not.toMatch(/explorar modelos|escolher uma decisão/i);
+  });
+});
+
+describe("score-aware result copy", () => {
+  it("frames a low score around the main limiter and isolated-pilot risk", () => {
+    const pillarScores = scores({ dados: 28, estrategia: 42, pessoas: 38, governanca: 31, tecnologia: 36 });
+    const strongest = pillarScores.reduce((current, item) => item.score > current.score ? item : current);
+    const weakest = pillarScores.reduce((current, item) => item.score < current.score ? item : current);
+    const summary = buildExecutiveSummary({
+      answers: {},
+      pillarScores,
+      result: { score: 34, level: "Prontidão Baixa", blocker: null },
+      strongest,
+      weakest,
+    });
+
+    expect(summary.currentSituation.join(" ")).toContain("espaço significativo de evolução");
+    expect(summary.currentSituation.join(" ")).toContain("O principal limitador hoje é Dados");
+    expect(summary.currentSituation.join(" ")).toContain("restrita a pilotos isolados");
+  });
+
+  it("puts a practical governed pilot in the second quarter for sub-60 profiles", () => {
+    const pillarScores = scores({ dados: 42, estrategia: 55, pessoas: 45, governanca: 38, tecnologia: 48 });
+    const strongest = pillarScores.reduce((current, item) => item.score > current.score ? item : current);
+    const weakest = pillarScores.reduce((current, item) => item.score < current.score ? item : current);
+    const roadmap = buildQuarterlyRecommendations({
+      answers: {},
+      pillarScores,
+      result: { score: 50, level: "Prontidão Emergente", blocker: null },
+      strongest,
+      weakest,
+    });
+
+    expect(roadmap.map(item => item.focus)).toEqual([
+      "Preparar base e mudança",
+      "Pilotar agente e governança",
+      "Expandir o piloto",
+    ]);
+    expect(roadmap[1].title).toContain("governança focada no piloto");
+    expect(roadmap[1].successMetric).toContain("fluxo real");
+  });
+
+  it("does not tell an advanced profile to rebuild its foundation", () => {
+    const pillarScores = scores({ dados: 96, estrategia: 92, pessoas: 90, governanca: 91, tecnologia: 95 });
+    const strongest = pillarScores.reduce((current, item) => item.score > current.score ? item : current);
+    const weakest = pillarScores.reduce((current, item) => item.score < current.score ? item : current);
+    const result: AssessmentResult = { score: 93, level: "Prontidão Avançada", blocker: null };
+    const answers: AnswerRecord = { dados_q1: 3, dados_q2: 5, dados_q4: 4, tec_q1: 3, tec_q2e: 2 };
+    const summary = buildExecutiveSummary({ answers, pillarScores, result, strongest, weakest });
+    const roadmap = buildQuarterlyRecommendations({ answers, pillarScores, result, strongest, weakest });
+
+    expect(summary.currentSituation.join(" ")).not.toContain("principal limitador");
+    expect(summary.currentSituation.join(" ")).toContain("ampliar soluções comprovadas");
+    expect(summary.recommendationTitle).toBe("Predictive Agents");
+    expect(roadmap[0].focus).toBe("Consolidar Data Foundation");
+    expect(roadmap[0].title).toContain("Ampliar");
   });
 });
 
