@@ -1,0 +1,93 @@
+name: Deploy AI Readiness
+
+on:
+  push:
+    branches:
+      - master
+      - main
+    paths-ignore:
+      - .github/workflows/deploy-ai-readiness.yml
+      - next.config.ts
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ai-readiness-production
+  cancel-in-progress: true
+
+env:
+  BASE_PATH: /assessments/ai-readiness
+  DEPLOY_PATH: /opt/snowfox-wordpress/html/assessments/ai-readiness
+
+jobs:
+  deploy:
+    name: Build and publish to OVH
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests
+        run: npm test
+
+      - name: Build website export
+        run: NEXT_PUBLIC_BASE_PATH="$BASE_PATH" npm run build
+
+      - name: Configure SSH
+        env:
+          OVH_SSH_KEY: ${{ secrets.OVH_SSH_KEY }}
+          OVH_KNOWN_HOSTS: ${{ secrets.OVH_KNOWN_HOSTS }}
+        run: |
+          set -euo pipefail
+          test -n "$OVH_SSH_KEY"
+          test -n "$OVH_KNOWN_HOSTS"
+          install -m 700 -d "$HOME/.ssh"
+          printf '%s\n' "$OVH_SSH_KEY" | tr -d '\r' > "$HOME/.ssh/ovh_deploy_key"
+          printf '%s\n' "$OVH_KNOWN_HOSTS" > "$HOME/.ssh/known_hosts"
+          chmod 600 "$HOME/.ssh/ovh_deploy_key" "$HOME/.ssh/known_hosts"
+
+      - name: Publish static export
+        env:
+          OVH_HOST: ${{ secrets.OVH_HOST }}
+          OVH_USER: ${{ secrets.OVH_USER }}
+        run: |
+          set -euo pipefail
+          test -n "$OVH_HOST"
+          test -n "$OVH_USER"
+
+          ssh_opts=(-o BatchMode=yes -o IdentitiesOnly=yes -i "$HOME/.ssh/ovh_deploy_key" -o UserKnownHostsFile="$HOME/.ssh/known_hosts")
+          remote_root="$(dirname "$DEPLOY_PATH")"
+          remote_target="$DEPLOY_PATH"
+          deploy_id="${GITHUB_SHA::12}-${GITHUB_RUN_ID}"
+          remote_tmp="$remote_root/.ai-readiness.${deploy_id}.tmp"
+          remote_backup="$remote_root/.ai-readiness.previous.${deploy_id}"
+          destination="$OVH_USER@$OVH_HOST"
+
+          ssh "${ssh_opts[@]}" "$destination" \
+            "sudo -n mkdir -p '$remote_root' && sudo -n rm -rf '$remote_tmp' && sudo -n mkdir '$remote_tmp'"
+
+          tar -C out -czf - . | ssh "${ssh_opts[@]}" "$destination" \
+            "sudo -n tar -xzf - -C '$remote_tmp'"
+
+          ssh "${ssh_opts[@]}" "$destination" "
+            set -e
+            if [ -e '$remote_target' ]; then sudo -n mv '$remote_target' '$remote_backup'; fi
+            sudo -n mv '$remote_tmp' '$remote_target'
+            sudo -n chown -R www-data:www-data '$remote_target'
+            sudo -n find '$remote_target' -type d -exec chmod 755 {} +
+            sudo -n find '$remote_target' -type f -exec chmod 644 {} +
+          "
+
+          echo "Published $GITHUB_SHA to $DEPLOY_PATH"
