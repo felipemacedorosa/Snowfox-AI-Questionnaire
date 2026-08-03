@@ -45,7 +45,7 @@ export function LandingScreen({
           <div className="section-kicker"><span className="kicker-line" /> Snowfox AI · Diagnóstico executivo</div>
           <h1>Diagnóstico de prontidão para IA.</h1>
           <p className="landing-lede">
-            Enxergue como estratégia, dados, pessoas, governança e tecnologia se conectam e transforme respostas dispersas em uma agenda de decisão concreta.
+            Entenda como sua organização se posiciona em termos de maturidade de IA e como avançar em sua transformação
           </p>
           <div className="landing-actions">
             <motion.button type="button" className="button-primary button-large" onClick={hasDraft ? onResume : onStart} whileTap={{ scale: 0.98 }}>
