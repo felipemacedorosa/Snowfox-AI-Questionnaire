@@ -1,8 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
   applyBlockerRules,
+  calculateOverallScore,
+  calculatePillarScores,
+  getAllQuestions,
   getQuestionFlowState,
   getSectionProgress,
+  isQuestionScored,
   PillarScore,
   SECTIONS,
 } from "./data";
@@ -23,6 +27,106 @@ const technology = SECTIONS.find(section => section.id === "tecnologia")!;
 function strategyQuestion(id: string) {
   return strategy.questions.find(question => question.id === id)!;
 }
+
+function question(id: string) {
+  return SECTIONS.flatMap(section => section.questions).find(item => item.id === id)!;
+}
+
+function localizedQuestion(id: string) {
+  return getAllQuestions("pt").find(item => item.id === id)!;
+}
+
+const UNKNOWN_IDS = [
+  "dados_q2", "dados_q4", "dados_q6", "dados_q3", "gov_q1", "gov_q2",
+  "est_q1", "est_q1a", "est_q1a1", "est_q1a1a", "est_q1b", "est_q2",
+  "est_q3", "est_q3a", "pess_q1", "pess_q2", "pess_q2a", "pess_q3",
+  "pess_q4", "pess_q5a", "pess_q6", "tec_q1", "tec_q1b", "tec_q1c",
+  "tec_q1e", "tec_q1f", "tec_q1g", "tec_q2a", "tec_q2b", "tec_q2d",
+  "tec_q2e", "tec_q2f",
+] as const;
+
+describe("questionnaire content and answer semantics", () => {
+  it("moves operational capacity from Data to Governance and Process", () => {
+    const data = SECTIONS.find(section => section.id === "dados")!;
+    const governance = SECTIONS.find(section => section.id === "governanca")!;
+
+    expect(data.questions.some(item => item.id === "dados_q3")).toBe(false);
+    expect(governance.questions.some(item => item.id === "dados_q3")).toBe(true);
+    expect(question("dados_q3").pillar).toBe("governanca");
+
+    const byPillar = Object.fromEntries(
+      calculatePillarScores({ dados_q3: 3 }).map(item => [item.id, item.score])
+    );
+    expect(byPillar.dados).toBe(0);
+    expect(byPillar.governanca).toBe(100);
+    expect(calculateOverallScore({ dados_q3: 3 })).toBe(5);
+  });
+
+  it("defines economic value where the respondent answers the question", () => {
+    expect(localizedQuestion("est_q1b").context).toBe(
+      "Valor econômico é o impacto mensurável que a IA pode gerar, como reduzir custos ou tempo, aumentar receita, melhorar previsões e decisões recorrentes ou transformar dados em novos produtos, serviços e experiências."
+    );
+  });
+
+  it("offers one explicit uncertainty answer on every approved question", () => {
+    for (const id of UNKNOWN_IDS) {
+      const item = localizedQuestion(id);
+      expect(item.type).not.toBe("text");
+      if (item.type === "text") continue;
+      expect(item.options.filter(option => option.label === "Não sei afirmar")).toHaveLength(1);
+      expect(item.options.find(option => option.label === "Não sei afirmar")).toMatchObject({
+        value: 0,
+        score: 0,
+        isUnknown: true,
+      });
+    }
+  });
+
+  it("does not duplicate uncertainty where the questionnaire already expresses it", () => {
+    for (const id of ["dados_q1", "dados_q5", "dados_q7", "pess_q5", "tec_q1d", "tec_q2c"]) {
+      const item = localizedQuestion(id);
+      if (item.type === "text") continue;
+      expect(item.options.some(option => option.label === "Não sei afirmar")).toBe(false);
+    }
+  });
+
+  it("keeps unknown expertise exclusive from concrete expertise", () => {
+    const expertise = localizedQuestion("pess_q3");
+    expect(expertise.type).toBe("multi");
+    if (expertise.type !== "multi") return;
+    expect(expertise.options.find(option => option.isUnknown)).toMatchObject({
+      value: 0,
+      isNone: true,
+    });
+  });
+
+  it("turns delay reason into required unscored context", () => {
+    const delayReason = localizedQuestion("est_q3a1");
+    expect(delayReason.type).toBe("single");
+    expect(isQuestionScored(question("est_q3a1"))).toBe(false);
+    if (delayReason.type !== "single") return;
+    expect(delayReason.options.map(option => option.label)).toEqual([
+      "Falta de engajamento ou disponibilidade dos times",
+      "Desalinhamento entre o escopo e o processo interno real",
+      "Falta de priorização da alta liderança",
+      "Dependências de dados ou integrações",
+      "Requisitos ou aprovações pouco claros",
+      "Outro motivo",
+      "Não sei afirmar",
+    ]);
+
+    const withoutReason = { est_q3: 5, est_q3a: 3 };
+    const withReason = { ...withoutReason, est_q3a1: 1 };
+    expect(calculateOverallScore(withReason)).toBe(calculateOverallScore(withoutReason));
+    expect(calculatePillarScores(withReason)).toEqual(calculatePillarScores(withoutReason));
+  });
+
+  it("does not ask for a delay reason when there are no initiatives or visibility", () => {
+    const delayReason = strategy.questions.find(item => item.id === "est_q3a1")!;
+    expect(getQuestionFlowState(delayReason, strategy.questions, { est_q3: 5, est_q3a: 5 })).toBe("skipped");
+    expect(getQuestionFlowState(delayReason, strategy.questions, { est_q3: 5, est_q3a: 0 })).toBe("skipped");
+  });
+});
 
 describe("conditional questionnaire progress", () => {
   it("keeps the maximum question count stable", () => {

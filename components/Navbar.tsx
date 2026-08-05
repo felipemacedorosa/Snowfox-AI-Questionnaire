@@ -15,12 +15,14 @@ export function Navbar({
   screen,
   sectionLabel,
   saveState,
+  reportConfirmed,
   onSave,
   onNavigate,
 }: {
   screen: AppScreen;
   sectionLabel: string;
   saveState: SaveState;
+  reportConfirmed: boolean;
   onSave: () => void;
   onNavigate: (screen: AppScreen) => void;
 }) {
@@ -47,7 +49,7 @@ export function Navbar({
         <div className="nav-context">
           {screen === "landing" && <span className="nav-context-label">{t.nav.contextLanding}</span>}
           {screen === "quiz" && <><span className="nav-context-label">{t.nav.contextQuiz}</span><span className="nav-context-divider" />{sectionLabel}</>}
-          {screen === "results" && <span className="nav-context-label">{t.nav.contextResults}</span>}
+          {screen === "results" && <span className="nav-context-label">{reportConfirmed ? t.nav.contextResults : t.nav.contextFinalizeReport}</span>}
         </div>
 
         <button type="button" className="mobile-menu-button" onClick={() => setMenuOpen(current => !current)} aria-label={menuOpen ? t.nav.closeMenu : t.nav.openMenu} aria-expanded={menuOpen}>

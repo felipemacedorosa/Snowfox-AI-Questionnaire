@@ -4,32 +4,22 @@ import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import {
   ChevronDown,
+  Cpu,
+  Database,
   Download,
   ExternalLink,
+  Layers3,
   RotateCcw,
+  ShieldCheck,
+  Target,
   TrendingDown,
+  Users,
 } from "lucide-react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import {
-  AnswerRecord,
-  applyBlockerRules,
-  calculateOverallScore,
-  calculatePillarScores,
-  getLevelLabel,
-  LEVEL_META,
-} from "@/app/data";
+import { getLevelLabel, LEVEL_META } from "@/app/data";
 import { useLanguage } from "@/app/LanguageContext";
-import {
-  getOpportunityTracks,
-  getReadinessProfile,
-  getRiskSignals,
-  selectPrimaryRecommendation,
-} from "@/app/resultAnalysis";
-import {
-  buildExecutiveSummary,
-  buildQuarterlyRecommendations,
-  QuarterlyRecommendation,
-} from "@/app/resultInsights";
+import { ReportSnapshot } from "@/app/reportSnapshot";
+import { QuarterlyRecommendation } from "@/app/resultInsights";
 import {
   OpportunityLibrarySection,
   RiskViewSection,
@@ -39,6 +29,15 @@ import { ReportChapter, ReportNavigation } from "@/components/results/ReportNavi
 
 const BASE = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
 const CONTACT_URL = process.env.NEXT_PUBLIC_CONTACT_URL ?? "https://snowfox-ai.com";
+
+const RECOMMENDATION_ICONS = {
+  dados: Database,
+  estrategia: Target,
+  pessoas: Users,
+  governanca: ShieldCheck,
+  tecnologia: Cpu,
+  portfolio: Layers3,
+} as const;
 
 const reveal = {
   initial: { opacity: 0, y: 18 },
@@ -62,7 +61,7 @@ function RoadmapDetailContent({ item }: { item: QuarterlyRecommendation }) {
   );
 }
 
-export function ResultsScreen({ answers, onRestart }: { answers: AnswerRecord; onRestart: () => void }) {
+export function ResultsScreen({ snapshot, onRestart }: { snapshot: ReportSnapshot; onRestart: () => void }) {
   const { lang, t } = useLanguage();
   const [displayScore, setDisplayScore] = useState(0);
   const [expandedRoadmap, setExpandedRoadmap] = useState("q1");
@@ -76,27 +75,21 @@ export function ResultsScreen({ answers, onRestart }: { answers: AnswerRecord; o
     { id: "action-plan", number: "04", label: t.results.actionPlanHeading },
   ], [t]);
 
-  const pillarScores = useMemo(() => calculatePillarScores(answers, lang), [answers, lang]);
-  const overallScore = useMemo(() => calculateOverallScore(answers), [answers]);
-  const result = useMemo(() => applyBlockerRules(overallScore, pillarScores, lang), [overallScore, pillarScores, lang]);
-  const strongest = pillarScores.reduce((current, item) => item.score > current.score ? item : current);
-  const weakest = pillarScores.reduce((current, item) => item.score < current.score ? item : current);
+  const {
+    overallScore,
+    result,
+    pillarScores,
+    executiveSummary,
+    quarterlyRecommendations,
+    profile,
+    riskSignals,
+    opportunityTracks,
+  } = snapshot.report;
   const meta = LEVEL_META[result.level];
-  const executiveSummary = useMemo(
-    () => buildExecutiveSummary({ answers, pillarScores, result, strongest, weakest, lang }),
-    [answers, pillarScores, result, strongest, weakest, lang]
-  );
-  const quarterlyRecommendations = useMemo(
-    () => buildQuarterlyRecommendations({ answers, pillarScores, result, strongest, weakest, lang }),
-    [answers, pillarScores, result, strongest, weakest, lang]
-  );
-  const profile = useMemo(() => getReadinessProfile(pillarScores, result, lang), [pillarScores, result, lang]);
-  const riskSignals = useMemo(() => getRiskSignals(answers, pillarScores, lang), [answers, pillarScores, lang]);
-  const opportunityTracks = useMemo(() => getOpportunityTracks(answers, pillarScores, lang), [answers, pillarScores, lang]);
-  const primaryRecommendation = useMemo(() => selectPrimaryRecommendation(opportunityTracks), [opportunityTracks]);
+  const RecommendationIcon = RECOMMENDATION_ICONS[executiveSummary.priorityId];
   const dateStr = useMemo(
-    () => new Intl.DateTimeFormat(lang === "en" ? "en-US" : "pt-BR", { day: "2-digit", month: "long", year: "numeric" }).format(new Date()),
-    [lang]
+    () => new Intl.DateTimeFormat(lang === "en" ? "en-US" : "pt-BR", { day: "2-digit", month: "long", year: "numeric" }).format(new Date(snapshot.clientSubmittedAt)),
+    [lang, snapshot.clientSubmittedAt]
   );
 
   useEffect(() => {
@@ -200,6 +193,15 @@ export function ResultsScreen({ answers, onRestart }: { answers: AnswerRecord; o
               <div className="executive-summary-body">
                 <p>{executiveSummary.strengths}</p>
                 <p>{executiveSummary.opportunities}</p>
+                <div className="executive-priority-block">
+                  <div className="executive-priority-heading">
+                    <RecommendationIcon size={18} aria-hidden="true" />
+                    <span>{t.results.recommendationHeading}</span>
+                    <strong>{executiveSummary.recommendationTitle}</strong>
+                  </div>
+                  <p>{executiveSummary.recommendationContext}</p>
+                  <ul>{executiveSummary.immediateRecommendation.map(item => <li key={item}>{item}</li>)}</ul>
+                </div>
               </div>
               <div className="executive-summary-chart">
                 <PillarRadarChart pillarScores={pillarScores} />
@@ -208,7 +210,7 @@ export function ResultsScreen({ answers, onRestart }: { answers: AnswerRecord; o
           </motion.section>
 
           <RiskViewSection signals={riskSignals} />
-          <OpportunityLibrarySection tracks={opportunityTracks} primaryId={primaryRecommendation.id} />
+          <OpportunityLibrarySection tracks={opportunityTracks} />
 
           <motion.section className="report-section roadmap-section" id="action-plan" {...revealMotion}>
             <div className="report-section-heading">

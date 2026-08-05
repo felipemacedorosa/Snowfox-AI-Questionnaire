@@ -22,7 +22,7 @@
 // `scoreCondition` are maintainer-facing traceability notes, never rendered
 // to the end user, so they stay in Portuguese only.
 
-import { AnswerRecord, AssessmentResult, PillarScore, PILLAR_CONFIG, RECOMMENDATIONS, getPillarTier, hasDataFoundation } from "@/app/data";
+import { AnswerRecord, AssessmentResult, PillarScore, PILLAR_CONFIG, RECOMMENDATIONS, getPillarTier } from "@/app/data";
 import { Bilingual, DEFAULT_LANG, Lang, bi, pick } from "@/app/i18n";
 
 export type InsightPillarId = "dados" | "estrategia" | "pessoas" | "governanca" | "tecnologia";
@@ -198,15 +198,15 @@ const RESULT_INSIGHTS: RawResultInsight[] = [
     ),
   },
   {
-    id: "dados-05",
-    pillar: "dados",
+    id: "governanca-06",
+    pillar: "governanca",
     questionId: "dados_q3",
     trigger: "dados_q3 = 1 (\"Não\", não cresce sem aumentar o quadro)",
     scoreCondition: "0/5",
     answerMatch: [eq("dados_q3", 1)],
     priority: 1,
     type: "oportunidade",
-    theme: "dados-escalabilidade",
+    theme: "governanca-escalabilidade",
     title: bi("Crescimento ainda depende de mais pessoas", "Growth still depends on more headcount"),
     insight: bi(
       "O crescimento ainda escala de forma linear com o número de pessoas, sinal de que parte da operação poderia estar mais automatizada. Essa é uma abertura para o uso de IA em geral, seja por meio de automação de processos, modelos preditivos, analytics avançado, agentes inteligentes ou IA generativa, dependendo do tipo de tarefa, dos dados disponíveis e do impacto esperado.",
@@ -1084,6 +1084,7 @@ function safeClientText(text: string, lang: Lang) {
 
 export interface QuarterlyRecommendation {
   id: "q1" | "q2" | "q3";
+  priorityId: PrimaryPriorityId;
   period: string;
   focus: string;
   title: string;
@@ -1121,7 +1122,7 @@ const QUARTERLY_PILLAR_ACTIONS: Record<InsightPillarId, QuarterlyPillarAction> =
   },
   estrategia: {
     stabilizeTitle: bi("Alinhar liderança e tese de valor", "Align leadership and the value thesis"),
-    stabilizeAction: bi("definir patrocinador, problema de negócio, métrica econômica e critérios para decidir quais oportunidades de IA merecem investimento", "define a sponsor, business problem, economic metric, and criteria for deciding which AI opportunities deserve investment"),
+    stabilizeAction: bi("organizar um comitê executivo, levantar as dores prioritárias das áreas e selecionar um piloto com patrocinador, linha de base e ROI claro e mensurável", "organize an executive committee, identify priority pain points across business areas, and select a pilot with a sponsor, baseline, and clear, measurable ROI"),
     stabilizeOutcome: bi("um ponto de vista executivo claro sobre onde IA deve gerar valor primeiro", "a clear executive point of view on where AI should generate value first"),
     pilotTitle: bi("Converter intenção em roadmap", "Turn intent into a roadmap"),
     pilotAction: bi("priorizar dois ou três casos de uso, atribuir donos, definir prazos e conectar cada iniciativa a uma métrica de resultado", "prioritize two or three use cases, assign owners, set timelines, and tie each initiative to an outcome metric"),
@@ -1183,38 +1184,6 @@ function quarterlyTierCopy(entry: QuarterlyPillarAction, tier: QuarterlyTier) {
   };
 }
 
-// Q1 is framed as either building the data foundation from zero or extending
-// one that already exists — an org that already has a lake/warehouse or data
-// marts shouldn't be told to "start now" as if beginning its AI journey.
-const DATA_FOUNDATION_Q1 = {
-  start: {
-    focus: bi("Iniciar Data Foundation", "Start Data Foundation"),
-    title: bi("Construir a base de dados para IA", "Build the data foundation for AI"),
-    action: bi(
-      "Começar agora por um domínio de negócio e estruturar lake ou warehouse, qualidade, catálogo, acesso e governança como uma base reutilizável.",
-      "Start now with one business domain and structure a lake or warehouse, quality, catalog, access, and governance as a reusable foundation."
-    ),
-    outcome: bi(
-      "dados confiáveis e acessíveis para decisões, automações e modelos futuros",
-      "reliable, accessible data for future decisions, automations, and models"
-    ),
-    dependency: bi("Nenhuma pré-condição de maturidade", "No maturity precondition"),
-  },
-  extend: {
-    focus: bi("Consolidar Data Foundation", "Consolidate Data Foundation"),
-    title: bi("Ampliar a base de dados para novos domínios", "Extend the data foundation to new domains"),
-    action: bi(
-      "Mapear lacunas de cobertura, qualidade e governança na base atual e priorizar a expansão para o próximo domínio de negócio.",
-      "Map coverage, quality, and governance gaps in the current foundation and prioritize extending it to the next business domain."
-    ),
-    outcome: bi(
-      "cobertura mais ampla de dados confiáveis, prontos para sustentar novas decisões, automações e modelos",
-      "broader coverage of reliable data, ready to support new decisions, automations, and models"
-    ),
-    dependency: bi("Lacunas de cobertura da base atual mapeadas", "Coverage gaps in the current foundation mapped"),
-  },
-};
-
 interface ActionMetaEntry {
   ownerRole: Bilingual;
   dependency: Bilingual;
@@ -1266,9 +1235,124 @@ export function isWeakPillarScore(score: number): boolean {
   return tier !== "high" && tier !== "advanced";
 }
 
+export type PrimaryPriorityId = InsightPillarId | "portfolio";
+
+export interface PrimaryPriority {
+  id: PrimaryPriorityId;
+  title: string;
+  actionLabel: string;
+  context: string;
+  recommendation: string[];
+}
+
+interface RawPrimaryPriority {
+  title: Bilingual;
+  actionLabel: Bilingual;
+  context: Bilingual;
+  recommendation: Bilingual[];
+}
+
+const PRIMARY_RECOMMENDATIONS: Record<PrimaryPriorityId, RawPrimaryPriority> = {
+  dados: {
+    title: bi("Fundação de dados orientada ao caso de uso", "Use-case-led data foundation"),
+    actionLabel: bi("Estruturar agora", "Structure now"),
+    context: bi("Dados ligados a uma decisão prioritária", "Data tied to a priority decision"),
+    recommendation: [
+      bi("Escolha uma decisão ou fluxo de negócio prioritário e organize as fontes, responsáveis, qualidade e acesso necessários para sustentá-lo.", "Choose a priority business decision or workflow and organize the sources, owners, quality, and access needed to support it."),
+      bi("Meça a melhoria na decisão ou operação antes de ampliar a fundação para novos domínios.", "Measure the improvement in the decision or operation before extending the foundation to new domains."),
+    ],
+  },
+  estrategia: {
+    title: bi("Comitê executivo e portfólio de IA", "Executive committee and AI portfolio"),
+    actionLabel: bi("Alinhar agora", "Align now"),
+    context: bi("Dores priorizadas e ROI mensurável", "Prioritized pain points and measurable ROI"),
+    recommendation: [
+      bi("Organize um comitê executivo para levantar as principais dores de cada área e comparar candidatos reais a um piloto de IA.", "Organize an executive committee to identify each area's main pain points and compare real candidates for an AI pilot."),
+      bi("Escolha o primeiro caso com patrocinador, linha de base e ROI claro e mensurável.", "Choose the first case with a sponsor, baseline, and clear, measurable ROI."),
+    ],
+  },
+  pessoas: {
+    title: bi("Programa de adoção e capacitação", "Adoption and capability program"),
+    actionLabel: bi("Mobilizar agora", "Mobilize now"),
+    context: bi("Mudança incorporada ao trabalho", "Change embedded in real work"),
+    recommendation: [
+      bi("Identifique usuários-chave, resistências e lacunas de conhecimento no fluxo escolhido e prepare comunicação e capacitação aplicadas.", "Identify key users, resistance, and knowledge gaps in the selected workflow, then prepare applied communication and training."),
+      bi("Acompanhe uso, barreiras e qualidade semanalmente para transformar a solução em mudança real de trabalho.", "Track usage, barriers, and quality weekly to turn the solution into a real change in how work gets done."),
+    ],
+  },
+  governanca: {
+    title: bi("Modelo de governança e processo", "Governance and process model"),
+    actionLabel: bi("Definir agora", "Define now"),
+    context: bi("Processos, controles e responsáveis", "Processes, controls, and owners"),
+    recommendation: [
+      bi("Documente o processo real, suas exceções e responsáveis e defina controles mínimos de dados, segurança e revisão humana.", "Document the real process, its exceptions, and owners, and define minimum controls for data, security, and human review."),
+      bi("Aplique esse modelo no primeiro caso antes de replicá-lo em outras áreas.", "Apply this model to the first case before replicating it in other areas."),
+    ],
+  },
+  tecnologia: {
+    title: bi("Base técnica de entrega", "Technical delivery foundation"),
+    actionLabel: bi("Preparar agora", "Prepare now"),
+    context: bi("Integrações e operação confiáveis", "Reliable integrations and operations"),
+    recommendation: [
+      bi("Defina integrações, ambientes, segurança, monitoramento e caminho de produção para um caso de uso delimitado.", "Define integrations, environments, security, monitoring, and the production path for a bounded use case."),
+      bi("Entregue o piloto em um fluxo real e documente os componentes que podem ser reutilizados.", "Deliver the pilot in a real workflow and document the components that can be reused."),
+    ],
+  },
+  portfolio: {
+    title: bi("Gestão do portfólio de IA", "AI portfolio management"),
+    actionLabel: bi("Escalar com disciplina", "Scale with discipline"),
+    context: bi("Valor, risco e reutilização", "Value, risk, and reuse"),
+    recommendation: [
+      bi("Priorize a expansão das soluções que já provaram valor e reutilize integrações, controles e práticas de adoção.", "Prioritize expanding solutions that have already proven value and reuse integrations, controls, and adoption practices."),
+      bi("Revise valor, risco, custo e desempenho como um portfólio e realoque investimento conforme os resultados.", "Review value, risk, cost, and performance as a portfolio and reallocate investment based on results."),
+    ],
+  },
+};
+
+export function getPrimaryPriority({
+  answers,
+  pillarScores,
+  weakest,
+  lang = DEFAULT_LANG,
+}: {
+  answers: AnswerRecord;
+  pillarScores: PillarScore[];
+  weakest: PillarScore;
+  lang?: Lang;
+}): PrimaryPriority {
+  const values = pillarScores.map(pillar => pillar.score);
+  const balancedAdvanced = values.every(score => score >= 75) && Math.max(...values) - Math.min(...values) <= 5;
+  let id: PrimaryPriorityId = "portfolio";
+
+  if (!balancedAdvanced) {
+    const scoreByPillar = Object.fromEntries(pillarScores.map(pillar => [pillar.id, pillar.score])) as Record<InsightPillarId, number>;
+    const needsAttention = (pillar: InsightPillarId) => (scoreByPillar[pillar] ?? 0) < 75;
+    const insights = selectResultInsights(answers, pillarScores, { min: 3, max: 6 }, lang);
+    const attention =
+      insights.find(insight => insight.type === "risco-critico" && needsAttention(insight.pillar)) ??
+      insights.find(insight => insight.priority <= 2 && needsAttention(insight.pillar)) ??
+      insights.find(insight => insight.pillar === weakest.id);
+    id = attention?.pillar ?? toPillarId(weakest.id);
+  }
+
+  const raw = PRIMARY_RECOMMENDATIONS[id];
+  return {
+    id,
+    title: pick(raw.title, lang),
+    actionLabel: pick(raw.actionLabel, lang),
+    context: pick(raw.context, lang),
+    recommendation: raw.recommendation.map(item => pick(item, lang)),
+  };
+}
+
 export interface ExecutiveSummary {
+  priorityId: PrimaryPriorityId;
   strengths: string;
   opportunities: string;
+  recommendationTitle: string;
+  recommendationAction: string;
+  recommendationContext: string;
+  immediateRecommendation: string[];
 }
 
 const EXEC_PILLAR_LABEL: Record<InsightPillarId, Bilingual> = {
@@ -1452,19 +1536,12 @@ export function buildExecutiveSummary({
   weakest: PillarScore;
   lang?: Lang;
 }): ExecutiveSummary {
-  const insights = selectResultInsights(answers, pillarScores, { min: 3, max: 5 }, lang);
   const scoreByPillar = Object.fromEntries(pillarScores.map(p => [p.id, p.score])) as Record<InsightPillarId, number>;
   const isWeakPillar = (pillar: InsightPillarId) => isWeakPillarScore(scoreByPillar[pillar] ?? 0);
-  // Only trust a matched risk/gap insight to pick the "opportunity" pillar
-  // when that pillar's own aggregate score still agrees it's weak — otherwise
-  // fall back to the pillar that is genuinely the lowest scoring one.
-  const attention =
-    insights.find(i => i.type === "risco-critico" && isWeakPillar(i.pillar)) ??
-    insights.find(i => i.priority <= 2 && isWeakPillar(i.pillar)) ??
-    insights.find(i => i.pillar === weakest.id);
   const weakestPillar = toPillarId(weakest.id);
   const strongestPillar = toPillarId(strongest.id);
-  const opportunityPillar = attention?.pillar ?? weakestPillar;
+  const primaryPriority = getPrimaryPriority({ answers, pillarScores, weakest, lang });
+  const opportunityPillar = primaryPriority.id === "portfolio" ? weakestPillar : primaryPriority.id;
   const opportunityScore = scoreByPillar[opportunityPillar] ?? weakest.score;
   // Every pillar clearing the "Forte" bar means there's nothing genuinely
   // weak to flag — paragraph 2 should stay positive, not manufacture a gap.
@@ -1503,7 +1580,11 @@ export function buildExecutiveSummary({
   }
 
   let opportunities: string;
-  if (allPillarsStrong) {
+  if (primaryPriority.id === "portfolio") {
+    opportunities = lang === "en"
+      ? "The five capabilities are strong and balanced, with no isolated point of attention. The greatest opportunity is to manage AI as a portfolio, expanding what has already proven value while reviewing return, risk, cost, and performance consistently."
+      : "As cinco capacidades estão fortes e equilibradas, sem um ponto de atenção isolado. A maior oportunidade é gerir IA como portfólio, expandindo o que já provou valor e revisando retorno, risco, custo e desempenho com consistência.";
+  } else if (allPillarsStrong) {
     opportunities = noDifferentiation
       ? (lang === "en"
         ? "All capabilities are at the same high level, with no single point of attention. The focus should be maintaining consistency and capturing the value already available, rather than fixing weaknesses."
@@ -1530,16 +1611,19 @@ export function buildExecutiveSummary({
   }
 
   return {
+    priorityId: primaryPriority.id,
     strengths: safeClientText(strengths, lang),
     opportunities: safeClientText(opportunities, lang),
+    recommendationTitle: primaryPriority.title,
+    recommendationAction: primaryPriority.actionLabel,
+    recommendationContext: primaryPriority.context,
+    immediateRecommendation: primaryPriority.recommendation,
   };
 }
 
 export function buildQuarterlyRecommendations({
   answers,
   pillarScores,
-  result,
-  strongest,
   weakest,
   lang = DEFAULT_LANG,
 }: {
@@ -1550,54 +1634,83 @@ export function buildQuarterlyRecommendations({
   weakest: PillarScore;
   lang?: Lang;
 }): QuarterlyRecommendation[] {
+  const primaryPriority = getPrimaryPriority({ answers, pillarScores, weakest, lang });
   const insights = selectResultInsights(answers, pillarScores, { min: 3, max: 6 }, lang);
-  const attention =
-    insights.find(i => i.type === "risco-critico") ??
-    insights.find(i => i.priority <= 2) ??
-    insights.find(i => i.pillar === weakest.id);
-  const opportunity = insights.find(i =>
-    i.id !== attention?.id &&
-    (i.type === "oportunidade" || i.type === "proximo-passo")
-  );
-  const strength = insights.find(i => i.priority === 3);
-
-  const weakestPillar = toPillarId(weakest.id);
-  const strongestPillar = toPillarId(strongest.id);
-  const secondPillar = opportunity?.pillar ?? weakestPillar;
-  const thirdPillar = strength?.pillar ?? strongestPillar;
-  const secondCopy = QUARTERLY_PILLAR_ACTIONS[secondPillar];
-  const thirdCopy = QUARTERLY_PILLAR_ACTIONS[thirdPillar];
-
-  // Each quarter's copy tier (stabilize/pilot/scale) follows that specific
-  // pillar's own score, so a company that's already mature there gets asked
-  // to scale, not to run a first pilot as if starting from zero.
   const scoreByPillar = Object.fromEntries(pillarScores.map(p => [p.id, p.score])) as Record<InsightPillarId, number>;
-  const secondTierCopy = quarterlyTierCopy(secondCopy, quarterlyTier(scoreByPillar[secondPillar] ?? weakest.score));
-  const thirdTierCopy = quarterlyTierCopy(thirdCopy, quarterlyTier(scoreByPillar[thirdPillar] ?? strongest.score));
+  const primaryPillar = primaryPriority.id === "portfolio" ? null : primaryPriority.id;
+  const insightOrder = insights.filter(insight => insight.priority <= 3).map(insight => insight.pillar);
+  const scoreOrder = [...pillarScores].sort((a, b) => a.score - b.score).map(pillar => toPillarId(pillar.id));
+  const remainingPillars = [...new Set([...insightOrder, ...scoreOrder])].filter(pillar => pillar !== primaryPillar);
+  const secondPillar = remainingPillars[0];
+  const thirdPillar = remainingPillars[1];
+  const secondTierCopy = quarterlyTierCopy(
+    QUARTERLY_PILLAR_ACTIONS[secondPillar],
+    quarterlyTier(scoreByPillar[secondPillar] ?? weakest.score),
+  );
+  const thirdTierCopy = quarterlyTierCopy(
+    QUARTERLY_PILLAR_ACTIONS[thirdPillar],
+    quarterlyTier(scoreByPillar[thirdPillar] ?? weakest.score),
+  );
 
-  // Q1 talks about building the data foundation from zero or extending one
-  // that's already there, depending on what the company actually reported.
-  const q1Copy = hasDataFoundation(answers) ? DATA_FOUNDATION_Q1.extend : DATA_FOUNDATION_Q1.start;
+  const buildPrimaryQuarter = (): QuarterlyRecommendation => {
+    if (primaryPriority.id === "portfolio") {
+      return lang === "en" ? {
+        id: "q1",
+        priorityId: "portfolio",
+        period: "Next quarter",
+        focus: "Manage portfolio and value",
+        title: "Expand what has already proven results",
+        action: "Select the solutions with the strongest measurable results, prioritize adjacent expansions, and establish a monthly review of value, risk, cost, and performance.",
+        outcome: "a portfolio prioritized by evidence, with reused components and controls",
+        ownerRole: "AI executive committee",
+        dependency: "Results and owners for existing solutions identified",
+        effort: pick(EFFORT_LABEL.medium, lang),
+        successMetric: "Approved expansions with an incremental target, owner, and monthly review",
+      } : {
+        id: "q1",
+        priorityId: "portfolio",
+        period: "Próximo trimestre",
+        focus: "Gerir portfólio e valor",
+        title: "Expandir o que já provou resultado",
+        action: "Selecionar as soluções com melhor resultado mensurável, priorizar expansões adjacentes e definir uma revisão mensal de valor, risco, custo e desempenho.",
+        outcome: "um portfólio priorizado por evidência, com componentes e controles reutilizados",
+        ownerRole: "Comitê executivo de IA",
+        dependency: "Resultados e responsáveis das soluções existentes identificados",
+        effort: pick(EFFORT_LABEL.medium, lang),
+        successMetric: "Expansões aprovadas com meta incremental, responsável e revisão mensal",
+      };
+    }
+
+    const primaryId = primaryPriority.id;
+    const tier = quarterlyTier(scoreByPillar[primaryId] ?? weakest.score);
+    const copy = quarterlyTierCopy(QUARTERLY_PILLAR_ACTIONS[primaryId], tier);
+    const focusVerb = lang === "en"
+      ? { stabilize: "Strengthen", pilot: "Execute", scale: "Scale" }[tier]
+      : { stabilize: "Estruturar", pilot: "Executar", scale: "Ampliar" }[tier];
+    return {
+      id: "q1",
+      priorityId: primaryId,
+      period: lang === "en" ? "Next quarter" : "Próximo trimestre",
+      focus: safeClientText(`${focusVerb} ${pick(EXEC_PILLAR_LABEL[primaryId], lang)}`, lang),
+      title: safeClientText(pick(copy.title, lang), lang),
+      action: safeClientText(`${lang === "en" ? "Act on the primary priority" : "Executar a prioridade principal"}: ${pick(copy.action, lang)}.`, lang),
+      outcome: safeClientText(pick(copy.outcome, lang), lang),
+      ownerRole: pick(ACTION_META[primaryId].ownerRole, lang),
+      dependency: pick(ACTION_META[primaryId].dependency, lang),
+      effort: pick(EFFORT_LABEL.medium, lang),
+      successMetric: pick(ACTION_META[primaryId].successMetric, lang),
+    };
+  };
 
   if (lang === "en") {
     return [
-      {
-        id: "q1",
-        period: "Next quarter",
-        focus: pick(q1Copy.focus, lang),
-        title: pick(q1Copy.title, lang),
-        action: pick(q1Copy.action, lang),
-        outcome: pick(q1Copy.outcome, lang),
-        ownerRole: pick(ACTION_META.dados.ownerRole, lang),
-        dependency: pick(q1Copy.dependency, lang),
-        effort: pick(EFFORT_LABEL.medium, lang),
-        successMetric: pick(ACTION_META.dados.successMetric, lang),
-      },
+      buildPrimaryQuarter(),
       {
         id: "q2",
+        priorityId: secondPillar,
         period: "Following quarter",
         focus: safeClientText(`Execute ${pick(EXEC_PILLAR_LABEL[secondPillar], lang)}`, lang),
-        title: safeClientText(opportunity?.title ?? pick(secondTierCopy.title, lang), lang),
+        title: safeClientText(pick(secondTierCopy.title, lang), lang),
         action: safeClientText(`Turn last quarter's learning into execution: ${pick(secondTierCopy.action, lang)}.`, lang),
         outcome: safeClientText(pick(secondTierCopy.outcome, lang), lang),
         ownerRole: pick(ACTION_META[secondPillar].ownerRole, lang),
@@ -1607,9 +1720,10 @@ export function buildQuarterlyRecommendations({
       },
       {
         id: "q3",
+        priorityId: thirdPillar,
         period: "Third quarter",
         focus: safeClientText(`Scale ${pick(EXEC_PILLAR_LABEL[thirdPillar], lang)}`, lang),
-        title: safeClientText(strength ? `Scale from ${strength.title}` : pick(thirdTierCopy.title, lang), lang),
+        title: safeClientText(pick(thirdTierCopy.title, lang), lang),
         action: safeClientText(`Use this foundation to expand maturity: ${pick(thirdTierCopy.action, lang)}.`, lang),
         outcome: safeClientText(pick(thirdTierCopy.outcome, lang), lang),
         ownerRole: pick(ACTION_META[thirdPillar].ownerRole, lang),
@@ -1621,23 +1735,13 @@ export function buildQuarterlyRecommendations({
   }
 
   return [
-    {
-      id: "q1",
-      period: "Próximo trimestre",
-      focus: pick(q1Copy.focus, lang),
-      title: pick(q1Copy.title, lang),
-      action: pick(q1Copy.action, lang),
-      outcome: pick(q1Copy.outcome, lang),
-      ownerRole: pick(ACTION_META.dados.ownerRole, lang),
-      dependency: pick(q1Copy.dependency, lang),
-      effort: pick(EFFORT_LABEL.medium, lang),
-      successMetric: pick(ACTION_META.dados.successMetric, lang),
-    },
+    buildPrimaryQuarter(),
     {
       id: "q2",
+      priorityId: secondPillar,
       period: "Trimestre seguinte",
       focus: safeClientText(`Executar ${pick(EXEC_PILLAR_LABEL[secondPillar], lang)}`, lang),
-      title: safeClientText(opportunity?.title ?? pick(secondTierCopy.title, lang), lang),
+      title: safeClientText(pick(secondTierCopy.title, lang), lang),
       action: safeClientText(`Converter o aprendizado do trimestre anterior em execução: ${pick(secondTierCopy.action, lang)}.`, lang),
       outcome: safeClientText(pick(secondTierCopy.outcome, lang), lang),
       ownerRole: pick(ACTION_META[secondPillar].ownerRole, lang),
@@ -1647,9 +1751,10 @@ export function buildQuarterlyRecommendations({
     },
     {
       id: "q3",
+      priorityId: thirdPillar,
       period: "Terceiro trimestre",
       focus: safeClientText(`Escalar ${pick(EXEC_PILLAR_LABEL[thirdPillar], lang)}`, lang),
-      title: safeClientText(strength ? `Escalar a partir de ${strength.title}` : pick(thirdTierCopy.title, lang), lang),
+      title: safeClientText(pick(thirdTierCopy.title, lang), lang),
       action: safeClientText(`Usar essa base para ampliar a maturidade: ${pick(thirdTierCopy.action, lang)}.`, lang),
       outcome: safeClientText(pick(thirdTierCopy.outcome, lang), lang),
       ownerRole: pick(ACTION_META[thirdPillar].ownerRole, lang),

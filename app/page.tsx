@@ -1,44 +1,27 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { LandingScreen } from "@/components/landing/LandingScreen";
 import { Navbar, type AppScreen, type SaveState } from "@/components/Navbar";
 import { QuizScreen } from "@/components/quiz/QuizScreen";
+import { ReportIdentityGate, type ReportSubmitState } from "@/components/results/ReportIdentityGate";
 import { ResultsScreen } from "@/components/results/ResultsScreen";
-import { AnswerRecord, SECTIONS, clearDependentAnswers, getSections } from "./data";
+import {
+  buildAssessmentDraft,
+  parseAssessmentDraft,
+  type AssessmentDraftState,
+  type AssessmentDraftV2,
+  type ReportSubmissionReceipt,
+} from "./assessmentDraft";
+import { type AnswerRecord, SECTIONS, clearDependentAnswers, getSections } from "./data";
 import { useLanguage } from "./LanguageContext";
+import { buildReportSnapshot, type ParticipantIdentity, type ReportSnapshot } from "./reportSnapshot";
+import { getReportSubmissionRecovery, ReportSubmissionError, submitReportSnapshot } from "./reportSubmission";
 // DEV SHORTCUT (remove with app/devShortcuts.ts): see effect below.
 import { buildStrategyGapTestAnswers } from "./devShortcuts";
 
 const STORAGE_KEY = "snowfox-ai-assessment-v1";
-
-interface AssessmentDraft {
-  version: 1;
-  screen: AppScreen;
-  resumeScreen?: "quiz" | "results" | null;
-  section: number;
-  answers: AnswerRecord;
-  updatedAt: string;
-}
-
-function isAnswerRecord(value: unknown): value is AnswerRecord {
-  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
-  return Object.values(value as Record<string, unknown>).every(item =>
-    typeof item === "number" ||
-    typeof item === "string" ||
-    (Array.isArray(item) && item.every(entry => typeof entry === "number"))
-  );
-}
-
-function isAssessmentDraft(value: unknown): value is AssessmentDraft {
-  if (!value || typeof value !== "object") return false;
-  const draft = value as Partial<AssessmentDraft>;
-  return draft.version === 1 &&
-    (draft.screen === "landing" || draft.screen === "quiz" || draft.screen === "results") &&
-    typeof draft.section === "number" &&
-    isAnswerRecord(draft.answers);
-}
 
 function clampSection(section: number) {
   return Math.min(Math.max(Math.round(section), 0), SECTIONS.length - 1);
@@ -51,6 +34,12 @@ export default function Home() {
   const [hydrated, setHydrated] = useState(false);
   const [saveState, setSaveState] = useState<SaveState>("idle");
   const [resumeScreen, setResumeScreen] = useState<"quiz" | "results" | null>(null);
+  const [pendingReport, setPendingReport] = useState<ReportSnapshot | null>(null);
+  const [reportReceipt, setReportReceipt] = useState<ReportSubmissionReceipt | null>(null);
+  const [reportSubmitState, setReportSubmitState] = useState<ReportSubmitState>("idle");
+  const [reportSubmitError, setReportSubmitError] = useState<string | null>(null);
+  const activeSubmissionId = useRef<string | null>(null);
+  const resumedPendingReport = useRef(false);
   const prefersReducedMotion = useReducedMotion();
   const { lang, t } = useLanguage();
 
@@ -64,11 +53,15 @@ export default function Home() {
       const raw = window.localStorage.getItem(STORAGE_KEY);
       if (raw) {
         const parsed: unknown = JSON.parse(raw);
-        if (isAssessmentDraft(parsed)) {
-          setScreen(parsed.screen);
-          setSection(clampSection(parsed.section));
-          setAnswers(parsed.answers);
-          setResumeScreen(parsed.resumeScreen ?? (parsed.screen === "results" ? "results" : Object.keys(parsed.answers).length > 0 ? "quiz" : null));
+        const draft = parseAssessmentDraft(parsed);
+        if (draft) {
+          setScreen(draft.screen);
+          setSection(clampSection(draft.section));
+          setAnswers(draft.answers);
+          setPendingReport(draft.pendingReport);
+          setReportReceipt(draft.reportReceipt);
+          activeSubmissionId.current = draft.pendingReport?.submissionId ?? null;
+          setResumeScreen(draft.resumeScreen ?? (draft.screen === "results" ? "results" : Object.keys(draft.answers).length > 0 ? "quiz" : null));
         }
       }
     } catch {
@@ -89,37 +82,79 @@ export default function Home() {
     setScreen("results");
   }, []);
 
-  const buildDraft = useCallback((): AssessmentDraft => ({
-    version: 1,
+  const buildDraft = useCallback((overrides: Partial<AssessmentDraftState> = {}): AssessmentDraftV2 => buildAssessmentDraft({
     screen,
     resumeScreen,
     section,
     answers,
-    updatedAt: new Date().toISOString(),
-  }), [answers, resumeScreen, screen, section]);
+    pendingReport,
+    reportReceipt,
+  }, overrides), [answers, pendingReport, reportReceipt, resumeScreen, screen, section]);
+
+  const persistDraft = useCallback((draft: AssessmentDraftV2): boolean => {
+    try {
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(draft));
+      setSaveState("saved");
+      return true;
+    } catch {
+      setSaveState("unavailable");
+      return false;
+    }
+  }, []);
 
   useEffect(() => {
     if (!hydrated) return;
     setSaveState(current => current === "unavailable" ? current : "saving");
     const timeout = window.setTimeout(() => {
-      try {
-        window.localStorage.setItem(STORAGE_KEY, JSON.stringify(buildDraft()));
-        setSaveState("saved");
-      } catch {
-        setSaveState("unavailable");
-      }
+      persistDraft(buildDraft());
     }, 180);
     return () => window.clearTimeout(timeout);
-  }, [answers, buildDraft, hydrated, resumeScreen, screen, section]);
+  }, [buildDraft, hydrated, persistDraft]);
 
   const persistNow = useCallback(() => {
-    try {
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(buildDraft()));
-      setSaveState("saved");
-    } catch {
-      setSaveState("unavailable");
+    persistDraft(buildDraft());
+  }, [buildDraft, persistDraft]);
+
+  const saveReport = useCallback(async (snapshot: ReportSnapshot) => {
+    setReportSubmitState("saving");
+    setReportSubmitError(null);
+
+    const pendingDraft = buildDraft({ pendingReport: snapshot, reportReceipt: null });
+    if (!persistDraft(pendingDraft)) {
+      setReportSubmitError(t.results.identityLocalSaveError);
+      setReportSubmitState("failed");
+      return;
     }
-  }, [buildDraft]);
+
+    try {
+      const receipt = await submitReportSnapshot(snapshot);
+      if (activeSubmissionId.current !== snapshot.submissionId) return;
+      setReportReceipt(receipt);
+      persistDraft(buildDraft({ pendingReport: snapshot, reportReceipt: receipt }));
+      setReportSubmitState("idle");
+    } catch (error) {
+      if (activeSubmissionId.current !== snapshot.submissionId) return;
+      const message = error instanceof ReportSubmissionError
+        ? error.message
+        : t.results.identitySubmitError;
+      if (getReportSubmissionRecovery(error) === "edit") {
+        activeSubmissionId.current = null;
+        resumedPendingReport.current = false;
+        setPendingReport(null);
+        setReportReceipt(null);
+        persistDraft(buildDraft({ pendingReport: null, reportReceipt: null }));
+      }
+      setReportSubmitError(message);
+      setReportSubmitState("failed");
+    }
+  }, [buildDraft, persistDraft, t.results.identityLocalSaveError, t.results.identitySubmitError]);
+
+  useEffect(() => {
+    if (!hydrated || !pendingReport || reportReceipt || reportSubmitState !== "idle" || resumedPendingReport.current) return;
+    resumedPendingReport.current = true;
+    activeSubmissionId.current = pendingReport.submissionId;
+    void saveReport(pendingReport);
+  }, [hydrated, pendingReport, reportReceipt, reportSubmitState, saveReport]);
 
   const scrollToTop = useCallback(() => {
     const root = document.documentElement;
@@ -149,7 +184,13 @@ export default function Home() {
   }, [scrollToTop]);
 
   const handleAnswer = useCallback((qid: string, value: number | number[] | string | -1) => {
+    activeSubmissionId.current = null;
+    resumedPendingReport.current = false;
     setResumeScreen("quiz");
+    setPendingReport(null);
+    setReportReceipt(null);
+    setReportSubmitState("idle");
+    setReportSubmitError(null);
     setAnswers(previous => {
       const next = clearDependentAnswers(qid, previous);
       if (value === -1) {
@@ -162,15 +203,27 @@ export default function Home() {
   }, []);
 
   const startFresh = useCallback(() => {
+    activeSubmissionId.current = null;
+    resumedPendingReport.current = false;
     setResumeScreen("quiz");
     setAnswers({});
+    setPendingReport(null);
+    setReportReceipt(null);
+    setReportSubmitState("idle");
+    setReportSubmitError(null);
     setSection(0);
     goTo("quiz");
   }, [goTo]);
 
   const restart = useCallback(() => {
+    activeSubmissionId.current = null;
+    resumedPendingReport.current = false;
     setResumeScreen(null);
     setAnswers({});
+    setPendingReport(null);
+    setReportReceipt(null);
+    setReportSubmitState("idle");
+    setReportSubmitError(null);
     setSection(0);
     try {
       window.localStorage.removeItem(STORAGE_KEY);
@@ -180,6 +233,27 @@ export default function Home() {
     }
     goTo("landing");
   }, [goTo]);
+
+  const handleReportIdentity = useCallback((participant: ParticipantIdentity) => {
+    const snapshot = buildReportSnapshot({
+      answers,
+      participant,
+      submissionId: crypto.randomUUID(),
+      clientSubmittedAt: new Date().toISOString(),
+      lang,
+    });
+    activeSubmissionId.current = snapshot.submissionId;
+    resumedPendingReport.current = true;
+    setPendingReport(snapshot);
+    setReportReceipt(null);
+    void saveReport(snapshot);
+  }, [answers, lang, saveReport]);
+
+  const retryReport = useCallback(() => {
+    if (!pendingReport) return;
+    activeSubmissionId.current = pendingReport.submissionId;
+    void saveReport(pendingReport);
+  }, [pendingReport, saveReport]);
 
   if (!hydrated) {
     return <div className="loading-screen" aria-label={t.loading} />;
@@ -193,6 +267,7 @@ export default function Home() {
         screen={screen}
         sectionLabel={sectionLabel}
         saveState={saveState}
+        reportConfirmed={Boolean(reportReceipt)}
         onSave={persistNow}
         onNavigate={goTo}
       />
@@ -211,6 +286,7 @@ export default function Home() {
                 hasDraft={draftExists}
                 savedScreen={resumeScreen}
                 savedSection={section}
+                reportConfirmed={Boolean(reportReceipt)}
                 onStart={startFresh}
                 onResume={() => goTo(resumeScreen === "results" ? "results" : "quiz")}
                 onReset={restart}
@@ -246,8 +322,18 @@ export default function Home() {
               />
             )}
 
-            {screen === "results" && (
-              <ResultsScreen answers={answers} onRestart={restart} />
+            {screen === "results" && (!pendingReport || !reportReceipt) && (
+              <ReportIdentityGate
+                pendingReport={pendingReport}
+                submitState={reportSubmitState}
+                errorMessage={reportSubmitError}
+                onSubmit={handleReportIdentity}
+                onRetry={retryReport}
+              />
+            )}
+
+            {screen === "results" && pendingReport && reportReceipt && (
+              <ResultsScreen snapshot={pendingReport} onRestart={restart} />
             )}
           </motion.div>
         </AnimatePresence>

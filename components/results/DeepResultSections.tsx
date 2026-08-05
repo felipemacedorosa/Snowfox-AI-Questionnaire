@@ -141,43 +141,29 @@ export const OPPORTUNITY_ICONS = {
   "predictive-agents": BrainCircuit,
 };
 
-export function OpportunityLibrarySection({ tracks, primaryId }: { tracks: OpportunityTrack[]; primaryId: OpportunityTrack["id"] }) {
+export function OpportunityLibrarySection({ tracks }: { tracks: OpportunityTrack[] }) {
   const revealMotion = useReportReveal();
   const { t } = useLanguage();
-  // Data Foundation is only ever green/"recommended" while it's actually the
-  // recommended move (status "recommended"). Once the org already has a data
-  // lake/warehouse or data marts, its status flips to "maintain" and the
-  // green highlight moves to whichever track is the real primary pick.
-  const dataFoundationRecommended = tracks.find(t => t.id === "data-foundation")?.status === "recommended";
+  const scalingPortfolio = tracks.some(track => track.isFeatured);
   return (
     <motion.section className="report-section opportunity-section" id="opportunities" {...revealMotion}>
       <ReportHeading number="03" title={t.deepSections.opportunityHeading} />
       <p className="report-section-intro">
-        <strong>{dataFoundationRecommended ? t.deepSections.opportunityIntroStrong : t.deepSections.opportunityIntroMaintainStrong}</strong>{" "}
-        {dataFoundationRecommended ? t.deepSections.opportunityIntroRest : t.deepSections.opportunityIntroMaintainRest}
+        <strong>{scalingPortfolio ? t.deepSections.opportunityIntroMaintainStrong : t.deepSections.opportunityIntroStrong}</strong>{" "}
+        {scalingPortfolio ? t.deepSections.opportunityIntroMaintainRest : t.deepSections.opportunityIntroRest}
       </p>
       <div className="opportunity-tracks">
         {tracks.map(track => {
           const Icon = OPPORTUNITY_ICONS[track.id];
           const isDataFoundation = track.id === "data-foundation";
-          const isPrimary = track.id === primaryId;
-          // Data Foundation only carries its own highlight while it's still
-          // actually the recommendation (status "recommended"); once it's
-          // "maintain", it's never primary (see selectPrimaryRecommendation),
-          // so the star badge below is what signals the real pick instead.
-          const isSnowfoxPick = isPrimary && !isDataFoundation;
-          const isHighlighted = (isDataFoundation && track.status === "recommended") || isSnowfoxPick;
-          // The recommended pick always reads as the recommendation, even
-          // when its underlying checks aren't fully cleared yet — showing
-          // "Adiar por enquanto" (or "Preparar a base") on the one card
-          // that's highlighted as the pick would contradict the highlight.
-          const showAsPriority = isSnowfoxPick && track.status !== "ready";
+          const isSnowfoxPick = track.isFeatured;
+          const isHighlighted = track.isFeatured;
           return (
             <article className={`opportunity-track opportunity-${track.status} opportunity-track-${track.id}${isHighlighted ? " opportunity-track-highlighted" : ""}`} key={track.id}>
               <div className="opportunity-track-heading">
                 <Icon size={19} aria-hidden="true" />
                 <div><strong>{track.title}</strong><span>{track.subtitle}</span></div>
-                <b className={showAsPriority ? "opportunity-badge-priority" : undefined}>{showAsPriority ? t.deepSections.priorityNowLabel : track.statusLabel}</b>
+                <b>{track.statusLabel}</b>
               </div>
               {isSnowfoxPick && <div className="opportunity-snowfox-pick"><Star size={12} aria-hidden="true" /><span>{t.deepSections.snowfoxPickLabel}</span></div>}
               <p className="opportunity-summary">{track.summary}</p>

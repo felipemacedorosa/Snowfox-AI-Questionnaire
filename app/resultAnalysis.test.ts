@@ -1,10 +1,20 @@
 import { describe, expect, it } from "vitest";
-import { AnswerRecord, AssessmentResult, PillarScore } from "./data";
+import {
+  AnswerRecord,
+  AssessmentResult,
+  calculateOverallScore,
+  getQuestionMax,
+  isQuestionScored,
+  PillarScore,
+  SECTIONS,
+} from "./data";
+import { buildStrategyGapTestAnswers } from "./devShortcuts";
 import {
   buildQuestionEvidence,
   getCriticalPath,
   getNextLevelTarget,
   getOpportunityTracks,
+  getQuestionNextAction,
   getReadinessProfile,
   getRiskSignals,
 } from "./resultAnalysis";
@@ -74,9 +84,34 @@ describe("answer evidence", () => {
     expect(evidence.find(item => item.id === "dados_q1")).toMatchObject({
       answer: "Dados parciais",
       normalizedScore: 50,
-      targetState: "Dados suficientes",
+      targetState: "Definir as decisões prioritárias e garantir dados suficientes e relevantes para sustentá-las.",
     });
     expect(evidence.some(item => item.id === "est_q1a")).toBe(false);
+  });
+
+  it("keeps the selected delay reason as context instead of a scored gap", () => {
+    const evidence = buildQuestionEvidence({ est_q3: 5, est_q3a: 1, est_q3a1: 3 });
+    expect(evidence.find(item => item.id === "est_q3a1")).toMatchObject({
+      answer: "Falta de priorização da alta liderança",
+      normalizedScore: null,
+      kind: "context",
+      targetState: null,
+    });
+  });
+
+  it("uses an authored action instead of the next answer label", () => {
+    const evidence = buildQuestionEvidence({ est_q1: 3, est_q1b: 3 });
+    const strategy = evidence.find(item => item.id === "est_q1")!;
+    expect(strategy.targetState).toContain("comitê executivo");
+    expect(strategy.targetState).toContain("ROI");
+    expect(strategy.targetState).not.toMatch(/^(Sim|Não|Parcialmente|Formal)$/);
+  });
+
+  it("authors a next action for every scored question", () => {
+    for (const question of SECTIONS.flatMap(section => section.questions)) {
+      if (!isQuestionScored(question) || getQuestionMax(question) === 0) continue;
+      expect(getQuestionNextAction(question.id), question.id).toBeTruthy();
+    }
   });
 });
 
@@ -100,20 +135,48 @@ describe("critical path and risks", () => {
 });
 
 describe("opportunity tracks", () => {
-  it("keeps Data Foundation recommended when the gated tracks are also viable", () => {
+  it("does not feature Data Foundation as a universal recommendation", () => {
     const answers: AnswerRecord = { dados_q1: 3, dados_q2: 3, dados_q4: 3 };
     const tracks = getOpportunityTracks(answers, scores({ dados: 72, estrategia: 68, pessoas: 55, governanca: 52, tecnologia: 63 }));
-    expect(tracks.map(track => track.status)).toEqual(["recommended", "ready", "ready"]);
+    expect(tracks.find(track => track.id === "data-foundation")).toMatchObject({
+      status: "prepare",
+      isFeatured: false,
+      statusLabel: "Preparar a base",
+    });
+    expect(tracks.filter(track => track.isFeatured)).toHaveLength(0);
   });
 
-  it("recommends Data Foundation without requirements while deferring unsupported predictive work", () => {
+  it("keeps unsupported predictive work deferred without declaring a technical winner", () => {
     const tracks = getOpportunityTracks({}, scores({ dados: 25, estrategia: 65, pessoas: 42, governanca: 42, tecnologia: 30 }));
-    expect(tracks.find(track => track.id === "data-foundation")).toMatchObject({
-      status: "recommended",
-      statusLabel: "Solução recomendada",
-      prerequisites: [],
-    });
+    expect(tracks.find(track => track.id === "data-foundation")?.status).toBe("prepare");
     expect(tracks.find(track => track.id === "predictive-agents")?.status).toBe("defer");
+    expect(tracks.every(track => !track.isFeatured)).toBe(true);
+  });
+
+  it("features only a proven advanced agent expansion", () => {
+    const answers = buildStrategyGapTestAnswers();
+    expect(calculateOverallScore(answers)).toBeGreaterThanOrEqual(75);
+    const tracks = getOpportunityTracks(answers, scores({ dados: 90, estrategia: 85, pessoas: 80, governanca: 82, tecnologia: 90 }));
+    expect(tracks.find(track => track.id === "predictive-agents")?.isFeatured).toBe(true);
+    expect(tracks.find(track => track.id === "data-foundation")?.isFeatured).toBe(false);
+  });
+
+  it("does not feature agent expansion below an overall score of 75", () => {
+    const answers: AnswerRecord = {
+      dados_q1: 3,
+      dados_q2: 5,
+      dados_q4: 4,
+      tec_q1: 3,
+      tec_q2a: 3,
+      tec_q2b: 3,
+      tec_q2c: 4,
+      tec_q2d: 3,
+      tec_q2e: 2,
+      tec_q2f: 3,
+    };
+    expect(calculateOverallScore(answers)).toBeLessThan(75);
+    const tracks = getOpportunityTracks(answers, scores({ dados: 90, estrategia: 85, pessoas: 80, governanca: 82, tecnologia: 90 }));
+    expect(tracks.every(track => !track.isFeatured)).toBe(true);
   });
 });
 

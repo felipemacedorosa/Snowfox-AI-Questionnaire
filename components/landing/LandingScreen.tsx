@@ -20,6 +20,7 @@ export function LandingScreen({
   hasDraft,
   savedScreen,
   savedSection,
+  reportConfirmed,
   onStart,
   onResume,
   onReset,
@@ -27,6 +28,7 @@ export function LandingScreen({
   hasDraft: boolean;
   savedScreen: "quiz" | "results" | null;
   savedSection: number;
+  reportConfirmed: boolean;
   onStart: () => void;
   onResume: () => void;
   onReset: () => void;
@@ -36,6 +38,8 @@ export function LandingScreen({
   const pillarConfig = getPillarConfig(lang);
   const savedSectionTitle = sections[savedSection]?.title ?? t.landing.fallbackSectionTitle;
   const [activePillarId, setActivePillarId] = useState<InsightPillarId>("estrategia");
+  const hasCompletedReport = savedScreen === "results" && reportConfirmed;
+  const hasPendingReport = savedScreen === "results" && !reportConfirmed;
 
   return (
     <div className="landing-page" id="landing-top">
@@ -89,11 +93,11 @@ export function LandingScreen({
         <section className="resume-strip page-frame" aria-label={t.landing.draftAriaLabel}>
           <div className="resume-strip-icon"><Sparkles size={18} aria-hidden="true" /></div>
           <div>
-            <strong>{savedScreen === "results" ? t.landing.draftReportReady : t.landing.draftStoppedAt(savedSectionTitle)}</strong>
-            <span>{savedScreen === "results" ? t.landing.draftResumeReport : t.landing.draftResumeQuiz}</span>
+            <strong>{hasCompletedReport ? t.landing.draftReportReady : hasPendingReport ? t.landing.draftReportPending : t.landing.draftStoppedAt(savedSectionTitle)}</strong>
+            <span>{hasCompletedReport ? t.landing.draftResumeReport : hasPendingReport ? t.landing.draftResumePending : t.landing.draftResumeQuiz}</span>
           </div>
           <button type="button" className="button-quiet" onClick={onResume}>
-            {savedScreen === "results" ? t.landing.viewReport : t.landing.resume} <ArrowRight size={15} aria-hidden="true" />
+            {hasCompletedReport ? t.landing.viewReport : hasPendingReport ? t.landing.finishReport : t.landing.resume} <ArrowRight size={15} aria-hidden="true" />
           </button>
           <button type="button" className="icon-button icon-button-muted" onClick={onReset} aria-label={t.landing.deleteDraftLabel} title={t.landing.deleteDraftLabel}>
             <RotateCcw size={15} aria-hidden="true" />

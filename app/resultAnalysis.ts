@@ -1,6 +1,7 @@
 import {
   AnswerRecord,
   AssessmentResult,
+  calculateOverallScore,
   getAllQuestions,
   getLevelLabel,
   getQuestionMax,
@@ -79,6 +80,7 @@ export interface OpportunityTrack {
   subtitle: string;
   status: OpportunityStatus;
   statusLabel: string;
+  isFeatured: boolean;
   summary: string;
   examples: string[];
   prerequisites: Array<{ label: string; met: boolean }>;
@@ -172,23 +174,57 @@ function selectedAnswer(q: LocalizedQuestion, answers: AnswerRecord): { label: s
   };
 }
 
-function nextCapability(q: LocalizedQuestion, answers: AnswerRecord): string | null {
-  if (q.type === "text") return null;
-  const answer = answers[q.id];
-  if (q.type === "single") {
-    const selected = q.options.find(item => item.value === answer);
-    if (!selected) return null;
-    const next = [...q.options]
-      .filter(item => item.score > selected.score)
-      .sort((a, b) => a.score - b.score)[0];
-    return next?.label ?? null;
-  }
-  const values = Array.isArray(answer) ? answer : [];
-  const missing = q.options
-    .filter(item => !item.isNone && item.score > 0 && !values.includes(item.value))
-    .sort((a, b) => b.score - a.score)
-    .slice(0, 2);
-  return missing.length > 0 ? missing.map(item => item.label).join(" + ") : null;
+const QUESTION_NEXT_ACTION: Record<string, Bilingual> = {
+  dados_q1: bi("Definir as decisões prioritárias e garantir dados suficientes e relevantes para sustentá-las.", "Define priority decisions and ensure sufficient, relevant data is available to support them."),
+  dados_q2: bi("Disponibilizar as fontes prioritárias por acessos governados e repetíveis, sem depender de solicitações manuais.", "Make priority sources available through governed, repeatable access without relying on manual requests."),
+  dados_q3: bi("Mapear e padronizar processos repetitivos para ampliar a capacidade sem crescimento linear do quadro.", "Map and standardize repetitive processes to expand capacity without linear headcount growth."),
+  dados_q4: bi("Consolidar histórico confiável e contínuo nas áreas em que previsões ou padrões podem gerar valor.", "Build reliable, continuous history in areas where forecasts or patterns can create value."),
+  dados_q5: bi("Reduzir o tempo entre a geração do dado e a decisão, com atualização e acesso compatíveis com o ritmo do negócio.", "Reduce the time between data generation and decisions, with updates and access that match the pace of the business."),
+  dados_q6: bi("Mapear dados sensíveis, impacto de vazamento, responsáveis e controles antes de ampliar o uso de IA.", "Map sensitive data, leak impact, owners, and controls before expanding AI use."),
+  dados_q7: bi("Aumentar qualidade, rastreabilidade e transparência para tornar confiáveis as decisões baseadas em dados.", "Improve quality, traceability, and transparency so data-based decisions become trustworthy."),
+  est_q1: bi("Organizar um comitê executivo para priorizar dores reais das áreas e selecionar um piloto de IA com ROI claro e mensurável.", "Organize an executive committee to prioritize real business pain points and select an AI pilot with clear, measurable ROI."),
+  est_q1a: bi("Mapear áreas e processos com maior potencial de retorno e comparar candidatos por impacto e viabilidade.", "Map areas and processes with the greatest return potential and compare candidates by impact and feasibility."),
+  est_q1a1: bi("Documentar um roadmap de 12 a 24 meses com casos de uso, responsáveis, métricas e decisões de continuidade.", "Document a 12-to-24-month roadmap with use cases, owners, metrics, and continuation decisions."),
+  est_q1a1a: bi("Instituir revisão ao menos trimestral do roadmap, do valor capturado e das prioridades.", "Review the roadmap, captured value, and priorities at least quarterly."),
+  est_q1b: bi("Traduzir oportunidades de IA em hipóteses de impacto econômico, com linha de base e métrica de retorno.", "Translate AI opportunities into economic-impact hypotheses with a baseline and return metric."),
+  est_q2: bi("Conectar a agenda de IA a mudanças de operação, decisão ou proposta de valor, além de ganhos pontuais de produtividade.", "Connect the AI agenda to changes in operations, decisions, or the value proposition, beyond isolated productivity gains."),
+  est_q3: bi("Definir um patrocinador executivo visível, com autoridade para priorizar e remover impedimentos.", "Assign a visible executive sponsor with authority to prioritize and remove obstacles."),
+  est_q3a: bi("Identificar e tratar a causa recorrente dos atrasos antes de ampliar o portfólio de iniciativas.", "Identify and address the recurring cause of delays before expanding the initiative portfolio."),
+  pess_q1: bi("Estabelecer comunicação regular sobre objetivos, responsabilidades e resultados esperados da adoção de IA.", "Establish regular communication about objectives, responsibilities, and expected AI-adoption outcomes."),
+  pess_q2: bi("Criar uma cadência segura de experimentação com problemas reais e aprendizado compartilhado.", "Create a safe experimentation cadence around real problems and shared learning."),
+  pess_q2a: bi("Adotar um processo estruturado para priorizar, medir, revisar e decidir o destino de cada experimento.", "Adopt a structured process to prioritize, measure, review, and decide the outcome of each experiment."),
+  pess_q3: bi("Definir um plano de capacidade para cobrir dados, IA, cloud e segurança com equipe interna ou parceiros.", "Define a capability plan covering data, AI, cloud, and security through internal teams or partners."),
+  pess_q4: bi("Conduzir gestão de mudança com usuários-chave, comunicação, suporte e feedback incorporados ao piloto.", "Run change management with key users, communication, support, and feedback built into the pilot."),
+  pess_q5: bi("Formalizar critérios de negócio, técnicos, de risco e ROI para decidir quando IA é a solução adequada.", "Formalize business, technical, risk, and ROI criteria for deciding when AI is the right solution."),
+  pess_q5a: bi("Criar um processo formal de priorização com critérios, responsáveis e cadência de decisão.", "Create a formal prioritization process with criteria, owners, and a decision cadence."),
+  pess_q6: bi("Estruturar capacitação aplicada, suporte e metas mensuráveis de adoção para as equipes envolvidas.", "Structure applied training, support, and measurable adoption goals for the teams involved."),
+  gov_q1: bi("Documentar etapas, exceções, decisões e responsáveis do processo escolhido antes de automatizá-lo.", "Document the selected process steps, exceptions, decisions, and owners before automating it."),
+  gov_q2: bi("Definir controles específicos de IA para dados, segurança, privacidade, revisão humana e responsabilização.", "Define AI-specific controls for data, security, privacy, human review, and accountability."),
+  tec_q1: bi("Selecionar e entregar um primeiro caso de uso delimitado, integrado e medido em um fluxo real.", "Select and deliver a first bounded, integrated, measured use case in a real workflow."),
+  tec_q1b: bi("Validar integrações, dados, equipe, aprovações e caminho de produção antes de iniciar o piloto.", "Validate integrations, data, team, approvals, and the production path before starting the pilot."),
+  tec_q1c: bi("Definir um plano de retomada ou evolução para projetos parados e encerrar os que não têm valor demonstrável.", "Define a recovery or evolution plan for stalled projects and stop those without demonstrable value."),
+  tec_q1d: bi("Mapear a arquitetura e os tipos de modelo usados para orientar suporte, risco e evolução técnica.", "Map the architecture and model types in use to guide support, risk, and technical evolution."),
+  tec_q1e: bi("Integrar o projeto aos sistemas do fluxo real com acessos, erros e responsáveis definidos.", "Integrate the project into real workflow systems with defined access, error handling, and owners."),
+  tec_q1f: bi("Vincular cada projeto a uma linha de base e a uma métrica concreta de custo, tempo, qualidade ou receita.", "Tie each project to a baseline and a concrete cost, time, quality, or revenue metric."),
+  tec_q1g: bi("Padronizar componentes, integrações e controles para reutilizar a solução em novas áreas.", "Standardize components, integrations, and controls so the solution can be reused in new areas."),
+  tec_q2a: bi("Instituir uma rotina de atualização, monitoramento e manutenção para as soluções em produção.", "Establish an update, monitoring, and maintenance routine for production solutions."),
+  tec_q2b: bi("Consolidar soluções pontuais em um ecossistema com integrações, padrões e operação compartilhados.", "Consolidate one-off solutions into an ecosystem with shared integrations, standards, and operations."),
+  tec_q2c: bi("Mapear e adequar o portfólio de modelos às decisões e fluxos em que cada abordagem gera mais valor.", "Map and align the model portfolio to the decisions and workflows where each approach creates the most value."),
+  tec_q2d: bi("Ampliar integrações reutilizáveis entre as soluções de IA e os sistemas internos prioritários.", "Expand reusable integrations between AI solutions and priority internal systems."),
+  tec_q2e: bi("Medir e comparar valor de negócio de forma consistente em todo o portfólio de IA.", "Measure and compare business value consistently across the AI portfolio."),
+  tec_q2f: bi("Reutilizar componentes, monitoramento e controles ao expandir soluções para novas áreas.", "Reuse components, monitoring, and controls when expanding solutions to new areas."),
+};
+
+export function getQuestionNextAction(questionId: string, lang: Lang = DEFAULT_LANG): string | null {
+  const action = QUESTION_NEXT_ACTION[questionId];
+  return action ? pick(action, lang) : null;
+}
+
+function nextCapability(q: LocalizedQuestion, answers: AnswerRecord, lang: Lang): string | null {
+  if (q.type === "text" || q.scored === false) return null;
+  const score = getQuestionScore(q, answers);
+  if (score === null || score >= getQuestionMax(q)) return null;
+  return getQuestionNextAction(q.id, lang);
 }
 
 // Declarative rewrite of each scored question, used in "Existing capabilities"
@@ -246,13 +282,13 @@ export function buildQuestionEvidence(answers: AnswerRecord, lang: Lang = DEFAUL
       if (!selected) continue;
       const score = getQuestionScore(question, answers);
       const max = getQuestionMax(question);
-      const normalizedScore = question.type === "text" || score === null
+      const normalizedScore = question.type === "text" || question.scored === false || score === null
         ? null
         : max > 0 ? Math.round((score / max) * 100) : 0;
       const pillar = toPillarId(question.scorePillar ?? question.pillar);
       // A question only counts as a gap/risk when the chosen answer scored
       // below half of what it could be worth — a "good enough" answer isn't a gap.
-      const kind: EvidenceKind = question.type === "text"
+      const kind: EvidenceKind = normalizedScore === null
         ? "context"
         : question.type === "single" && (question as LocalizedSingleQuestion).riskFlag && (normalizedScore ?? 0) < 50
           ? "risk"
@@ -267,7 +303,7 @@ export function buildQuestionEvidence(answers: AnswerRecord, lang: Lang = DEFAUL
         answerNote: selected.note,
         normalizedScore,
         kind,
-        targetState: nextCapability(question, answers),
+        targetState: nextCapability(question, answers, lang),
         strengthLabel: kind === "strength" && STRENGTH_PHRASING[question.id] ? pick(STRENGTH_PHRASING[question.id], lang) : null,
       });
     }
@@ -584,11 +620,20 @@ export function getOpportunityTracks(answers: AnswerRecord, pillarScores: Pillar
   const foundationExists = hasDataFoundation(answers);
 
   const automationMet = automationChecks.filter(item => item.met).length;
-  const automationStatus: OpportunityStatus = automationMet === automationChecks.length
+  const automationBaseStatus: OpportunityStatus = automationMet === automationChecks.length
     ? "ready" : automationMet >= 3 ? "prepare" : "defer";
-  const predictiveStatus: OpportunityStatus = predictiveChecks.every(item => item.met)
+  const predictiveBaseStatus: OpportunityStatus = predictiveChecks.every(item => item.met)
     ? "ready" : scores.dados >= 40 && scores.tecnologia >= 40 ? "prepare" : "defer";
-  const dataFoundationStatus: OpportunityStatus = foundationExists ? "maintain" : "recommended";
+  const overallScore = calculateOverallScore(answers);
+  const provenPortfolio = overallScore >= 75 && answers.tec_q1 === 3 && answers.tec_q2e === 2;
+  const featuredTrack: OpportunityTrack["id"] | null = provenPortfolio
+    ? predictiveBaseStatus === "ready"
+      ? "predictive-agents"
+      : automationBaseStatus === "ready" ? "automation-agents" : null
+    : null;
+  const automationStatus: OpportunityStatus = featuredTrack === "automation-agents" ? "maintain" : automationBaseStatus;
+  const predictiveStatus: OpportunityStatus = featuredTrack === "predictive-agents" ? "maintain" : predictiveBaseStatus;
+  const dataFoundationStatus: OpportunityStatus = foundationExists || scores.dados >= 75 ? "maintain" : "prepare";
 
   if (lang === "en") {
     return [
@@ -598,14 +643,15 @@ export function getOpportunityTracks(answers: AnswerRecord, pillarScores: Pillar
         subtitle: "Lake, warehouse, quality, and governance",
         status: dataFoundationStatus,
         statusLabel: statusLabel(dataFoundationStatus, lang),
+        isFeatured: false,
         summary: foundationExists
           ? "The organization already has a data lake, warehouse, or data marts in place. The priority now is to maintain quality and governance and extend coverage to new domains, not to rebuild the foundation from scratch."
-          : "Data Foundation is the recommended solution at any readiness level. It creates the reusable foundation for decisions, automations, and models without requiring a minimum maturity to get started.",
+          : "The organization can still strengthen data quality, access, history, and governance around the domains tied to priority decisions. This work should support the selected use case, not replace the organizational priority identified in the summary.",
         examples: ["A lake or warehouse oriented around critical domains", "Catalog, quality, and lineage", "Governed access and reusable integrations"],
         prerequisites: foundationExists ? dataFoundationChecks : [],
         startAction: foundationExists
           ? "Map coverage, quality, and governance gaps in the current foundation and prioritize extending it to the next business domain."
-          : "Start now with one business domain and organize its sources, owners, quality, access, and lake or warehouse architecture.",
+          : "Choose the data domain tied to the priority case and organize sources, owners, quality, access, and architecture only to the extent needed to deliver it.",
       },
       {
         id: "automation-agents",
@@ -613,7 +659,10 @@ export function getOpportunityTracks(answers: AnswerRecord, pillarScores: Pillar
         subtitle: "LLMs to automate work and knowledge",
         status: automationStatus,
         statusLabel: statusLabel(automationStatus, lang),
-        summary: automationStatus === "ready"
+        isFeatured: featuredTrack === "automation-agents",
+        summary: automationStatus === "maintain"
+          ? "The organization has proven delivery experience and measurable results. The opportunity is to expand automation into adjacent workflows while reusing integrations, controls, and adoption practices."
+          : automationStatus === "ready"
           ? "The organization has the minimum conditions to test agents in a well-scoped flow, with human review and an observable outcome."
           : "Agents can generate value, but the first pilot should wait for, or run alongside, improvements in process, governance, adoption, and integration.",
         examples: ["Assisted support and triage", "Reading and producing documents", "Knowledge agents and internal workflows"],
@@ -626,7 +675,10 @@ export function getOpportunityTracks(answers: AnswerRecord, pillarScores: Pillar
         subtitle: "Traditional Machine Learning and Deep Learning",
         status: predictiveStatus,
         statusLabel: statusLabel(predictiveStatus, lang),
-        summary: predictiveStatus === "ready"
+        isFeatured: featuredTrack === "predictive-agents",
+        summary: predictiveStatus === "maintain"
+          ? "The organization has enough history, technical capacity, and measurable delivery experience to expand predictive work into adjacent recurring decisions."
+          : predictiveStatus === "ready"
           ? "Data and technical capacity allow for exploring predictive models in decisions with history, an observable outcome, and a monitoring routine."
           : "Predictive use cases depend on enough history, access, and quality; without that, model uncertainty tends to outweigh the expected value.",
         examples: ["Demand and capacity forecasting", "Churn, propensity, and recommendation", "Anomalies, risk, and optimization"],
@@ -643,14 +695,15 @@ export function getOpportunityTracks(answers: AnswerRecord, pillarScores: Pillar
       subtitle: "Lake, warehouse, qualidade e governança",
       status: dataFoundationStatus,
       statusLabel: statusLabel(dataFoundationStatus, lang),
+      isFeatured: false,
       summary: foundationExists
         ? "A organização já possui data lake, data warehouse ou data marts estruturados. A prioridade agora é manter a qualidade e a governança e ampliar a cobertura para novos domínios, não reconstruir a base do zero."
-        : "Data Foundation é a solução recomendada para qualquer nível de prontidão. Ela cria a base reutilizável para decisões, automações e modelos sem exigir uma maturidade mínima para começar.",
+        : "A organização ainda pode fortalecer qualidade, acesso, histórico e governança dos dados a partir dos domínios ligados às decisões prioritárias. Essa frente deve apoiar o caso de uso escolhido, não substituir a prioridade organizacional indicada no resumo.",
       examples: ["Lake ou warehouse orientado a domínios críticos", "Catálogo, qualidade e linhagem", "Acesso governado e integrações reutilizáveis"],
       prerequisites: foundationExists ? dataFoundationChecks : [],
       startAction: foundationExists
         ? "Mapear lacunas de cobertura, qualidade e governança na base atual e priorizar a expansão para o próximo domínio de negócio."
-        : "Começar agora por um domínio de negócio e organizar suas fontes, responsáveis, qualidade, acesso e arquitetura de lake ou warehouse.",
+        : "Escolher o domínio de dados ligado ao caso prioritário e organizar fontes, responsáveis, qualidade, acesso e arquitetura na medida necessária para entregá-lo.",
     },
     {
       id: "automation-agents",
@@ -658,7 +711,10 @@ export function getOpportunityTracks(answers: AnswerRecord, pillarScores: Pillar
       subtitle: "LLMs para automatizar trabalho e conhecimento",
       status: automationStatus,
       statusLabel: statusLabel(automationStatus, lang),
-      summary: automationStatus === "ready"
+      isFeatured: featuredTrack === "automation-agents",
+      summary: automationStatus === "maintain"
+        ? "A organização já provou capacidade de entrega e resultado mensurável. A oportunidade é expandir automações para fluxos adjacentes, reutilizando integrações, controles e práticas de adoção."
+        : automationStatus === "ready"
         ? "A organização reúne condições mínimas para testar agentes em um fluxo delimitado, com revisão humana e resultado observável."
         : "Agentes podem gerar valor, mas o primeiro piloto deve esperar ou acompanhar melhorias de processo, governança, adoção e integração.",
       examples: ["Atendimento e triagem assistidos", "Leitura e produção de documentos", "Agentes de conhecimento e fluxos internos"],
@@ -671,7 +727,10 @@ export function getOpportunityTracks(answers: AnswerRecord, pillarScores: Pillar
       subtitle: "Machine Learning e Deep Learning tradicionais",
       status: predictiveStatus,
       statusLabel: statusLabel(predictiveStatus, lang),
-      summary: predictiveStatus === "ready"
+      isFeatured: featuredTrack === "predictive-agents",
+      summary: predictiveStatus === "maintain"
+        ? "A organização reúne histórico, capacidade técnica e experiência mensurável de entrega para expandir modelos preditivos a decisões recorrentes adjacentes."
+        : predictiveStatus === "ready"
         ? "Dados e capacidade técnica permitem explorar modelos preditivos em decisões com histórico, resultado observável e rotina de monitoramento."
         : "Casos preditivos dependem de histórico, acesso e qualidade suficientes; sem isso, a incerteza do modelo tende a superar o valor esperado.",
       examples: ["Previsão de demanda e capacidade", "Churn, propensão e recomendação", "Anomalias, risco e otimização"],

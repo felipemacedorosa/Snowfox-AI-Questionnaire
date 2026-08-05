@@ -35,6 +35,7 @@ import {
   LocalizedTextQuestion,
 } from "@/app/data";
 import { useLanguage } from "@/app/LanguageContext";
+import { QuestionContext } from "@/components/quiz/QuestionContext";
 import { NavBtn } from "@/components/NavBtn";
 import type { SaveState } from "@/components/Navbar";
 
@@ -436,6 +437,7 @@ function QuestionCard({
     <>
       <div className="question-number">{t.quiz.questionNumber(String(index + 1).padStart(2, "0"), String(total).padStart(2, "0"))} <span>{t.quiz.questionOfTotal(String(total).padStart(2, "0"))}</span></div>
       <h2 ref={headingRef} tabIndex={-1}>{question.text}</h2>
+      <QuestionContext text={question.context} />
       {question.type === "single" && <SingleOptions question={question} answers={answers} onSelect={onSingleSelect} />}
       {question.type === "multi" && <MultiOptions question={question} answers={answers} onToggle={onMultiToggle} />}
       {question.type === "text" && <TextInput question={question} answers={answers} onAnswer={onAnswer} />}
