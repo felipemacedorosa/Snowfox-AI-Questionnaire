@@ -21,6 +21,7 @@ env:
   BASE_PATH: /assessments/ai-readiness
   DEPLOY_PATH: /opt/snowfox-wordpress/html/assessments/ai-readiness
   REPORT_DATA_PATH: /opt/snowfox-wordpress/data/ai-readiness-reports
+  WORDPRESS_PROJECT_PATH: /opt/snowfox-wordpress
 
 jobs:
   deploy:
@@ -89,6 +90,9 @@ jobs:
 
           ssh "${ssh_opts[@]}" "$destination" \
             "sudo -n install -d -o www-data -g www-data -m 0750 '$REPORT_DATA_PATH'"
+
+          ssh "${ssh_opts[@]}" "$destination" \
+            "sudo -n docker compose --project-directory '$WORDPRESS_PROJECT_PATH' -f '$WORDPRESS_PROJECT_PATH/docker-compose.yml' exec -T wordpress test -w '$REPORT_DATA_PATH'"
 
           ssh "${ssh_opts[@]}" "$destination" \
             "sudo -n mkdir -p '$remote_root' && sudo -n rm -rf '$remote_tmp' && sudo -n mkdir '$remote_tmp'"
