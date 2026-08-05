@@ -36,14 +36,19 @@ function localizedQuestion(id: string) {
   return getAllQuestions("pt").find(item => item.id === id)!;
 }
 
+// "Não sei afirmar" is reserved for questions a respondent can only answer with
+// visibility into systems, infrastructure, or the internals of AI projects.
+// Strategy, people, and process questions are answerable from lived experience,
+// so an uncertainty escape there only invites opting out of the assessment.
 const UNKNOWN_IDS = [
-  "dados_q2", "dados_q4", "dados_q6", "dados_q3", "gov_q1", "gov_q2",
-  "est_q1", "est_q1a", "est_q1a1", "est_q1a1a", "est_q1b", "est_q2",
-  "est_q3", "est_q3a", "pess_q1", "pess_q2", "pess_q2a", "pess_q3",
-  "pess_q4", "pess_q5a", "pess_q6", "tec_q1", "tec_q1b", "tec_q1c",
-  "tec_q1e", "tec_q1f", "tec_q1g", "tec_q2a", "tec_q2b", "tec_q2d",
-  "tec_q2e", "tec_q2f",
+  "dados_q4", "dados_q6", "dados_q8", "dados_q9", "gov_q2",
+  "pess_q3", "tec_q1", "tec_q1b", "tec_q1c", "tec_q1e", "tec_q1f",
+  "tec_q2a", "tec_q2b", "tec_q2e", "tec_q2f",
 ] as const;
+
+// est_q3a1 also carries the answer, but as required unscored context rather than
+// a technical question, and on value 7 because 1-6 are taken. Asserted separately.
+const UNKNOWN_ALLOWED: readonly string[] = [...UNKNOWN_IDS, "est_q3a1"];
 
 describe("questionnaire content and answer semantics", () => {
   it("moves operational capacity from Data to Governance and Process", () => {
@@ -82,11 +87,27 @@ describe("questionnaire content and answer semantics", () => {
     }
   });
 
-  it("does not duplicate uncertainty where the questionnaire already expresses it", () => {
-    for (const id of ["dados_q1", "dados_q5", "dados_q7", "pess_q5", "tec_q1d", "tec_q2c"]) {
+  it("offers no uncertainty answer anywhere else", () => {
+    const approved = new Set(UNKNOWN_ALLOWED);
+    for (const item of getAllQuestions("pt")) {
+      if (approved.has(item.id) || item.type === "text") continue;
+      expect({
+        id: item.id,
+        unknown: item.options.some(option => option.label === "Não sei afirmar"),
+      }).toEqual({ id: item.id, unknown: false });
+    }
+  });
+
+  it("keeps the pre-existing uncertainty wording on questions that already had it", () => {
+    for (const [id, label] of [
+      ["dados_q1", "Sem clareza"],
+      ["pess_q5", "Sem conhecimento"],
+      ["tec_q1d", "Não sei"],
+      ["tec_q2c", "Não sei"],
+    ] as const) {
       const item = localizedQuestion(id);
       if (item.type === "text") continue;
-      expect(item.options.some(option => option.label === "Não sei afirmar")).toBe(false);
+      expect(item.options.some(option => option.label === label)).toBe(true);
     }
   });
 
@@ -121,10 +142,10 @@ describe("questionnaire content and answer semantics", () => {
     expect(calculatePillarScores(withReason)).toEqual(calculatePillarScores(withoutReason));
   });
 
-  it("does not ask for a delay reason when there are no initiatives or visibility", () => {
+  it("does not ask for a delay reason when there are no initiatives to assess", () => {
     const delayReason = strategy.questions.find(item => item.id === "est_q3a1")!;
     expect(getQuestionFlowState(delayReason, strategy.questions, { est_q3: 5, est_q3a: 5 })).toBe("skipped");
-    expect(getQuestionFlowState(delayReason, strategy.questions, { est_q3: 5, est_q3a: 0 })).toBe("skipped");
+    expect(getQuestionFlowState(delayReason, strategy.questions, { est_q3: 5, est_q3a: 4 })).toBe("skipped");
   });
 });
 

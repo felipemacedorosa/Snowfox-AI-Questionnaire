@@ -202,7 +202,6 @@ export const SECTIONS: Section[] = [
           { value: 3, label: bi("Acesso parcial", "Partial access"), note: bi("As principais equipes conseguem acessar parte dos dados de que precisam, mas informações importantes ainda estão fragmentadas ou são difíceis de usar.", "Key teams can access part of the data they need, but important information is still fragmented or hard to use."), score: 2.5 },
           { value: 4, label: bi("Acesso quase total", "Near-total access"), note: bi("A maioria dos dados relevantes está disponível para as equipes e sistemas certos, com apenas pequenas lacunas ou etapas manuais.", "Most relevant data is available to the right teams and systems, with only small gaps or manual steps."), score: 3.75 },
           { value: 5, label: bi("Acesso total", "Full access"), note: bi("Os dados estão facilmente disponíveis para equipes e sistemas autorizados.", "Data is easily available to authorized teams and systems."), score: 5 },
-          unknownSingleOption(),
         ],
       },
       {
@@ -271,6 +270,7 @@ export const SECTIONS: Section[] = [
         options: [
           { value: 1, label: bi("Não", "No"), note: bi("A organização ainda não possui um data lake ou data warehouse estruturado.", "The organization doesn't yet have a structured data lake or data warehouse."), score: 0 },
           { value: 2, label: bi("Sim", "Yes"), note: bi("A organização já possui um data lake ou data warehouse estruturado.", "The organization already has a structured data lake or data warehouse."), score: 0 },
+          unknownSingleOption(),
         ],
       },
       {
@@ -283,6 +283,7 @@ export const SECTIONS: Section[] = [
         options: [
           { value: 1, label: bi("Não", "No"), note: bi("Os dados ainda não estão organizados em data marts para consumo direto das áreas de negócio.", "The data isn't yet organized into data marts for direct consumption by business teams."), score: 0 },
           { value: 2, label: bi("Sim", "Yes"), note: bi("Os dados já estão organizados em data marts prontos para consumo pelas áreas de negócio.", "The data is already organized into data marts ready for consumption by business teams."), score: 0 },
+          unknownSingleOption(),
         ],
       },
     ],
@@ -305,7 +306,6 @@ export const SECTIONS: Section[] = [
           { value: 3, label: bi("Não", "No"), note: bi("A liderança ainda não definiu uma visão clara de como a IA pode gerar valor para o negócio.", "Leadership hasn't yet defined a clear vision of how AI can generate value for the business."), score: 0 },
           { value: 2, label: bi("Parcialmente", "Partially"), note: bi("Existe uma visão inicial de como a IA pode gerar valor, mas ainda não está totalmente clara.", "There's an initial vision of how AI can generate value, but it's not yet fully clear."), score: 1 },
           { value: 1, label: bi("Sim", "Yes"), note: bi("A liderança já definiu com clareza como a IA pode gerar valor para o negócio.", "Leadership has clearly defined how AI can generate value for the business."), score: 3 },
-          unknownSingleOption(),
         ],
       },
       {
@@ -318,7 +318,6 @@ export const SECTIONS: Section[] = [
         options: [
           { value: 2, label: bi("Não", "No"), note: bi("A liderança ainda não mapeou quais áreas têm maior potencial de retorno com IA.", "Leadership hasn't yet mapped which areas have the greatest return potential with AI."), score: 0 },
           { value: 1, label: bi("Sim", "Yes"), note: bi("A liderança já mapeou as áreas e processos com maior potencial de retorno com IA.", "Leadership has already mapped the areas and processes with the greatest return potential with AI."), score: 2 },
-          unknownSingleOption(),
         ],
       },
       {
@@ -331,7 +330,6 @@ export const SECTIONS: Section[] = [
         options: [
           { value: 2, label: bi("Não", "No"), note: bi("Não existe um roadmap de IA documentado para os próximos 12 a 24 meses.", "There is no documented AI roadmap for the next 12 to 24 months."), score: 0 },
           { value: 1, label: bi("Sim", "Yes"), note: bi("Existe um roadmap de IA documentado para os próximos 12 a 24 meses.", "There is a documented AI roadmap for the next 12 to 24 months."), score: 2.5 },
-          unknownSingleOption(),
         ],
       },
       {
@@ -346,7 +344,6 @@ export const SECTIONS: Section[] = [
           { value: 2, label: bi("Anualmente", "Annually"), note: bi("O roadmap é revisado uma vez por ano.", "The roadmap is reviewed once a year."), score: 0.33 },
           { value: 3, label: bi("Trimestralmente", "Quarterly"), note: bi("O roadmap é revisado a cada trimestre.", "The roadmap is reviewed every quarter."), score: 0.67 },
           { value: 4, label: bi("Mensalmente ou mais", "Monthly or more"), note: bi("O roadmap é revisado mensalmente ou com frequência ainda maior.", "The roadmap is reviewed monthly or even more often."), score: 1 },
-          unknownSingleOption(),
         ],
       },
       {
@@ -364,7 +361,6 @@ export const SECTIONS: Section[] = [
           { value: 3, label: bi("Não", "No"), note: bi("A liderança não entende o potencial ou o valor econômico da IA.", "Leadership doesn't understand the potential or economic value of AI."), score: 0 },
           { value: 2, label: bi("Parcialmente", "Partially"), note: bi("A liderança tem uma noção limitada do valor econômico da IA.", "Leadership has a limited sense of AI's economic value."), score: 0.5 },
           { value: 1, label: bi("Sim", "Yes"), note: bi("A liderança entende o potencial e o valor econômico da IA.", "Leadership understands the potential and economic value of AI."), score: 1 },
-          unknownSingleOption(),
         ],
       },
       {
@@ -378,7 +374,6 @@ export const SECTIONS: Section[] = [
           { value: 2, label: bi("Melhoria de produtividade", "Productivity improvement"), note: bi("A empresa usa IA para fazer o que já faz com mais velocidade e menos custo, sem mudar a forma como o negócio funciona.", "The company uses AI to do what it already does faster and at lower cost, without changing how the business works."), score: 2.33 },
           { value: 3, label: bi("Transformação do negócio", "Business transformation"), note: bi("A empresa usa IA para mudar a forma como opera, decide ou entrega valor, não apenas para otimizar, mas para fazer diferente.", "The company uses AI to change how it operates, decides, or delivers value, not just to optimize, but to do things differently."), score: 4.66 },
           { value: 4, label: bi("Vantagem competitiva central", "Core competitive advantage"), note: bi("IA é parte estrutural da proposta de valor da empresa, um ativo estratégico que a diferencia de forma que concorrentes sem essa capacidade dificilmente conseguem replicar.", "AI is a structural part of the company's value proposition, a strategic asset that sets it apart in a way competitors without that capability can hardly replicate."), score: 7 },
-          unknownSingleOption(),
         ],
       },
       {
@@ -393,7 +388,6 @@ export const SECTIONS: Section[] = [
           { value: 3, label: bi("Às vezes", "Sometimes"), note: bi("Os executivos apoiam as iniciativas de IA apenas em algumas ocasiões.", "Executives support AI initiatives only on some occasions."), score: 3.5 },
           { value: 4, label: bi("Regularmente", "Regularly"), note: bi("Os executivos patrocinam as iniciativas de IA de forma regular.", "Executives regularly sponsor AI initiatives."), score: 5.25 },
           { value: 5, label: bi("De forma consistente e visível", "Consistently and visibly"), note: bi("Os executivos patrocinam as iniciativas de IA de forma consistente e visível para toda a empresa.", "Executives sponsor AI initiatives consistently and visibly for the whole company."), score: 7 },
-          unknownSingleOption(),
         ],
       },
       {
@@ -410,7 +404,6 @@ export const SECTIONS: Section[] = [
           { value: 3, label: bi("Ocasionalmente", "Occasionally"), note: bi("As iniciativas de IA sofrem atrasos ocasionalmente.", "AI initiatives suffer delays occasionally."), score: 2.66 },
           { value: 4, label: bi("Raramente", "Rarely"), note: bi("As iniciativas de IA raramente sofrem atrasos.", "AI initiatives rarely suffer delays."), score: 4 },
           { value: 5, label: bi("Não há iniciativas para avaliar", "There are no initiatives to assess"), note: bi("A organização ainda não possui iniciativas de IA cujo atraso possa ser avaliado.", "The organization does not yet have AI initiatives whose delays can be assessed."), score: 0 },
-          unknownSingleOption(),
         ],
       },
       {
@@ -444,7 +437,6 @@ export const SECTIONS: Section[] = [
           { value: 3, label: bi("Um pouco clara", "Somewhat clear"), note: bi("A comunicação existe, mas ainda deixa dúvidas sobre expectativas e resultados.", "Communication exists, but it still leaves doubts about expectations and results."), score: 1 },
           { value: 4, label: bi("Em grande parte clara", "Mostly clear"), note: bi("A comunicação é clara na maior parte do tempo, com poucas lacunas.", "Communication is clear most of the time, with few gaps."), score: 1.5 },
           { value: 5, label: bi("Clara e regular", "Clear and regular"), note: bi("A liderança comunica expectativas e resultados de forma clara e constante.", "Leadership communicates expectations and results clearly and consistently."), score: 2 },
-          unknownSingleOption(),
         ],
       },
       {
@@ -460,7 +452,6 @@ export const SECTIONS: Section[] = [
           { value: 4, label: bi("Frequentemente", "Frequently"), note: bi("As equipes experimentam novas capacidades de IA com frequência.", "Teams experiment with new AI capabilities frequently."), score: 1.875 },
           // TODO: a nova versão do questionário mostra (+2.6) aqui, mas o subtotal do bloco (3.5) só fecha com 2.5; pontuação existente preservada.
           { value: 5, label: bi("Continuamente", "Continuously"), note: bi("As equipes experimentam novas capacidades de IA de forma contínua.", "Teams continuously experiment with new AI capabilities."), score: 2.5 },
-          unknownSingleOption(),
         ],
       },
       {
@@ -475,7 +466,6 @@ export const SECTIONS: Section[] = [
           { value: 2, label: bi("Testes informais", "Informal testing"), note: bi("Algumas pessoas ou equipes experimentam ferramentas de IA por conta própria, mas não há processo formal, responsável definido ou aprendizado compartilhado.", "Some people or teams experiment with AI tools on their own, but there's no formal process, defined owner, or shared learning."), score: 0.5 },
           { value: 3, label: bi("Pilotos ocasionais", "Occasional pilots"), note: bi("A organização realiza pilotos ocasionais de IA ligados a problemas específicos do negócio, mas os resultados nem sempre são medidos ou escalados.", "The organization runs occasional AI pilots tied to specific business problems, but results aren't always measured or scaled."), score: 0.75 },
           { value: 4, label: bi("Processo estruturado", "Structured process"), note: bi("Os experimentos de IA são priorizados, medidos, revisados e conectados a objetivos claros de negócio, com um processo para decidir o que escalar, melhorar ou interromper.", "AI experiments are prioritized, measured, reviewed, and tied to clear business goals, with a process for deciding what to scale, improve, or stop."), score: 1 },
-          unknownSingleOption(),
         ],
       },
     ],
@@ -515,7 +505,6 @@ export const SECTIONS: Section[] = [
           { value: 3, label: bi("Parcialmente receptivos", "Partially receptive"), note: bi("Os colaboradores aceitam mudanças, mas com alguma resistência.", "Employees accept changes, but with some resistance."), score: 1 },
           { value: 4, label: bi("Geralmente receptivos", "Generally receptive"), note: bi("A maior parte dos colaboradores aceita bem as mudanças.", "Most employees accept changes well."), score: 1.5 },
           { value: 5, label: bi("Altamente receptivos", "Highly receptive"), note: bi("Os colaboradores abraçam mudanças em processos e tecnologias com facilidade.", "Employees embrace changes in processes and technologies with ease."), score: 2 },
-          unknownSingleOption(),
         ],
       },
       {
@@ -542,7 +531,6 @@ export const SECTIONS: Section[] = [
           { value: 1, label: bi("Não", "No"), note: bi("Não existe um processo para priorizar iniciativas de IA.", "There is no process for prioritizing AI initiatives."), score: 0 },
           { value: 2, label: bi("Informal", "Informal"), note: bi("Existe uma priorização, mas sem um processo formalizado.", "There is some prioritization, but without a formal process."), score: 1 },
           { value: 3, label: bi("Formal", "Formal"), note: bi("Existe um processo formal e estruturado para priorizar iniciativas de IA.", "There is a formal, structured process for prioritizing AI initiatives."), score: 2 },
-          unknownSingleOption(),
         ],
       },
       {
@@ -556,7 +544,6 @@ export const SECTIONS: Section[] = [
           { value: 2, label: bi("Treinamento informal", "Informal training"), note: bi("Alguns colaboradores estão experimentando ferramentas de IA, mas o treinamento e o suporte são majoritariamente informais ou opcionais.", "Some employees are experimenting with AI tools, but training and support are mostly informal or optional."), score: 0.83 },
           { value: 3, label: bi("Treinamento estruturado", "Structured training"), note: bi("A empresa oferece treinamentos em IA, programas internos ou está contratando especialistas para desenvolver capacidade em IA.", "The company offers AI training, internal programs, or is hiring specialists to build AI capability."), score: 1.67 },
           { value: 4, label: bi("Estratégia formal de capacitação", "Formal upskilling strategy"), note: bi("A capacitação em IA faz parte de uma estratégia formal de desenvolvimento da força de trabalho, com orçamento dedicado, apoio da liderança e metas mensuráveis de adoção.", "AI upskilling is part of a formal workforce development strategy, with dedicated budget, leadership support, and measurable adoption goals."), score: 2.5 },
-          unknownSingleOption(),
         ],
       },
     ],
@@ -579,7 +566,6 @@ export const SECTIONS: Section[] = [
           { value: 1, label: bi("Não", "No"), note: bi("A operação ainda depende diretamente de contratar mais pessoas para crescer.", "The operation still depends directly on hiring more people to grow."), score: 0 },
           { value: 2, label: bi("Depende da área", "Depends on the area"), note: bi("Em algumas áreas dá para crescer sem novas contratações, em outras não.", "Some areas can grow without new hires, others can't."), score: 2.5 },
           { value: 3, label: bi("Sim", "Yes"), note: bi("A empresa consegue ampliar a operação sem aumentar o quadro na mesma proporção.", "The company can expand the operation without increasing headcount at the same rate."), score: 5 },
-          unknownSingleOption(),
         ],
       },
       {
@@ -593,7 +579,6 @@ export const SECTIONS: Section[] = [
           { value: 2, label: bi("Parcialmente documentados", "Partially documented"), note: bi("Apenas uma parte dos processos críticos está documentada.", "Only part of the critical processes is documented."), score: 1.67 },
           { value: 3, label: bi("Em sua maioria documentados", "Mostly documented"), note: bi("A maior parte dos processos críticos já está documentada.", "Most critical processes are already documented."), score: 3.33 },
           { value: 4, label: bi("Totalmente documentados", "Fully documented"), note: bi("Todos os processos críticos do negócio estão documentados.", "All critical business processes are documented."), score: 5 },
-          unknownSingleOption(),
         ],
       },
       {
@@ -714,7 +699,6 @@ export const SECTIONS: Section[] = [
           { value: 1, label: bi("Não reutilizável", "Not reusable"), note: bi("Não, as soluções de IA geralmente são construídas para uma área específica e precisam ser reconstruídas para outras.", "No, AI solutions are generally built for a specific area and need to be rebuilt for others."), score: 0 },
           { value: 2, label: bi("Parcialmente reutilizável", "Partially reusable"), note: bi("Parcialmente, algumas partes podem ser reutilizadas, mas a expansão ainda exige retrabalho significativo.", "Partially, some parts can be reused, but expansion still requires significant rework."), score: 1 },
           { value: 3, label: bi("Totalmente reutilizável", "Fully reusable"), note: bi("Sim, as soluções de IA são projetadas para serem reutilizáveis e escaláveis em diferentes áreas da empresa.", "Yes, AI solutions are designed to be reusable and scalable across different areas of the company."), score: 2 },
-          unknownSingleOption(),
         ],
       },
       // Branch: 5 or more projects
@@ -771,7 +755,6 @@ export const SECTIONS: Section[] = [
           { value: 1, label: bi("Não", "No"), note: bi("Os projetos não se integram a nenhum sistema interno.", "The projects don't integrate with any internal system."), score: 0 },
           { value: 2, label: bi("Alguns", "Some"), note: bi("Parte dos projetos se integra a sistemas internos.", "Some of the projects integrate with internal systems."), score: 1 },
           { value: 3, label: bi("Sim", "Yes"), note: bi("Os projetos se integram a sistemas internos como CRM, Slack ou ERP.", "The projects integrate with internal systems such as CRM, Slack, or ERP."), score: 2 },
-          unknownSingleOption(),
         ],
       },
       {
