@@ -69,6 +69,23 @@ function cacheBusted(url) {
   return target;
 }
 
+function requireBaseUrl(baseUrl) {
+  const target = new URL(baseUrl);
+  if (!target.pathname.endsWith("/") || target.search || target.hash) {
+    throw new Error("Production base URL must end with a trailing slash and contain no query or hash.");
+  }
+  return target;
+}
+
+function compareVersions(left, right) {
+  const leftParts = left.split(".").map(Number);
+  const rightParts = right.split(".").map(Number);
+  for (let index = 0; index < 3; index += 1) {
+    if (leftParts[index] !== rightParts[index]) return leftParts[index] - rightParts[index];
+  }
+  return 0;
+}
+
 async function fetchJson(response, label) {
   if (!response.ok) throw new Error(`${label} returned HTTP ${response.status}.`);
   try {
@@ -80,14 +97,18 @@ async function fetchJson(response, label) {
 
 export async function checkProductionVersion({ baseUrl, candidateVersion, candidateSha, eventName, fetcher = fetch }) {
   buildManifest({ reportVersion: candidateVersion, commitSha: candidateSha, builtAt: new Date().toISOString() });
-  if (eventName === "workflow_dispatch") return;
-  const manifestUrl = new URL("deployment.json", baseUrl);
+  const productionBase = requireBaseUrl(baseUrl);
+  const manifestUrl = new URL("deployment.json", productionBase);
   const response = await fetcher(cacheBusted(manifestUrl), { cache: "no-store" });
   if (response.status === 404) return;
   const published = await fetchJson(response, "Production deployment manifest");
   const current = buildManifest(published);
+  if (current.reportVersion === candidateVersion && current.commitSha === candidateSha.toLowerCase()) return;
   if (current.reportVersion === candidateVersion && current.commitSha !== candidateSha.toLowerCase()) {
     throw new Error(`Production already uses report version ${candidateVersion}; bump package.json before deploying a new commit.`);
+  }
+  if (compareVersions(candidateVersion, current.reportVersion) <= 0) {
+    throw new Error(`Report version ${candidateVersion} must be newer than production version ${current.reportVersion}.`);
   }
 }
 
@@ -101,25 +122,29 @@ function requireCacheHeader(response, expected, label) {
 export async function verifyProduction({ baseUrl, expectedVersion, expectedSha, fetcher = fetch }) {
   const normalizedSha = expectedSha.toLowerCase();
   buildManifest({ reportVersion: expectedVersion, commitSha: normalizedSha, builtAt: new Date().toISOString() });
+  const productionBase = requireBaseUrl(baseUrl);
 
-  const manifestResponse = await fetcher(cacheBusted(new URL("deployment.json", baseUrl)), { cache: "no-store" });
+  const manifestResponse = await fetcher(cacheBusted(new URL("deployment.json", productionBase)), { cache: "no-store" });
   requireCacheHeader(manifestResponse, ["no-cache", "no-store", "must-revalidate"], "deployment.json");
   const manifest = buildManifest(await fetchJson(manifestResponse, "Production deployment manifest"));
   if (manifest.reportVersion !== expectedVersion || manifest.commitSha !== normalizedSha) {
     throw new Error(`Production identity mismatch: expected ${expectedVersion}/${normalizedSha}, received ${manifest.reportVersion}/${manifest.commitSha}.`);
   }
 
-  const htmlResponse = await fetcher(cacheBusted(baseUrl), { cache: "no-store" });
+  const htmlResponse = await fetcher(cacheBusted(productionBase), { cache: "no-store" });
   if (!htmlResponse.ok) throw new Error(`Production HTML returned HTTP ${htmlResponse.status}.`);
   requireCacheHeader(htmlResponse, ["no-cache", "no-store", "must-revalidate"], "Production HTML");
   const html = await htmlResponse.text();
-  const basePath = new URL(baseUrl).pathname.replace(/\/$/, "");
+  const routePayloadResponse = await fetcher(cacheBusted(new URL("index.txt", productionBase)), { cache: "no-store" });
+  if (!routePayloadResponse.ok) throw new Error(`Production route payload returned HTTP ${routePayloadResponse.status}.`);
+  requireCacheHeader(routePayloadResponse, ["no-cache", "no-store", "must-revalidate"], "Production route payload");
+  const basePath = productionBase.pathname.replace(/\/$/, "");
   const assets = extractStaticAssetPaths(html, basePath);
   if (assets.length === 0) throw new Error("Production HTML references no hashed JS/CSS assets.");
 
   let javascript = "";
   for (const asset of assets) {
-    const assetResponse = await fetcher(cacheBusted(new URL(asset, baseUrl)), { cache: "no-store" });
+    const assetResponse = await fetcher(cacheBusted(new URL(asset, productionBase)), { cache: "no-store" });
     if (!assetResponse.ok) throw new Error(`Production asset ${asset} returned HTTP ${assetResponse.status}.`);
     requireCacheHeader(assetResponse, ["max-age=31536000", "immutable"], asset);
     if (asset.endsWith(".js")) javascript += await assetResponse.text();

@@ -19,7 +19,7 @@
 
 ## Cache Contract
 
-- HTML and `deployment.json` must return `Cache-Control: no-cache, no-store, must-revalidate`.
+- HTML, Next.js route payload `.txt` files, and `deployment.json` must return `Cache-Control: no-cache, no-store, must-revalidate`.
 - Content-hashed JS and CSS under `_next/static` must return `Cache-Control: public, max-age=31536000, immutable`.
 - Production verification must fetch HTML and assets with cache-busting query parameters and confirm every referenced JS/CSS asset returns HTTP 200.
 

@@ -48,7 +48,7 @@ describe("deployment manifest", () => {
     await expect(release.verifyStaticExport(output, "/assessments/ai-readiness")).rejects.toThrow(/missing/i);
   });
 
-  it("rejects a reused production version on a new push but permits recovery dispatch", async () => {
+  it("rejects reused or older versions while permitting recovery of the same release", async () => {
     const published = {
       reportVersion: "1.2.12",
       commitSha: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
@@ -69,6 +69,51 @@ describe("deployment manifest", () => {
       candidateSha: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
       eventName: "workflow_dispatch",
       fetcher,
+    })).rejects.toThrow(/bump/i);
+    await expect(release.checkProductionVersion({
+      baseUrl: "https://snowfox-ai.com/assessments/ai-readiness/",
+      candidateVersion: "1.2.11",
+      candidateSha: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      eventName: "push",
+      fetcher,
+    })).rejects.toThrow(/newer/i);
+    await expect(release.checkProductionVersion({
+      baseUrl: "https://snowfox-ai.com/assessments/ai-readiness/",
+      candidateVersion: "1.2.12",
+      candidateSha: published.commitSha,
+      eventName: "workflow_dispatch",
+      fetcher,
     })).resolves.toBeUndefined();
+  });
+
+  it("requires the production base URL to end in a slash", async () => {
+    expect(release).not.toBeNull();
+    await expect(release.checkProductionVersion({
+      baseUrl: "https://snowfox-ai.com/assessments/ai-readiness",
+      candidateVersion: "1.2.12",
+      candidateSha: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      eventName: "push",
+      fetcher: async () => new Response(null, { status: 404 }),
+    })).rejects.toThrow(/trailing slash/i);
+  });
+
+  it("verifies production HTML, route payload, manifest, and immutable assets", async () => {
+    const baseUrl = "https://snowfox-ai.com/assessments/ai-readiness/";
+    const commitSha = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+    const noCache = { "cache-control": "no-cache, no-store, must-revalidate" };
+    const immutable = { "cache-control": "public, max-age=31536000, immutable" };
+    const requested = [];
+    const fetcher = async input => {
+      const url = new URL(input);
+      requested.push(url.pathname);
+      if (url.pathname.endsWith("deployment.json")) return new Response(JSON.stringify({ reportVersion: "1.2.12", commitSha, builtAt: "2026-08-05T14:18:07.000Z" }), { status: 200, headers: noCache });
+      if (url.pathname.endsWith("index.txt")) return new Response("route payload", { status: 200, headers: noCache });
+      if (url.pathname.endsWith("app-def456.js")) return new Response("personalizado v1.2.12", { status: 200, headers: immutable });
+      if (url.pathname.endsWith("ai-readiness/")) return new Response('<script src="/assessments/ai-readiness/_next/static/chunks/app-def456.js"></script>', { status: 200, headers: noCache });
+      return new Response(null, { status: 404 });
+    };
+
+    await expect(release.verifyProduction({ baseUrl, expectedVersion: "1.2.12", expectedSha: commitSha, fetcher })).resolves.toMatchObject({ assets: 1 });
+    expect(requested).toContain("/assessments/ai-readiness/index.txt");
   });
 });

@@ -11,7 +11,7 @@
 2. Confirm `package.json` and `package-lock.json` contain the same semantic version.
 3. Confirm the report heading test expects the selected release version.
 
-The push-triggered workflow compares the candidate version with `/deployment.json` in production. A new commit cannot reuse the currently published version. `workflow_dispatch` may redeploy the same commit and version for recovery.
+The workflow compares the candidate version with `/deployment.json` in production. A new commit must use a newer version. `workflow_dispatch` may reuse a version only when redeploying the exact same commit for recovery.
 
 ## Local Verification
 
@@ -65,7 +65,7 @@ It verifies:
 - `deployment.json` contains the exact package version and commit SHA;
 - the published JavaScript contains the report heading and version;
 - all JS/CSS referenced by production HTML return HTTP 200;
-- HTML and manifest cannot remain stale in cache;
+- HTML, Next.js route payload `.txt` files, and the manifest cannot remain stale in cache;
 - hashed JS/CSS are cached as immutable assets.
 
 Finally, compare the aggregate report count and mtimes before and after deployment. Do not print names, emails, answers, or complete report JSON during routine release verification.
