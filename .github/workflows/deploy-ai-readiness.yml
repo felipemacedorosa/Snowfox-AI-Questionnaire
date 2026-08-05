@@ -5,9 +5,6 @@ on:
     branches:
       - master
       - main
-    paths-ignore:
-      - .github/workflows/deploy-ai-readiness.yml
-      - next.config.ts
   workflow_dispatch:
 
 permissions:
@@ -22,6 +19,7 @@ env:
   DEPLOY_PATH: /opt/snowfox-wordpress/html/assessments/ai-readiness
   REPORT_DATA_PATH: /opt/snowfox-wordpress/data/ai-readiness-reports
   WORDPRESS_PROJECT_PATH: /opt/snowfox-wordpress
+  PRODUCTION_URL: https://snowfox-ai.com/assessments/ai-readiness/
 
 jobs:
   deploy:
@@ -31,6 +29,8 @@ jobs:
     steps:
       - name: Check out source
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -47,11 +47,21 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Verify deployable report version
+        run: node scripts/deploymentManifest.mjs check-version "$PRODUCTION_URL" "$GITHUB_EVENT_NAME" "$GITHUB_SHA"
+
       - name: Run tests
         run: RUN_PHP_INTEGRATION=1 npm test
 
       - name: Build website export
         run: NEXT_PUBLIC_BASE_PATH="$BASE_PATH" npm run build
+
+      - name: Create and verify deployment manifest
+        run: |
+          built_at="$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+          npm run release:manifest -- "$GITHUB_SHA" "$built_at"
+          npm run release:verify-local
+          test -f out/.htaccess
 
       - name: Verify report endpoint export
         run: |
@@ -110,3 +120,6 @@ jobs:
           "
 
           echo "Published $GITHUB_SHA to $DEPLOY_PATH"
+
+      - name: Verify production identity and cache behavior
+        run: node scripts/deploymentManifest.mjs verify-production "$PRODUCTION_URL" "$GITHUB_SHA"

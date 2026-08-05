@@ -19,6 +19,7 @@ import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { getLevelLabel, LEVEL_META } from "@/app/data";
 import { useLanguage } from "@/app/LanguageContext";
 import { ReportSnapshot } from "@/app/reportSnapshot";
+import { REPORT_VERSION } from "@/app/reportVersion";
 import { QuarterlyRecommendation } from "@/app/resultInsights";
 import {
   OpportunityLibrarySection,
@@ -161,7 +162,7 @@ export function ResultsScreen({ snapshot, onRestart }: { snapshot: ReportSnapsho
                 <span>snowfox <b>AI</b></span>
               </div>
               <div className="results-hero-actions no-print">
-                <span>{t.results.reportDate(dateStr)}</span>
+                <span>{t.results.reportDate(dateStr, REPORT_VERSION)}</span>
                 <button type="button" className="hero-tool-button" onClick={() => window.print()} title={t.results.exportPdfTitle}>
                   <Download size={15} aria-hidden="true" /> <span>{t.results.exportPdf}</span>
                 </button>

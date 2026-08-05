@@ -116,7 +116,7 @@ const UI_PT = {
       viewResult: "Ver resultado",
     },
     results: {
-      reportDate: (date: string) => `Relatório personalizado · ${date}`,
+      reportDate: (date: string, version: string) => `Relatório personalizado · ${date} · v${version}`,
       exportPdf: "Exportar PDF",
       exportPdfTitle: "Exportar relatório em PDF",
       readingKicker: "Leitura de prontidão",
@@ -296,7 +296,7 @@ const UI_EN: typeof UI_PT = {
       viewResult: "View result",
     },
     results: {
-      reportDate: (date: string) => `Personalized report · ${date}`,
+      reportDate: (date: string, version: string) => `Personalized report · ${date} · v${version}`,
       exportPdf: "Export PDF",
       exportPdfTitle: "Export report as PDF",
       readingKicker: "Readiness reading",

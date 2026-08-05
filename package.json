@@ -1,10 +1,12 @@
 {
   "name": "snowfox-ai-questionnaire",
-  "version": "0.1.0",
+  "version": "1.2.12",
   "private": true,
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "release:manifest": "node scripts/deploymentManifest.mjs write out",
+    "release:verify-local": "node scripts/deploymentManifest.mjs verify-local out /assessments/ai-readiness",
     "start": "next start",
     "lint": "next lint",
     "test": "vitest run"
