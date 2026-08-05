@@ -16,16 +16,16 @@ const snapshot = buildReportSnapshot({
 });
 
 describe("participant validation", () => {
-  it("requires a usable name, email, and acknowledgement", () => {
-    expect(validateParticipant({ name: "", email: "x", storageAcknowledged: false })).toEqual({
+  it("requires a usable name and email", () => {
+    expect(validateParticipant({ name: "", email: "x" })).toEqual({
       name: "Informe seu nome.",
       email: "Informe um e-mail válido.",
-      storageAcknowledged: "Confirme o armazenamento para gerar o relatório.",
     });
   });
 
-  it("normalizes valid identity without adding fields", () => {
-    expect(normalizeParticipant({ name: "  Gabi Silva  ", email: "  GABI@EXAMPLE.COM ", storageAcknowledged: true })).toEqual({
+  it("adds the legacy acknowledgement when normalizing valid identity", () => {
+    expect(validateParticipant({ name: "Gabi Silva", email: "gabi@example.com" })).toEqual({});
+    expect(normalizeParticipant({ name: "  Gabi Silva  ", email: "  GABI@EXAMPLE.COM " })).toEqual({
       name: "Gabi Silva",
       email: "gabi@example.com",
       storageAcknowledged: true,
@@ -33,7 +33,7 @@ describe("participant validation", () => {
   });
 
   it("rejects email shapes that the PHP endpoint will reject", () => {
-    expect(validateParticipant({ name: "Gabi Silva", email: "a..b@example.com", storageAcknowledged: true })).toEqual({
+    expect(validateParticipant({ name: "Gabi Silva", email: "a..b@example.com" })).toEqual({
       email: "Informe um e-mail válido.",
     });
   });

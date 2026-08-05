@@ -263,13 +263,11 @@ img { display: block; max-width: 100%; }
 .report-identity-copy h1 { margin-top: 14px; color: var(--ink); font-family: 'Montserrat', sans-serif; font-size: 36px; font-weight: 700; line-height: 1.15; letter-spacing: 0; }
 .report-identity-copy p { max-width: 520px; margin-top: 16px; color: var(--muted); font-size: 17px; line-height: 1.65; }
 .report-identity-form { display: grid; gap: 18px; width: 100%; max-width: 620px; padding-top: 4px; }
-.report-identity-form > label:not(.report-storage-acknowledgement) { display: grid; gap: 7px; color: var(--ink-soft); font-size: 16px; font-weight: 600; }
+.report-identity-form > label { display: grid; gap: 7px; color: var(--ink-soft); font-size: 16px; font-weight: 600; }
 .report-identity-form input[type="text"], .report-identity-form input[type="email"] { width: 100%; min-height: 46px; padding: 0 13px; border: 1px solid var(--border); border-radius: 6px; outline: none; background: var(--surface); color: var(--ink); font-size: 17px; }
 .report-identity-form input[type="text"]:focus, .report-identity-form input[type="email"]:focus { border-color: var(--violet); box-shadow: 0 0 0 2px rgba(147,102,233,0.14); }
 .report-identity-form input:disabled { color: var(--muted); background: var(--bg-soft); opacity: 1; }
 .report-identity-form small[role="alert"] { color: var(--red); font-size: 14px; font-weight: 500; line-height: 1.45; }
-.report-storage-acknowledgement { display: grid; grid-template-columns: 18px minmax(0, 1fr); align-items: start; gap: 10px; color: var(--muted); font-size: 15px; font-weight: 400; line-height: 1.55; }
-.report-storage-acknowledgement input { width: 18px; height: 18px; margin-top: 2px; accent-color: var(--violet-strong); }
 .report-submit-error { padding: 11px 13px; border-left: 3px solid var(--amber); background: rgba(239,189,114,0.08); color: var(--ink-soft); font-size: 15px; line-height: 1.55; }
 .report-submit-button { width: fit-content; min-width: 238px; min-height: 48px; }
 

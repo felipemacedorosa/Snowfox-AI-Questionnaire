@@ -4,7 +4,6 @@ import { ParticipantIdentity, ReportSnapshot } from "./reportSnapshot";
 export interface ParticipantInput {
   name: string;
   email: string;
-  storageAcknowledged: boolean;
 }
 
 export type ParticipantValidationErrors = Partial<Record<keyof ParticipantInput, string>>;
@@ -24,7 +23,6 @@ export function validateParticipant(input: ParticipantInput): ParticipantValidat
     localPart.includes("..") ||
     !EMAIL_PATTERN.test(email)
   ) errors.email = "Informe um e-mail válido.";
-  if (!input.storageAcknowledged) errors.storageAcknowledged = "Confirme o armazenamento para gerar o relatório.";
   return errors;
 }
 

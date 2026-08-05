@@ -29,7 +29,6 @@ export function ReportIdentityGate({
   const { lang, t } = useLanguage();
   const [name, setName] = useState(pendingReport?.participant.name ?? "");
   const [email, setEmail] = useState(pendingReport?.participant.email ?? "");
-  const [storageAcknowledged, setStorageAcknowledged] = useState(pendingReport?.participant.storageAcknowledged ?? false);
   const [errors, setErrors] = useState<ParticipantValidationErrors>({});
   const locked = pendingReport !== null;
 
@@ -39,7 +38,7 @@ export function ReportIdentityGate({
       onRetry();
       return;
     }
-    const input: ParticipantInput = { name, email, storageAcknowledged };
+    const input: ParticipantInput = { name, email };
     const nextErrors = validateParticipant(input);
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length > 0) return;
@@ -51,9 +50,7 @@ export function ReportIdentityGate({
     if (lang === "pt") return errors[field];
     return field === "name"
       ? "Enter your name."
-      : field === "email"
-        ? "Enter a valid email address."
-        : "Confirm storage to generate the report.";
+      : "Enter a valid email address.";
   };
 
   return (
@@ -74,11 +71,6 @@ export function ReportIdentityGate({
           <input name="email" type="email" inputMode="email" autoComplete="email" maxLength={254} disabled={locked} value={email} onChange={event => setEmail(event.target.value)} aria-invalid={Boolean(errors.email)} />
           {fieldError("email") && <small role="alert">{fieldError("email")}</small>}
         </label>
-        <label className="report-storage-acknowledgement">
-          <input type="checkbox" checked={storageAcknowledged} disabled={locked} onChange={event => setStorageAcknowledged(event.target.checked)} />
-          <span>{t.results.identityAcknowledgement}</span>
-        </label>
-        {fieldError("storageAcknowledged") && <small role="alert">{fieldError("storageAcknowledged")}</small>}
         {errorMessage && <div className="report-submit-error" role="alert">{errorMessage}</div>}
         <button className="button-primary report-submit-button" type="submit" disabled={submitState === "saving"} aria-live="polite">
           {submitState === "saving"
