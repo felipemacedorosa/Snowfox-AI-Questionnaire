@@ -257,6 +257,11 @@ img { display: block; max-width: 100%; }
 .question-footer-actions { display: flex; align-items: center; gap: 9px; }
 .question-nav-button { min-height: 44px; }
 
+@media (min-width: 981px) {
+  .quiz-layout { width: calc(100% - 32px); max-width: none; margin-inline: 16px; grid-template-columns: 300px minmax(0, 1fr); gap: 28px; }
+  .question-card > * { width: min(100%, 980px); }
+}
+
 /* Report identity */
 .report-identity { display: grid; grid-template-columns: minmax(0, 0.82fr) minmax(320px, 1fr); align-items: start; gap: 56px; min-height: calc(100dvh - var(--nav-h)); padding-top: 72px; padding-bottom: 72px; }
 .report-identity-copy { max-width: 570px; }
@@ -350,6 +355,7 @@ img { display: block; max-width: 100%; }
 .roadmap-title { color: var(--paper-ink); font-size: 18px; font-weight: 600; }
 .roadmap-row-trigger > svg { color: var(--paper-muted); transition: transform 260ms cubic-bezier(.22,1,.36,1); }
 .roadmap-row.is-active .roadmap-row-trigger > svg { transform: rotate(180deg); color: var(--violet-strong); }
+.roadmap-activity-label { display: inline-block; margin-bottom: 10px; color: var(--violet-strong); font-size: 13px; font-weight: 600; line-height: 1.4; }
 .roadmap-row-detail { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; padding: 0 70px 22px 68px; }
 .roadmap-row-detail p { color: var(--paper-muted); font-size: 17px; line-height: 1.7; }
 .roadmap-row-detail strong { color: var(--paper-ink); }

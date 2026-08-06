@@ -1094,6 +1094,8 @@ export interface QuarterlyRecommendation {
   dependency: string;
   effort: string;
   successMetric: string;
+  /** True when the recommendation was selected from a weak question in the lowest-scoring pillar. */
+  questionLedActivity?: boolean;
 }
 
 interface QuarterlyPillarAction {
@@ -1310,7 +1312,6 @@ const PRIMARY_RECOMMENDATIONS: Record<PrimaryPriorityId, RawPrimaryPriority> = {
 };
 
 export function getPrimaryPriority({
-  answers,
   pillarScores,
   weakest,
   lang = DEFAULT_LANG,
@@ -1322,18 +1323,7 @@ export function getPrimaryPriority({
 }): PrimaryPriority {
   const values = pillarScores.map(pillar => pillar.score);
   const balancedAdvanced = values.every(score => score >= 75) && Math.max(...values) - Math.min(...values) <= 5;
-  let id: PrimaryPriorityId = "portfolio";
-
-  if (!balancedAdvanced) {
-    const scoreByPillar = Object.fromEntries(pillarScores.map(pillar => [pillar.id, pillar.score])) as Record<InsightPillarId, number>;
-    const needsAttention = (pillar: InsightPillarId) => (scoreByPillar[pillar] ?? 0) < 75;
-    const insights = selectResultInsights(answers, pillarScores, { min: 3, max: 6 }, lang);
-    const attention =
-      insights.find(insight => insight.type === "risco-critico" && needsAttention(insight.pillar)) ??
-      insights.find(insight => insight.priority <= 2 && needsAttention(insight.pillar)) ??
-      insights.find(insight => insight.pillar === weakest.id);
-    id = attention?.pillar ?? toPillarId(weakest.id);
-  }
+  const id: PrimaryPriorityId = balancedAdvanced ? "portfolio" : toPillarId(weakest.id);
 
   const raw = PRIMARY_RECOMMENDATIONS[id];
   return {

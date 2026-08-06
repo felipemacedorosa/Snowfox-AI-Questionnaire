@@ -51,6 +51,7 @@ function RoadmapDetailContent({ item }: { item: QuarterlyRecommendation }) {
   const { t } = useLanguage();
   return (
     <>
+      {item.questionLedActivity && <span className="roadmap-activity-label">{t.results.roadmapActivityLabel}</span>}
       <div className="roadmap-action-copy"><p>{item.action}</p><p><strong>{t.results.expectedOutcome}</strong> {item.outcome}.</p></div>
       <dl className="roadmap-action-meta">
         <div><dt>{t.results.suggestedOwner}</dt><dd>{item.ownerRole}</dd></div>
@@ -88,6 +89,14 @@ export function ResultsScreen({ snapshot, onRestart }: { snapshot: ReportSnapsho
   } = snapshot.report;
   const meta = LEVEL_META[result.level];
   const RecommendationIcon = RECOMMENDATION_ICONS[executiveSummary.priorityId];
+  const visibleOpportunityTracks = useMemo(() => {
+    const dataFoundationIsAlreadyActionable = quarterlyRecommendations.some(
+      item => item.questionLedActivity && item.priorityId === "dados",
+    );
+    return dataFoundationIsAlreadyActionable
+      ? opportunityTracks.filter(track => track.id !== "data-foundation")
+      : opportunityTracks;
+  }, [opportunityTracks, quarterlyRecommendations]);
   const dateStr = useMemo(
     () => new Intl.DateTimeFormat(lang === "en" ? "en-US" : "pt-BR", { day: "2-digit", month: "long", year: "numeric" }).format(new Date(snapshot.clientSubmittedAt)),
     [lang, snapshot.clientSubmittedAt]
@@ -211,7 +220,7 @@ export function ResultsScreen({ snapshot, onRestart }: { snapshot: ReportSnapsho
           </motion.section>
 
           <RiskViewSection signals={riskSignals} />
-          <OpportunityLibrarySection tracks={opportunityTracks} />
+          <OpportunityLibrarySection tracks={visibleOpportunityTracks} />
 
           <motion.section className="report-section roadmap-section" id="action-plan" {...revealMotion}>
             <div className="report-section-heading">

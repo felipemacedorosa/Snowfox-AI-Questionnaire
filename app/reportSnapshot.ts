@@ -28,6 +28,7 @@ import {
   PrimaryPriority,
   QuarterlyRecommendation,
 } from "./resultInsights";
+import { buildLowestPillarRoadmap } from "./roadmapActivities";
 import { DEFAULT_LANG, Lang } from "./i18n";
 
 export interface ParticipantIdentity {
@@ -88,8 +89,23 @@ export function buildReportSnapshot(input: BuildReportSnapshotInput): ReportSnap
   const strongest = pillarScores.reduce((current, item) => item.score > current.score ? item : current);
   const weakest = pillarScores.reduce((current, item) => item.score < current.score ? item : current);
   const primaryPriority = getPrimaryPriority({ answers, pillarScores, weakest, lang });
-  const executiveSummary = buildExecutiveSummary({ answers, pillarScores, result, strongest, weakest, lang });
-  const quarterlyRecommendations = buildQuarterlyRecommendations({ answers, pillarScores, result, strongest, weakest, lang });
+  const baseExecutiveSummary = buildExecutiveSummary({ answers, pillarScores, result, strongest, weakest, lang });
+  const criticalPath = getCriticalPath(answers, pillarScores, result, lang);
+  const questionLedRoadmap = primaryPriority.id === "portfolio"
+    ? null
+    : buildLowestPillarRoadmap(answers, weakest.id, lang);
+  const quarterlyRecommendations = questionLedRoadmap
+    ?? buildQuarterlyRecommendations({ answers, pillarScores, result, strongest, weakest, lang });
+  const executiveSummary = questionLedRoadmap ? {
+    ...baseExecutiveSummary,
+    recommendationTitle: questionLedRoadmap[0].title,
+    recommendationContext: questionLedRoadmap[0].focus,
+    immediateRecommendation: [
+      lang === "en"
+        ? `First-cycle outcome: ${questionLedRoadmap[0].outcome}.`
+        : `Resultado do primeiro ciclo: ${questionLedRoadmap[0].outcome}.`,
+    ],
+  } : baseExecutiveSummary;
 
   return deepFreeze({
     schemaVersion: 1,
@@ -109,7 +125,7 @@ export function buildReportSnapshot(input: BuildReportSnapshotInput): ReportSnap
       quarterlyRecommendations,
       evidence: buildQuestionEvidence(answers, lang),
       profile: getReadinessProfile(pillarScores, result, lang),
-      criticalPath: getCriticalPath(answers, pillarScores, result, lang),
+      criticalPath,
       nextLevel: getNextLevelTarget(result, lang),
       riskSignals: getRiskSignals(answers, pillarScores, lang),
       opportunityTracks: getOpportunityTracks(answers, pillarScores, lang),
