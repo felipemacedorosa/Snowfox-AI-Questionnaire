@@ -36,31 +36,45 @@ async function filesUnder(directory) {
 
 export function extractStaticAssetPaths(html, basePath) {
   const normalizedBase = `/${basePath.split("/").filter(Boolean).join("/")}`;
-  const references = [...html.matchAll(/(?:src|href)=["']([^"']+\.(?:js|css)(?:\?[^"']*)?)["']/gi)];
+  const references = [...html.matchAll(/((?:https?:\/\/[^"'\\\s?]+)?\/[^"'\\\s?]*_next\/static\/[^"'\\\s?]+\.(?:js|css))(\?[^"'\\\s]*)?/gi)];
   const assets = new Set();
-  for (const [, reference] of references) {
+  for (const [, assetPath, query = ""] of references) {
+    const reference = `${assetPath}${query}`;
     const pathname = new URL(reference, "https://snowfox.invalid/").pathname;
     const prefix = `${normalizedBase}/`;
-    if (!pathname.startsWith(prefix)) continue;
-    const relative = pathname.slice(prefix.length);
-    if (relative.startsWith("_next/static/") && /\.(?:js|css)$/i.test(relative)) assets.add(relative);
+    const relative = pathname.startsWith(prefix)
+      ? pathname.slice(prefix.length)
+      : pathname.startsWith("/_next/static/") ? pathname.slice(1) : "";
+    if (relative.startsWith("_next/static/") && /\.(?:js|css)$/i.test(relative)) assets.add(`${relative}${query}`);
   }
   return [...assets].sort();
 }
 
-export async function verifyStaticExport(outputDirectory, basePath) {
+function requireAssetReleaseQuery(assets, expectedVersion, label) {
+  const stale = assets.filter(asset => new URL(asset, "https://snowfox.invalid/").searchParams.get("v") !== expectedVersion);
+  if (stale.length > 0) {
+    throw new Error(`${label} has JS/CSS without the expected release query v=${expectedVersion}: ${stale.join(", ")}`);
+  }
+}
+
+export async function verifyStaticExport(outputDirectory, basePath, expectedVersion = REPORT_VERSION) {
   const files = await filesUnder(outputDirectory);
   const htmlFiles = files.filter(file => file.endsWith(".html"));
+  const routePayloadFiles = files.filter(file => file.endsWith(".txt"));
   if (htmlFiles.length === 0) throw new Error("Static export has no HTML files.");
   const assets = new Set();
-  for (const htmlFile of htmlFiles) {
-    const html = await readFile(htmlFile, "utf8");
-    for (const asset of extractStaticAssetPaths(html, basePath)) assets.add(asset);
+  for (const referenceFile of [...htmlFiles, ...routePayloadFiles]) {
+    const contents = await readFile(referenceFile, "utf8");
+    for (const asset of extractStaticAssetPaths(contents, basePath)) assets.add(asset);
   }
   if (assets.size === 0) throw new Error("Static export has no referenced JS/CSS assets.");
-  const missing = [...assets].filter(asset => !existsSync(path.join(outputDirectory, asset)));
+  requireAssetReleaseQuery([...assets], expectedVersion, "Static export");
+  const missing = [...assets].filter(asset => {
+    const pathname = new URL(asset, "https://snowfox.invalid/").pathname.replace(/^\//, "");
+    return !existsSync(path.join(outputDirectory, pathname));
+  });
   if (missing.length > 0) throw new Error(`Static export references missing assets: ${missing.join(", ")}`);
-  return { htmlFiles: htmlFiles.length, assets: assets.size };
+  return { htmlFiles: htmlFiles.length, routePayloadFiles: routePayloadFiles.length, assets: assets.size };
 }
 
 function cacheBusted(url) {
@@ -138,16 +152,21 @@ export async function verifyProduction({ baseUrl, expectedVersion, expectedSha, 
   const routePayloadResponse = await fetcher(cacheBusted(new URL("index.txt", productionBase)), { cache: "no-store" });
   if (!routePayloadResponse.ok) throw new Error(`Production route payload returned HTTP ${routePayloadResponse.status}.`);
   requireCacheHeader(routePayloadResponse, ["no-cache", "no-store", "must-revalidate"], "Production route payload");
+  const routePayload = await routePayloadResponse.text();
   const basePath = productionBase.pathname.replace(/\/$/, "");
-  const assets = extractStaticAssetPaths(html, basePath);
+  const assets = [...new Set([
+    ...extractStaticAssetPaths(html, basePath),
+    ...extractStaticAssetPaths(routePayload, basePath),
+  ])].sort();
   if (assets.length === 0) throw new Error("Production HTML references no hashed JS/CSS assets.");
+  requireAssetReleaseQuery(assets, expectedVersion, "Production output");
 
   let javascript = "";
   for (const asset of assets) {
     const assetResponse = await fetcher(cacheBusted(new URL(asset, productionBase)), { cache: "no-store" });
     if (!assetResponse.ok) throw new Error(`Production asset ${asset} returned HTTP ${assetResponse.status}.`);
     requireCacheHeader(assetResponse, ["max-age=31536000", "immutable"], asset);
-    if (asset.endsWith(".js")) javascript += await assetResponse.text();
+    if (new URL(asset, productionBase).pathname.endsWith(".js")) javascript += await assetResponse.text();
   }
   const hasReportHeading = javascript.includes("personalizado") || javascript.includes("Personalized report");
   if (!javascript.includes(expectedVersion) || !hasReportHeading) {

@@ -258,8 +258,8 @@ img { display: block; max-width: 100%; }
 .question-nav-button { min-height: 44px; }
 
 @media (min-width: 981px) {
-  .quiz-layout { width: calc(100% - 32px); max-width: none; margin-inline: 16px; grid-template-columns: 300px minmax(0, 1fr); gap: 28px; }
-  .question-card > * { width: min(100%, 980px); }
+  .quiz-layout { width: min(calc(100% - 64px), 1680px); margin-inline: auto; grid-template-columns: 300px minmax(0, 1fr); gap: 32px; }
+  .question-card > * { width: min(100%, 900px); }
 }
 
 /* Report identity */

@@ -12,7 +12,7 @@ afterEach(async () => {
 
 describe("deployment manifest", () => {
   it("ships a release verification module", () => {
-    expect(release.REPORT_VERSION).toBe("1.2.14");
+    expect(release.REPORT_VERSION).toBe("1.2.15");
   });
 
   it("validates and writes exact deployment identity", async () => {
@@ -36,7 +36,8 @@ describe("deployment manifest", () => {
     temporaryDirectories.push(output);
     const assetDirectory = path.join(output, "_next/static/chunks");
     await mkdir(assetDirectory, { recursive: true });
-    await writeFile(path.join(output, "index.html"), '<link rel="stylesheet" href="/assessments/ai-readiness/_next/static/chunks/site-abc123.css"><script src="/assessments/ai-readiness/_next/static/chunks/app-def456.js"></script>');
+    await writeFile(path.join(output, "index.html"), '<link rel="stylesheet" href="/assessments/ai-readiness/_next/static/chunks/site-abc123.css?v=1.2.15"><script src="/assessments/ai-readiness/_next/static/chunks/app-def456.js?v=1.2.15"></script>');
+    await writeFile(path.join(output, "index.txt"), '"/_next/static/chunks/app-def456.js?v=1.2.15"');
     await writeFile(path.join(assetDirectory, "site-abc123.css"), "body{}\n");
     await writeFile(path.join(assetDirectory, "app-def456.js"), "console.log('v1.2.12')\n");
 
@@ -46,6 +47,20 @@ describe("deployment manifest", () => {
     });
     await rm(path.join(assetDirectory, "app-def456.js"));
     await expect(release.verifyStaticExport(output, "/assessments/ai-readiness")).rejects.toThrow(/missing/i);
+  });
+
+  it("rejects unversioned or incorrectly versioned static asset references", async () => {
+    const output = await mkdtemp(path.join(tmpdir(), "snowfox-export-version-"));
+    temporaryDirectories.push(output);
+    const assetDirectory = path.join(output, "_next/static/chunks");
+    await mkdir(assetDirectory, { recursive: true });
+    await writeFile(path.join(assetDirectory, "app.js"), "console.log('app')\n");
+    await writeFile(path.join(output, "index.html"), '<script src="/assessments/ai-readiness/_next/static/chunks/app.js"></script>');
+
+    await expect(release.verifyStaticExport(output, "/assessments/ai-readiness")).rejects.toThrow(/release query/i);
+
+    await writeFile(path.join(output, "index.html"), '<script src="/assessments/ai-readiness/_next/static/chunks/app.js?v=0.0.1"></script>');
+    await expect(release.verifyStaticExport(output, "/assessments/ai-readiness")).rejects.toThrow(/release query/i);
   });
 
   it("rejects reused or older versions while permitting recovery of the same release", async () => {
@@ -105,15 +120,33 @@ describe("deployment manifest", () => {
     const requested = [];
     const fetcher = async input => {
       const url = new URL(input);
-      requested.push(url.pathname);
+      requested.push(url);
       if (url.pathname.endsWith("deployment.json")) return new Response(JSON.stringify({ reportVersion: "1.2.12", commitSha, builtAt: "2026-08-05T14:18:07.000Z" }), { status: 200, headers: noCache });
-      if (url.pathname.endsWith("index.txt")) return new Response("route payload", { status: 200, headers: noCache });
+      if (url.pathname.endsWith("index.txt")) return new Response('"/_next/static/chunks/app-def456.js?v=1.2.12"', { status: 200, headers: noCache });
       if (url.pathname.endsWith("app-def456.js")) return new Response("personalizado v1.2.12", { status: 200, headers: immutable });
-      if (url.pathname.endsWith("ai-readiness/")) return new Response('<script src="/assessments/ai-readiness/_next/static/chunks/app-def456.js"></script>', { status: 200, headers: noCache });
+      if (url.pathname.endsWith("ai-readiness/")) return new Response('<script src="/assessments/ai-readiness/_next/static/chunks/app-def456.js?v=1.2.12"></script>', { status: 200, headers: noCache });
       return new Response(null, { status: 404 });
     };
 
     await expect(release.verifyProduction({ baseUrl, expectedVersion: "1.2.12", expectedSha: commitSha, fetcher })).resolves.toMatchObject({ assets: 1 });
-    expect(requested).toContain("/assessments/ai-readiness/index.txt");
+    expect(requested.some(url => url.pathname === "/assessments/ai-readiness/index.txt")).toBe(true);
+    const assetRequest = requested.find(url => url.pathname.endsWith("app-def456.js"));
+    expect(assetRequest?.searchParams.get("v")).toBe("1.2.12");
+    expect(assetRequest?.searchParams.has("release_check")).toBe(true);
+  });
+
+  it("rejects production HTML with a stale static asset release query", async () => {
+    const baseUrl = "https://snowfox-ai.com/assessments/ai-readiness/";
+    const commitSha = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+    const noCache = { "cache-control": "no-cache, no-store, must-revalidate" };
+    const fetcher = async input => {
+      const url = new URL(input);
+      if (url.pathname.endsWith("deployment.json")) return new Response(JSON.stringify({ reportVersion: "1.2.12", commitSha, builtAt: "2026-08-05T14:18:07.000Z" }), { status: 200, headers: noCache });
+      if (url.pathname.endsWith("index.txt")) return new Response("route payload", { status: 200, headers: noCache });
+      if (url.pathname.endsWith("ai-readiness/")) return new Response('<script src="/assessments/ai-readiness/_next/static/chunks/app.js?v=1.2.11"></script>', { status: 200, headers: noCache });
+      return new Response(null, { status: 404 });
+    };
+
+    await expect(release.verifyProduction({ baseUrl, expectedVersion: "1.2.12", expectedSha: commitSha, fetcher })).rejects.toThrow(/release query/i);
   });
 });
