@@ -4,15 +4,15 @@ import { UI } from "./i18n";
 import { REPORT_VERSION } from "./reportVersion";
 
 describe("report version", () => {
-  it("uses v1.2.15 in both personalized report headings", () => {
-    expect(packageJson.version).toBe("1.2.15");
+  it("uses v1.2.16 in both personalized report headings", () => {
+    expect(packageJson.version).toBe("1.2.16");
     expect(packageJson.version).toMatch(/^\d+\.\d+\.\d+$/);
     expect(REPORT_VERSION).toBe(packageJson.version);
     expect(UI.pt.results.reportDate("05 de agosto de 2026", REPORT_VERSION)).toBe(
-      "Relatório personalizado · 05 de agosto de 2026 · v1.2.15"
+      "Relatório personalizado · 05 de agosto de 2026 · v1.2.16"
     );
     expect(UI.en.results.reportDate("August 5, 2026", REPORT_VERSION)).toBe(
-      "Personalized report · August 5, 2026 · v1.2.15"
+      "Personalized report · August 5, 2026 · v1.2.16"
     );
   });
 });
