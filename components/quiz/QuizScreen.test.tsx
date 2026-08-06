@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 describe("desktop questionnaire layout", () => {
-  it("anchors the rail left while keeping the panel and form constrained", () => {
+  it("anchors the rail left while keeping the panel constrained and the form full width", () => {
     const css = readFileSync(new URL("../../app/globals.css", import.meta.url), "utf8");
     const desktopRules = css.match(/@media \(min-width: 981px\) \{([\s\S]*?)\n\}/)?.[1] ?? "";
 
@@ -14,6 +14,6 @@ describe("desktop questionnaire layout", () => {
     expect(desktopRules).toContain("width: min(100%, 1200px)");
     expect(desktopRules).toContain("justify-self: center");
     expect(desktopRules).toContain(".question-card > *");
-    expect(desktopRules).toContain("width: min(100%, 900px)");
+    expect(desktopRules).toContain("width: 100%");
   });
 });
