@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+require_once __DIR__ . '/_reportSheet.php';
+
 const MAX_REPORT_BYTES = 262144;
 const REPORT_KEYS = [
     'overallScore',
@@ -92,6 +94,17 @@ function valid_answer_value(mixed $value): bool
         }
     }
     return true;
+}
+
+function sync_saved_report(array $saved, string $reportDir): void
+{
+    try {
+        sync_report_to_sheet($saved, $reportDir);
+    } catch (Throwable) {
+        $submissionId = is_string($saved['submissionId'] ?? null) ? $saved['submissionId'] : 'unknown';
+        error_log('AI readiness Sheets sync failed for submission ' . $submissionId);
+        reject_request(503, 'sheet_sync_unavailable', 'O relatório foi salvo, mas a planilha não pôde ser atualizada. Tente novamente.');
+    }
 }
 
 function validate_payload(array $payload): void
@@ -207,6 +220,7 @@ try {
         if (!is_array($existing) || !isset($existing['payloadHash']) || !hash_equals((string) $existing['payloadHash'], $payloadHash)) {
             reject_request(409, 'submission_conflict', 'Identificador já utilizado para outro relatório.');
         }
+        sync_saved_report($existing, $reportDir);
         respond(200, [
             'submissionId' => $submissionId,
             'receivedAt' => $existing['receivedAt'],
@@ -235,6 +249,7 @@ try {
     flock($lock, LOCK_UN);
     fclose($lock);
     @unlink($lockPath);
+    sync_saved_report($saved, $reportDir);
     respond(201, ['submissionId' => $submissionId, 'receivedAt' => $receivedAt, 'payloadHash' => $payloadHash]);
 } catch (JsonException) {
     reject_request(400, 'invalid_json', 'JSON inválido.');

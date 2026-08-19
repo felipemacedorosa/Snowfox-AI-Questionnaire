@@ -12,7 +12,7 @@ afterEach(async () => {
 
 describe("deployment manifest", () => {
   it("ships a release verification module", () => {
-    expect(release.REPORT_VERSION).toBe("1.2.17");
+    expect(release.REPORT_VERSION).toBe("1.2.18");
   });
 
   it("validates and writes exact deployment identity", async () => {
@@ -36,8 +36,8 @@ describe("deployment manifest", () => {
     temporaryDirectories.push(output);
     const assetDirectory = path.join(output, "_next/static/chunks");
     await mkdir(assetDirectory, { recursive: true });
-    await writeFile(path.join(output, "index.html"), '<link rel="stylesheet" href="/assessments/ai-readiness/_next/static/chunks/site-abc123.css?v=1.2.17"><script src="/assessments/ai-readiness/_next/static/chunks/app-def456.js?v=1.2.17"></script>');
-    await writeFile(path.join(output, "index.txt"), '"/_next/static/chunks/app-def456.js?v=1.2.17"');
+    await writeFile(path.join(output, "index.html"), '<link rel="stylesheet" href="/assessments/ai-readiness/_next/static/chunks/site-abc123.css?v=1.2.18"><script src="/assessments/ai-readiness/_next/static/chunks/app-def456.js?v=1.2.18"></script>');
+    await writeFile(path.join(output, "index.txt"), '"/_next/static/chunks/app-def456.js?v=1.2.18"');
     await writeFile(path.join(assetDirectory, "site-abc123.css"), "body{}\n");
     await writeFile(path.join(assetDirectory, "app-def456.js"), "console.log('v1.2.12')\n");
 

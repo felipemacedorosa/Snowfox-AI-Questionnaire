@@ -1,5 +1,5 @@
 import { existsSync } from "node:fs";
-import { chmod, mkdtemp, readFile, readdir, rm, unlink } from "node:fs/promises";
+import { chmod, mkdtemp, readFile, readdir, rm, unlink, writeFile } from "node:fs/promises";
 import net from "node:net";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -8,9 +8,11 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { buildReportSnapshot } from "../app/reportSnapshot";
 
 const endpointPath = path.join(process.cwd(), "public/api/reports.php");
+const sheetHelperPath = path.join(process.cwd(), "public/api/_reportSheet.php");
 
 it("ships the report persistence endpoint", () => {
   expect(existsSync(endpointPath)).toBe(true);
+  expect(existsSync(sheetHelperPath)).toBe(true);
 });
 
 const describePhp = process.env.RUN_PHP_INTEGRATION === "1" ? describe : describe.skip;
@@ -93,6 +95,17 @@ describePhp("reports.php", () => {
     expect(second.status).toBe(200);
     expect(await second.json()).toEqual(firstReceipt);
     expect((await readdir(reportDir)).filter(file => file.endsWith(".json"))).toHaveLength(1);
+  });
+
+  it("keeps the saved report available when a configured Sheet sync fails", async () => {
+    const first = await post(snapshot);
+    expect(first.status).toBe(201);
+    await writeFile(path.join(reportDir, ".google-service-account"), "{}", { mode: 0o400 });
+
+    const retry = await post(snapshot);
+    expect(retry.status).toBe(503);
+    await expect(retry.json()).resolves.toMatchObject({ code: "sheet_sync_unavailable" });
+    expect((await readdir(reportDir)).filter(file => file.endsWith(".json"))).toEqual([`${snapshot.submissionId}.json`]);
   });
 
   it("rejects changed content that reuses a submission id", async () => {
