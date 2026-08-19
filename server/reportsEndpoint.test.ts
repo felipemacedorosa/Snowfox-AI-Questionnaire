@@ -39,9 +39,9 @@ describePhp("reports.php", () => {
     });
   });
 
-  const post = (body: unknown, requestOrigin = origin) => fetch(`${origin}/api/reports.php`, {
+  const post = (body: unknown, requestOrigin = origin, referer?: string) => fetch(`${origin}/api/reports.php`, {
     method: "POST",
-    headers: { "content-type": "application/json", origin: requestOrigin },
+    headers: { "content-type": "application/json", origin: requestOrigin, ...(referer ? { referer } : {}) },
     body: JSON.stringify(body),
   });
 
@@ -106,6 +106,23 @@ describePhp("reports.php", () => {
     expect(retry.status).toBe(503);
     await expect(retry.json()).resolves.toMatchObject({ code: "sheet_sync_unavailable" });
     expect((await readdir(reportDir)).filter(file => file.endsWith(".json"))).toEqual([`${snapshot.submissionId}.json`]);
+  });
+
+  it("stores supported UTM attribution without unrelated query parameters", async () => {
+    const sourced = { ...snapshot, submissionId: "94e73f7a-6a5c-44a5-bad7-0aa6ed10e315" };
+    const sourceUrl = `${origin}/?utm_source=linkedin&utm_medium=social&utm_campaign=readiness&utm_content=post-assess-033&utm_term=governanca&private=discard`;
+    const response = await post(sourced, origin, sourceUrl);
+    expect(response.status).toBe(201);
+
+    const saved = JSON.parse(await readFile(path.join(reportDir, `${sourced.submissionId}.json`), "utf8"));
+    expect(saved.source).toEqual({
+      url: `${origin}/?utm_source=linkedin&utm_medium=social&utm_campaign=readiness&utm_content=post-assess-033&utm_term=governanca`,
+      utmSource: "linkedin",
+      utmMedium: "social",
+      utmCampaign: "readiness",
+      utmContent: "post-assess-033",
+      utmTerm: "governanca",
+    });
   });
 
   it("rejects changed content that reuses a submission id", async () => {

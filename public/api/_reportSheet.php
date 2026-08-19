@@ -108,6 +108,7 @@ function report_sheet_row(array $saved): array
     $weakest = is_array($report['weakest'] ?? null) ? $report['weakest'] : [];
     $result = is_array($report['result'] ?? null) ? $report['result'] : [];
     $priority = is_array($report['primaryPriority'] ?? null) ? $report['primaryPriority'] : [];
+    $source = is_array($saved['source'] ?? null) ? $saved['source'] : [];
     $pillarScores = [];
     foreach (is_array($report['pillarScores'] ?? null) ? $report['pillarScores'] : [] as $pillar) {
         if (is_array($pillar) && is_string($pillar['id'] ?? null)) {
@@ -135,6 +136,12 @@ function report_sheet_row(array $saved): array
         report_sheet_value($pillarScores['governanca'] ?? ''),
         report_sheet_value($pillarScores['tecnologia'] ?? ''),
         report_sheet_value($saved['assessmentVersion'] ?? ''),
+        report_sheet_value($source['url'] ?? ''),
+        report_sheet_value($source['utmSource'] ?? ''),
+        report_sheet_value($source['utmMedium'] ?? ''),
+        report_sheet_value($source['utmCampaign'] ?? ''),
+        report_sheet_value($source['utmContent'] ?? ''),
+        report_sheet_value($source['utmTerm'] ?? ''),
     ];
 }
 
@@ -165,7 +172,7 @@ function sync_report_to_sheet(array $saved, string $reportDir): void
         }
     }
 
-    $appendRange = rawurlencode("'" . REPORT_SHEET_TAB . "'!A:S");
+    $appendRange = rawurlencode("'" . REPORT_SHEET_TAB . "'!A:Y");
     $appendBody = json_encode(['majorDimension' => 'ROWS', 'values' => [report_sheet_row($saved)]], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
     $appendResponse = report_sheet_http('POST', $baseUrl . $appendRange . ':append?valueInputOption=RAW&insertDataOption=INSERT_ROWS', $headers, $appendBody);
     if ($appendResponse['status'] !== 200) {

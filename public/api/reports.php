@@ -96,6 +96,59 @@ function valid_answer_value(mixed $value): bool
     return true;
 }
 
+function source_value(array $query, string $key): string
+{
+    $value = $query[$key] ?? '';
+    return is_string($value) ? substr($value, 0, 500) : '';
+}
+
+function extract_submission_source(string $expectedHost): array
+{
+    $empty = [
+        'url' => '',
+        'utmSource' => '',
+        'utmMedium' => '',
+        'utmCampaign' => '',
+        'utmContent' => '',
+        'utmTerm' => '',
+    ];
+    $referer = $_SERVER['HTTP_REFERER'] ?? '';
+    if (!is_string($referer) || $referer === '' || strlen($referer) > 4096) {
+        return $empty;
+    }
+
+    $parts = parse_url($referer);
+    $refererHost = is_array($parts) && is_string($parts['host'] ?? null) ? strtolower($parts['host']) : '';
+    $scheme = is_array($parts) && is_string($parts['scheme'] ?? null) ? strtolower($parts['scheme']) : '';
+    if ($refererHost === '' || !hash_equals($expectedHost, $refererHost) || !in_array($scheme, ['http', 'https'], true)) {
+        return $empty;
+    }
+
+    $query = [];
+    parse_str(is_string($parts['query'] ?? null) ? $parts['query'] : '', $query);
+    $source = [
+        'utmSource' => source_value($query, 'utm_source'),
+        'utmMedium' => source_value($query, 'utm_medium'),
+        'utmCampaign' => source_value($query, 'utm_campaign'),
+        'utmContent' => source_value($query, 'utm_content'),
+        'utmTerm' => source_value($query, 'utm_term'),
+    ];
+    $sourceQuery = array_filter([
+        'utm_source' => $source['utmSource'],
+        'utm_medium' => $source['utmMedium'],
+        'utm_campaign' => $source['utmCampaign'],
+        'utm_content' => $source['utmContent'],
+        'utm_term' => $source['utmTerm'],
+    ], static fn (string $value): bool => $value !== '');
+    $port = isset($parts['port']) && is_int($parts['port']) ? ':' . $parts['port'] : '';
+    $path = is_string($parts['path'] ?? null) && str_starts_with($parts['path'], '/') ? substr($parts['path'], 0, 1024) : '/';
+    $source['url'] = $scheme . '://' . $refererHost . $port . $path;
+    if ($sourceQuery !== []) {
+        $source['url'] .= '?' . http_build_query($sourceQuery, '', '&', PHP_QUERY_RFC3986);
+    }
+    return ['url' => $source['url'], ...$source];
+}
+
 function sync_saved_report(array $saved, string $reportDir): void
 {
     try {
@@ -230,6 +283,7 @@ try {
 
     $receivedAt = (new DateTimeImmutable('now', new DateTimeZone('UTC')))->format(DateTimeInterface::ATOM);
     $saved = $payload;
+    $saved['source'] = extract_submission_source($host);
     $saved['receivedAt'] = $receivedAt;
     $saved['payloadHash'] = $payloadHash;
     $encoded = json_encode($saved, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT | JSON_THROW_ON_ERROR) . PHP_EOL;
