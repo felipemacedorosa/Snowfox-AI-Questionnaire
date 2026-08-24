@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { Navbar, type AppScreen, type SaveState } from "@/components/Navbar";
 import { QuizScreen } from "@/components/quiz/QuizScreen";
@@ -22,6 +22,9 @@ import { buildStrategyGapTestAnswers } from "./devShortcuts";
 
 const STORAGE_KEY = "snowfox-ai-assessment-v1";
 
+// Not a server code: the browser refused to persist the draft locally.
+const LOCAL_SAVE_ERROR = "__local_save__";
+
 function clampSection(section: number) {
   return Math.min(Math.max(Math.round(section), 0), SECTIONS.length - 1);
 }
@@ -36,7 +39,7 @@ export default function Home() {
   const [pendingReport, setPendingReport] = useState<ReportSnapshot | null>(null);
   const [reportReceipt, setReportReceipt] = useState<ReportSubmissionReceipt | null>(null);
   const [reportSubmitState, setReportSubmitState] = useState<ReportSubmitState>("idle");
-  const [reportSubmitError, setReportSubmitError] = useState<string | null>(null);
+  const [reportSubmitErrorCode, setReportSubmitErrorCode] = useState<string | null>(null);
   const activeSubmissionId = useRef<string | null>(null);
   const resumedPendingReport = useRef(false);
   const prefersReducedMotion = useReducedMotion();
@@ -76,6 +79,29 @@ export default function Home() {
     setScreen("results");
   }, []);
 
+  // The saved snapshot resolves every bilingual string at submit time, so a
+  // report captured in Portuguese would stay Portuguese after switching to
+  // English. Rebuild it for display only: buildReportSnapshot is deterministic
+  // given the same answers, id and timestamp, so this changes the language and
+  // nothing else. pendingReport itself is never reassigned -- it is the record
+  // of what was actually submitted and hashed.
+  const displayReport = useMemo(() => {
+    if (!pendingReport) return null;
+    return buildReportSnapshot({
+      answers: pendingReport.answers,
+      participant: pendingReport.participant,
+      submissionId: pendingReport.submissionId,
+      clientSubmittedAt: pendingReport.clientSubmittedAt,
+      lang,
+    });
+  }, [pendingReport, lang]);
+
+  const reportSubmitError = reportSubmitErrorCode === null
+    ? null
+    : reportSubmitErrorCode === LOCAL_SAVE_ERROR
+      ? t.results.identityLocalSaveError
+      : t.results.submitErrors[reportSubmitErrorCode] ?? t.results.identitySubmitError;
+
   const buildDraft = useCallback((overrides: Partial<AssessmentDraftState> = {}): AssessmentDraftV2 => buildAssessmentDraft({
     screen,
     resumeScreen,
@@ -111,11 +137,11 @@ export default function Home() {
 
   const saveReport = useCallback(async (snapshot: ReportSnapshot) => {
     setReportSubmitState("saving");
-    setReportSubmitError(null);
+    setReportSubmitErrorCode(null);
 
     const pendingDraft = buildDraft({ pendingReport: snapshot, reportReceipt: null });
     if (!persistDraft(pendingDraft)) {
-      setReportSubmitError(t.results.identityLocalSaveError);
+      setReportSubmitErrorCode(LOCAL_SAVE_ERROR);
       setReportSubmitState("failed");
       return;
     }
@@ -128,9 +154,7 @@ export default function Home() {
       setReportSubmitState("idle");
     } catch (error) {
       if (activeSubmissionId.current !== snapshot.submissionId) return;
-      const message = error instanceof ReportSubmissionError
-        ? error.message
-        : t.results.identitySubmitError;
+      const code = error instanceof ReportSubmissionError ? error.code : "unknown_error";
       if (getReportSubmissionRecovery(error) === "edit") {
         activeSubmissionId.current = null;
         resumedPendingReport.current = false;
@@ -138,10 +162,10 @@ export default function Home() {
         setReportReceipt(null);
         persistDraft(buildDraft({ pendingReport: null, reportReceipt: null }));
       }
-      setReportSubmitError(message);
+      setReportSubmitErrorCode(code);
       setReportSubmitState("failed");
     }
-  }, [buildDraft, persistDraft, t.results.identityLocalSaveError, t.results.identitySubmitError]);
+  }, [buildDraft, persistDraft]);
 
   useEffect(() => {
     if (!hydrated || !pendingReport || reportReceipt || reportSubmitState !== "idle" || resumedPendingReport.current) return;
@@ -184,7 +208,7 @@ export default function Home() {
     setPendingReport(null);
     setReportReceipt(null);
     setReportSubmitState("idle");
-    setReportSubmitError(null);
+    setReportSubmitErrorCode(null);
     setAnswers(previous => {
       const next = clearDependentAnswers(qid, previous);
       if (value === -1) {
@@ -204,7 +228,7 @@ export default function Home() {
     setPendingReport(null);
     setReportReceipt(null);
     setReportSubmitState("idle");
-    setReportSubmitError(null);
+    setReportSubmitErrorCode(null);
     setSection(0);
     try {
       window.localStorage.removeItem(STORAGE_KEY);
@@ -304,8 +328,8 @@ export default function Home() {
               />
             )}
 
-            {screen === "results" && pendingReport && reportReceipt && (
-              <ResultsScreen snapshot={pendingReport} onRestart={restart} />
+            {screen === "results" && displayReport && reportReceipt && (
+              <ResultsScreen snapshot={displayReport} onRestart={restart} />
             )}
           </motion.div>
         </AnimatePresence>

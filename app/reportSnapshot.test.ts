@@ -112,3 +112,69 @@ describe("buildReportSnapshot", () => {
     expect(snapshot.report.executiveSummary.immediateRecommendation.join(" ")).not.toContain("primeiro piloto");
   });
 });
+
+describe("report language", () => {
+  // The saved snapshot resolves bilingual content at submit time. The results
+  // screen rebuilds it in the reader's language, so the same answers and id
+  // must produce the same report with only the strings swapped.
+  const input = {
+    answers: { dados_q1: 2, est_q1: 3, est_q1b: 2, tec_q1: 1, tec_q1b: 2 },
+    participant: {
+      name: "Teste Interno Snowfox",
+      email: "teste-interno@snowfox.ai",
+      companyName: "Snowfox AI",
+      jobTitle: "Diretor de Operações",
+      storageAcknowledged: true as const,
+    },
+    submissionId: "4b4d9728-6f1d-4f9d-b3fc-ff824d856e25",
+    clientSubmittedAt: "2026-08-04T20:00:00.000Z",
+  };
+
+  it("renders pillar titles in the requested language", () => {
+    const pt = buildReportSnapshot({ ...input, lang: "pt" });
+    const en = buildReportSnapshot({ ...input, lang: "en" });
+
+    expect(pt.report.pillarScores.map(p => p.title)).toContain("Dados");
+    expect(en.report.pillarScores.map(p => p.title)).toContain("Data");
+    expect(en.report.pillarScores.map(p => p.title)).not.toContain("Dados");
+  });
+
+  it("keeps scores and identity identical across languages", () => {
+    const pt = buildReportSnapshot({ ...input, lang: "pt" });
+    const en = buildReportSnapshot({ ...input, lang: "en" });
+
+    expect(en.report.overallScore).toBe(pt.report.overallScore);
+    expect(en.submissionId).toBe(pt.submissionId);
+    expect(en.answers).toEqual(pt.answers);
+    expect(en.report.pillarScores.map(p => p.score)).toEqual(pt.report.pillarScores.map(p => p.score));
+    expect(en.report.weakest.id).toBe(pt.report.weakest.id);
+  });
+
+  it("leaves no Portuguese in the English report body", () => {
+    const en = buildReportSnapshot({ ...input, lang: "en" });
+    const skip = new Set([
+      // Respondent-supplied, stored verbatim in whatever they typed.
+      "snapshot.participant",
+      // result.level is an internal identifier, not display text: data.ts keys
+      // LEVEL_META/LEVEL_LABEL off it and _reportSheet.php writes it to the
+      // Sheet as a stable value. ResultsScreen renders getLevelLabel(level).
+      "snapshot.report.result.level",
+    ]);
+
+    const found: string[] = [];
+    const walk = (value: unknown, path: string): void => {
+      if ([...skip].some(prefix => path === prefix || path.startsWith(`${prefix}.`))) return;
+      if (typeof value === "string") {
+        if (/[ãõçáâàéêíóôú]/i.test(value)) found.push(`${path} => ${value}`);
+        return;
+      }
+      if (Array.isArray(value)) return value.forEach((item, i) => walk(item, `${path}[${i}]`));
+      if (value && typeof value === "object") {
+        return Object.entries(value).forEach(([key, item]) => walk(item, `${path}.${key}`));
+      }
+    };
+    walk(en, "snapshot");
+
+    expect(found).toEqual([]);
+  });
+});
