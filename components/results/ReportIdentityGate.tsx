@@ -29,6 +29,8 @@ export function ReportIdentityGate({
   const { lang, t } = useLanguage();
   const [name, setName] = useState(pendingReport?.participant.name ?? "");
   const [email, setEmail] = useState(pendingReport?.participant.email ?? "");
+  const [companyName, setCompanyName] = useState(pendingReport?.participant.companyName ?? "");
+  const [jobTitle, setJobTitle] = useState(pendingReport?.participant.jobTitle ?? "");
   const [errors, setErrors] = useState<ParticipantValidationErrors>({});
   const locked = pendingReport !== null;
 
@@ -38,7 +40,7 @@ export function ReportIdentityGate({
       onRetry();
       return;
     }
-    const input: ParticipantInput = { name, email };
+    const input: ParticipantInput = { name, email, companyName, jobTitle };
     const nextErrors = validateParticipant(input);
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length > 0) return;
@@ -48,9 +50,13 @@ export function ReportIdentityGate({
   const fieldError = (field: keyof ParticipantValidationErrors) => {
     if (!errors[field]) return null;
     if (lang === "pt") return errors[field];
-    return field === "name"
-      ? "Enter your name."
-      : "Enter a valid email address.";
+    const english: Record<keyof ParticipantValidationErrors, string> = {
+      name: "Enter your name.",
+      email: "Enter a valid email address.",
+      companyName: "Enter your company name.",
+      jobTitle: "Enter your job title.",
+    };
+    return english[field];
   };
 
   return (
@@ -70,6 +76,16 @@ export function ReportIdentityGate({
           <span>{t.results.identityEmail}</span>
           <input name="email" type="email" inputMode="email" autoComplete="email" maxLength={254} disabled={locked} value={email} onChange={event => setEmail(event.target.value)} aria-invalid={Boolean(errors.email)} />
           {fieldError("email") && <small role="alert">{fieldError("email")}</small>}
+        </label>
+        <label>
+          <span>{t.results.identityCompany}</span>
+          <input name="companyName" type="text" autoComplete="organization" maxLength={120} disabled={locked} value={companyName} onChange={event => setCompanyName(event.target.value)} aria-invalid={Boolean(errors.companyName)} />
+          {fieldError("companyName") && <small role="alert">{fieldError("companyName")}</small>}
+        </label>
+        <label>
+          <span>{t.results.identityJobTitle}</span>
+          <input name="jobTitle" type="text" autoComplete="organization-title" maxLength={120} disabled={locked} value={jobTitle} onChange={event => setJobTitle(event.target.value)} aria-invalid={Boolean(errors.jobTitle)} />
+          {fieldError("jobTitle") && <small role="alert">{fieldError("jobTitle")}</small>}
         </label>
         {errorMessage && <div className="report-submit-error" role="alert">{errorMessage}</div>}
         <button className="button-primary report-submit-button" type="submit" disabled={submitState === "saving"} aria-live="polite">

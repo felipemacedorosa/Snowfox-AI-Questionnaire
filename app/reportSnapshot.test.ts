@@ -29,6 +29,8 @@ function snapshotFor(answers: AnswerRecord) {
     participant: {
       name: "Teste Interno Snowfox",
       email: "teste-interno@snowfox.ai",
+      companyName: "Snowfox AI",
+      jobTitle: "Diretor de Operações",
       storageAcknowledged: true,
     },
     submissionId: "4b4d9728-6f1d-4f9d-b3fc-ff824d856e25",
@@ -55,6 +57,8 @@ describe("buildReportSnapshot", () => {
       participant: {
         name: "Teste Interno Snowfox",
         email: "teste-interno@snowfox.ai",
+        companyName: "Snowfox AI",
+        jobTitle: "Diretor de Operações",
         storageAcknowledged: true as const,
       },
       submissionId: "4b4d9728-6f1d-4f9d-b3fc-ff824d856e25",

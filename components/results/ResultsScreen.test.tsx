@@ -23,6 +23,8 @@ describe("ResultsScreen communication", () => {
       participant: {
         name: "Report Render Test",
         email: "report-render@example.com",
+        companyName: "Render Test Industries",
+        jobTitle: "Head of Operations",
         storageAcknowledged: true,
       },
       submissionId: "4b4d9728-6f1d-4f9d-b3fc-ff824d856e25",

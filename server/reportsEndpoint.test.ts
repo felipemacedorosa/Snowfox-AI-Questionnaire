@@ -24,7 +24,13 @@ describePhp("reports.php", () => {
 
   const snapshot = buildReportSnapshot({
     answers: { dados_q1: 2, est_q1: 3, est_q1b: 2, tec_q1: 1, tec_q1b: 2 },
-    participant: { name: "Teste Endpoint", email: "endpoint@snowfox.ai", storageAcknowledged: true },
+    participant: {
+      name: "Teste Endpoint",
+      email: "endpoint@snowfox.ai",
+      companyName: "Endpoint Industria",
+      jobTitle: "Diretor de Tecnologia",
+      storageAcknowledged: true,
+    },
     submissionId: "4b4d9728-6f1d-4f9d-b3fc-ff824d856e25",
     clientSubmittedAt: "2026-08-04T20:00:00.000Z",
   });
@@ -138,11 +144,32 @@ describePhp("reports.php", () => {
     ["invalid name", () => post({ ...snapshot, participant: { ...snapshot.participant, name: "X" } }), 400],
     ["invalid email", () => post({ ...snapshot, participant: { ...snapshot.participant, email: "not-an-email" } }), 400],
     ["missing acknowledgement", () => post({ ...snapshot, participant: { ...snapshot.participant, storageAcknowledged: false } }), 400],
+    ["short company name", () => post({ ...snapshot, participant: { ...snapshot.participant, companyName: "X" } }), 400],
+    ["overlong company name", () => post({ ...snapshot, participant: { ...snapshot.participant, companyName: "x".repeat(121) } }), 400],
+    ["short job title", () => post({ ...snapshot, participant: { ...snapshot.participant, jobTitle: "X" } }), 400],
+    ["overlong job title", () => post({ ...snapshot, participant: { ...snapshot.participant, jobTitle: "x".repeat(121) } }), 400],
+    ["unknown participant field", () => post({ ...snapshot, participant: { ...snapshot.participant, phone: "555" } }), 400],
     ["invalid uuid", () => post({ ...snapshot, submissionId: "bad-id" }), 400],
     ["invalid report shape", () => post({ ...snapshot, report: { overallScore: 50 } }), 400],
     ["extra top-level field", () => post({ ...snapshot, extra: true }), 400],
   ] as const)("rejects %s", async (_label, request, expectedStatus) => {
     expect((await request()).status).toBe(expectedStatus);
+  });
+
+  it("accepts a retry captured before company and job title were collected", async () => {
+    // A browser holding an older pendingReport retries with the three-key
+    // participant. That report is already paid for by the respondent's time.
+    const { companyName: _companyName, jobTitle: _jobTitle, ...legacyParticipant } = snapshot.participant;
+    const response = await post({
+      ...snapshot,
+      submissionId: "0f4be0e1-6f1e-4c68-9a2a-9d0b0b1a3f77",
+      participant: legacyParticipant,
+    });
+
+    expect(response.status).toBe(201);
+    const saved = JSON.parse(await readFile(path.join(reportDir, "0f4be0e1-6f1e-4c68-9a2a-9d0b0b1a3f77.json"), "utf8"));
+    expect(saved.participant).not.toHaveProperty("companyName");
+    expect(saved.participant).not.toHaveProperty("jobTitle");
   });
 
   it("rejects requests over 256 KiB", async () => {

@@ -4,7 +4,13 @@ import { buildReportSnapshot } from "./reportSnapshot";
 
 const validSnapshot = buildReportSnapshot({
   answers: { tec_q1: 1, tec_q1b: 2 },
-  participant: { name: "Teste Draft", email: "draft@snowfox.ai", storageAcknowledged: true },
+  participant: {
+    name: "Teste Draft",
+    email: "draft@snowfox.ai",
+    companyName: "Draft Industria",
+    jobTitle: "Gerente de Dados",
+    storageAcknowledged: true,
+  },
   submissionId: "4b4d9728-6f1d-4f9d-b3fc-ff824d856e25",
   clientSubmittedAt: "2026-08-04T20:00:00.000Z",
 });
@@ -63,6 +69,26 @@ describe("parseAssessmentDraft", () => {
   it("rejects malformed answers and snapshots", () => {
     expect(parseAssessmentDraft({ version: 2, screen: "results", section: 4, answers: { bad: {} } })).toBeNull();
     expect(parseAssessmentDraft(makeValidDraft({ pendingReport: { submissionId: 12 } }))).toBeNull();
+  });
+
+  it("keeps a pending report saved before company and job title were collected", () => {
+    // Someone who finished the assessment under the older build has a draft whose
+    // participant has neither field. Rejecting it would throw away their answers.
+    const legacy = JSON.parse(JSON.stringify(validSnapshot));
+    delete legacy.participant.companyName;
+    delete legacy.participant.jobTitle;
+
+    const parsed = parseAssessmentDraft(makeValidDraft({ pendingReport: legacy }));
+    expect(parsed?.pendingReport).toEqual(legacy);
+    expect(parsed?.answers).toEqual(validSnapshot.answers);
+  });
+
+  it("rejects a pending report whose company or job title is not a string", () => {
+    for (const field of ["companyName", "jobTitle"]) {
+      const corrupt = JSON.parse(JSON.stringify(validSnapshot));
+      corrupt.participant[field] = 42;
+      expect(parseAssessmentDraft(makeValidDraft({ pendingReport: corrupt }))).toBeNull();
+    }
   });
 
   it("retains a valid pending report for idempotent retry", () => {

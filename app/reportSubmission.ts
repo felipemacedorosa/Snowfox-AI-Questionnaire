@@ -4,6 +4,8 @@ import { ParticipantIdentity, ReportSnapshot } from "./reportSnapshot";
 export interface ParticipantInput {
   name: string;
   email: string;
+  companyName: string;
+  jobTitle: string;
 }
 
 export type ParticipantValidationErrors = Partial<Record<keyof ParticipantInput, string>>;
@@ -15,7 +17,11 @@ export function validateParticipant(input: ParticipantInput): ParticipantValidat
   const name = input.name.trim();
   const email = input.email.trim();
   const localPart = email.split("@", 1)[0] ?? "";
+  const companyName = input.companyName.trim();
+  const jobTitle = input.jobTitle.trim();
   if (name.length < 2 || name.length > 120) errors.name = "Informe seu nome.";
+  if (companyName.length < 2 || companyName.length > 120) errors.companyName = "Informe o nome da empresa.";
+  if (jobTitle.length < 2 || jobTitle.length > 120) errors.jobTitle = "Informe seu cargo.";
   if (
     email.length > 254 ||
     localPart.startsWith(".") ||
@@ -32,6 +38,8 @@ export function normalizeParticipant(input: ParticipantInput): ParticipantIdenti
   return {
     name: input.name.trim(),
     email: input.email.trim().toLowerCase(),
+    companyName: input.companyName.trim(),
+    jobTitle: input.jobTitle.trim(),
     storageAcknowledged: true,
   };
 }

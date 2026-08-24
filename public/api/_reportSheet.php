@@ -142,6 +142,8 @@ function report_sheet_row(array $saved): array
         report_sheet_value($source['utmCampaign'] ?? ''),
         report_sheet_value($source['utmContent'] ?? ''),
         report_sheet_value($source['utmTerm'] ?? ''),
+        report_sheet_value($participant['companyName'] ?? ''),
+        report_sheet_value($participant['jobTitle'] ?? ''),
     ];
 }
 
@@ -172,7 +174,7 @@ function sync_report_to_sheet(array $saved, string $reportDir): void
         }
     }
 
-    $appendRange = rawurlencode("'" . REPORT_SHEET_TAB . "'!A:Y");
+    $appendRange = rawurlencode("'" . REPORT_SHEET_TAB . "'!A:AA");
     $appendBody = json_encode(['majorDimension' => 'ROWS', 'values' => [report_sheet_row($saved)]], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
     $appendResponse = report_sheet_http('POST', $baseUrl . $appendRange . ':append?valueInputOption=RAW&insertDataOption=INSERT_ROWS', $headers, $appendBody);
     if ($appendResponse['status'] !== 200) {

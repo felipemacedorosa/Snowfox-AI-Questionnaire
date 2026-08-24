@@ -34,6 +34,8 @@ import { DEFAULT_LANG, Lang } from "./i18n";
 export interface ParticipantIdentity {
   name: string;
   email: string;
+  companyName: string;
+  jobTitle: string;
   storageAcknowledged: true;
 }
 

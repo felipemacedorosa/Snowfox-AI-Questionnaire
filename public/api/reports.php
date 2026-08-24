@@ -177,7 +177,14 @@ function validate_payload(array $payload): void
     }
 
     $participant = $payload['participant'];
-    if (!is_object_array($participant) || !has_exact_keys($participant, ['name', 'email', 'storageAcknowledged'])) {
+    // Two accepted shapes. The legacy three-key form exists only for a report
+    // that was captured before company/job title were collected and is being
+    // retried from a browser's saved draft; new submissions always send five.
+    $legacyKeys = ['name', 'email', 'storageAcknowledged'];
+    $currentKeys = ['name', 'email', 'companyName', 'jobTitle', 'storageAcknowledged'];
+    $isCurrent = is_object_array($participant) && has_exact_keys($participant, $currentKeys);
+    $isLegacy = is_object_array($participant) && has_exact_keys($participant, $legacyKeys);
+    if (!$isCurrent && !$isLegacy) {
         reject_request(400, 'invalid_participant', 'Identificação inválida.');
     }
     $name = is_string($participant['name']) ? trim($participant['name']) : '';
@@ -187,6 +194,15 @@ function validate_payload(array $payload): void
     }
     if (!is_string($participant['email']) || strlen($participant['email']) > 254 || filter_var($participant['email'], FILTER_VALIDATE_EMAIL) === false) {
         reject_request(400, 'invalid_email', 'E-mail inválido.');
+    }
+    if ($isCurrent) {
+        foreach ([['companyName', 'invalid_company', 'Empresa inválida.'], ['jobTitle', 'invalid_job_title', 'Cargo inválido.']] as [$field, $code, $message]) {
+            $value = is_string($participant[$field]) ? trim($participant[$field]) : '';
+            $length = function_exists('mb_strlen') ? mb_strlen($value, 'UTF-8') : strlen($value);
+            if ($length < 2 || $length > 120) {
+                reject_request(400, $code, $message);
+            }
+        }
     }
     if ($participant['storageAcknowledged'] !== true) {
         reject_request(400, 'acknowledgement_required', 'Confirmação de armazenamento obrigatória.');

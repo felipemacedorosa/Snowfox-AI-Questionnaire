@@ -97,6 +97,11 @@ function isReportSnapshot(value: unknown): value is ReportSnapshot {
 
   const participant = value.participant;
   if (!isRecord(participant) || typeof participant.name !== "string" || typeof participant.email !== "string" || participant.storageAcknowledged !== true) return false;
+  // companyName/jobTitle are required for new submissions but must stay optional
+  // here: a pendingReport persisted before those fields existed is still a valid
+  // draft, and rejecting it would discard the respondent's completed answers.
+  if (participant.companyName !== undefined && typeof participant.companyName !== "string") return false;
+  if (participant.jobTitle !== undefined && typeof participant.jobTitle !== "string") return false;
 
   const report = value.report;
   if (!isRecord(report) || !REPORT_KEYS.every(key => key in report)) return false;
