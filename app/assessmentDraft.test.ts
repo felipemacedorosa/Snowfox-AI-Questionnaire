@@ -24,6 +24,22 @@ function makeValidDraft(overrides: Record<string, unknown> = {}) {
 }
 
 describe("parseAssessmentDraft", () => {
+  it("migrates a draft saved on the removed landing screen to the quiz", () => {
+    const parsed = parseAssessmentDraft(makeValidDraft({
+      screen: "landing",
+      resumeScreen: "quiz",
+      section: 2,
+      answers: { tec_q1: 1 },
+      pendingReport: null,
+    }));
+
+    // The answers are the point: rejecting this draft would wipe the saved
+    // progress of anyone mid-assessment when the landing screen was removed.
+    expect(parsed?.screen).toBe("quiz");
+    expect(parsed?.answers).toEqual({ tec_q1: 1 });
+    expect(parsed?.section).toBe(2);
+  });
+
   it("migrates a version-1 completed draft to an unsaved version-2 report", () => {
     expect(parseAssessmentDraft({
       version: 1,

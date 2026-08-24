@@ -1,8 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import { LandingScreen } from "@/components/landing/LandingScreen";
 import { Navbar, type AppScreen, type SaveState } from "@/components/Navbar";
 import { QuizScreen } from "@/components/quiz/QuizScreen";
 import { ReportIdentityGate, type ReportSubmitState } from "@/components/results/ReportIdentityGate";
@@ -28,7 +27,7 @@ function clampSection(section: number) {
 }
 
 export default function Home() {
-  const [screen, setScreen] = useState<AppScreen>("landing");
+  const [screen, setScreen] = useState<AppScreen>("quiz");
   const [section, setSection] = useState(0);
   const [answers, setAnswers] = useState<AnswerRecord>({});
   const [hydrated, setHydrated] = useState(false);
@@ -42,11 +41,6 @@ export default function Home() {
   const resumedPendingReport = useRef(false);
   const prefersReducedMotion = useReducedMotion();
   const { lang, t } = useLanguage();
-
-  const draftExists = useMemo(
-    () => resumeScreen !== null || Object.keys(answers).length > 0 || screen === "results",
-    [answers, resumeScreen, screen]
-  );
 
   useEffect(() => {
     try {
@@ -202,19 +196,6 @@ export default function Home() {
     });
   }, []);
 
-  const startFresh = useCallback(() => {
-    activeSubmissionId.current = null;
-    resumedPendingReport.current = false;
-    setResumeScreen("quiz");
-    setAnswers({});
-    setPendingReport(null);
-    setReportReceipt(null);
-    setReportSubmitState("idle");
-    setReportSubmitError(null);
-    setSection(0);
-    goTo("quiz");
-  }, [goTo]);
-
   const restart = useCallback(() => {
     activeSubmissionId.current = null;
     resumedPendingReport.current = false;
@@ -231,7 +212,13 @@ export default function Home() {
     } catch {
       setSaveState("unavailable");
     }
-    goTo("landing");
+    goTo("quiz");
+  }, [goTo]);
+
+  /** Navbar's results-screen action: back to question one, answers intact. */
+  const backToStart = useCallback(() => {
+    setSection(0);
+    goTo("quiz");
   }, [goTo]);
 
   const handleReportIdentity = useCallback((participant: ParticipantIdentity) => {
@@ -269,7 +256,7 @@ export default function Home() {
         saveState={saveState}
         reportConfirmed={Boolean(reportReceipt)}
         onSave={persistNow}
-        onNavigate={goTo}
+        onBackToStart={backToStart}
       />
 
       <main className="page-content">
@@ -281,18 +268,6 @@ export default function Home() {
             exit={prefersReducedMotion ? undefined : { opacity: 0, y: -8 }}
             transition={{ duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
           >
-            {screen === "landing" && (
-              <LandingScreen
-                hasDraft={draftExists}
-                savedScreen={resumeScreen}
-                savedSection={section}
-                reportConfirmed={Boolean(reportReceipt)}
-                onStart={startFresh}
-                onResume={() => goTo(resumeScreen === "results" ? "results" : "quiz")}
-                onReset={restart}
-              />
-            )}
-
             {screen === "quiz" && (
               <QuizScreen
                 section={section}
@@ -304,10 +279,7 @@ export default function Home() {
                   scrollToTop();
                 }}
                 onBack={() => {
-                  if (section === 0) {
-                    goTo("landing");
-                    return;
-                  }
+                  if (section === 0) return;
                   setSection(current => current - 1);
                   scrollToTop();
                 }}

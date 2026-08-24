@@ -404,7 +404,9 @@ export function QuizScreen({
                 : <><Circle size={13} aria-hidden="true" /> {t.quiz.selectAnAnswer}</>}
           </div>
           <div className="question-footer-actions">
-            <NavBtn variant="back" onClick={goBack}>{currentIndex === 0 && section === 0 ? t.quiz.home : t.quiz.back}</NavBtn>
+            {!(currentIndex === 0 && section === 0) && (
+              <NavBtn variant="back" onClick={goBack}>{t.quiz.back}</NavBtn>
+            )}
             <NavBtn variant="next" disabled={!canContinue || pendingAdvance} onClick={goForward}>{nextLabel}</NavBtn>
           </div>
         </footer>

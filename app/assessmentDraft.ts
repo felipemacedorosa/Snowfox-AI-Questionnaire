@@ -71,7 +71,18 @@ function isIsoTimestamp(value: unknown): value is string {
 }
 
 function isScreen(value: unknown): value is AppScreen {
-  return value === "landing" || value === "quiz" || value === "results";
+  return value === "quiz" || value === "results";
+}
+
+/**
+ * Drafts written before the landing screen was removed carry screen:"landing".
+ * They are still perfectly good answer sets, so they are migrated to the quiz
+ * rather than rejected — returning null here would silently discard the saved
+ * progress of anyone who was mid-assessment when this shipped.
+ */
+function normalizeScreen(value: unknown): AppScreen | null {
+  if (value === "landing") return "quiz";
+  return isScreen(value) ? value : null;
 }
 
 function isResumeScreen(value: unknown): value is AssessmentDraftV2["resumeScreen"] {
@@ -112,13 +123,15 @@ function deepFreeze<T>(value: T): T {
 }
 
 export function parseAssessmentDraft(value: unknown): AssessmentDraftV2 | null {
-  if (!isRecord(value) || !isScreen(value.screen) || typeof value.section !== "number" || !isAnswerRecord(value.answers)) return null;
+  if (!isRecord(value) || typeof value.section !== "number" || !isAnswerRecord(value.answers)) return null;
+  const screen = normalizeScreen(value.screen);
+  if (screen === null) return null;
   if (!isResumeScreen(value.resumeScreen) || !isIsoTimestamp(value.updatedAt)) return null;
 
   if (value.version === 1) {
     return {
       version: 2,
-      screen: value.screen,
+      screen,
       resumeScreen: value.resumeScreen,
       section: value.section,
       answers: value.answers,
@@ -138,7 +151,7 @@ export function parseAssessmentDraft(value: unknown): AssessmentDraftV2 | null {
 
   return deepFreeze({
     version: 2,
-    screen: value.screen,
+    screen,
     resumeScreen: value.resumeScreen,
     section: value.section,
     answers: value.answers,
