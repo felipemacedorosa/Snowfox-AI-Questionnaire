@@ -5,8 +5,16 @@ import Image from "next/image";
 import { ArrowLeft, Menu, X } from "lucide-react";
 import { Save } from "lucide-react";
 import { useLanguage } from "@/app/LanguageContext";
+import type { Lang } from "@/app/i18n";
 
 const BASE = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
+
+// The marketing site is bilingual too, so send the reader to the matching
+// version rather than always dropping them on the Portuguese home page.
+const HOME_URL: Record<Lang, string> = {
+  pt: "https://snowfox-ai.com/",
+  en: "https://snowfox-ai.com/en_us/",
+};
 
 export type AppScreen = "quiz" | "results";
 export type SaveState = "idle" | "saving" | "saved" | "unavailable";
@@ -41,10 +49,10 @@ export function Navbar({
   return (
     <nav className="site-nav" aria-label={t.nav.mainNavLabel}>
       <div className="nav-inner page-frame">
-        <div className="brand-lockup">
+        <a className="brand-lockup brand-home-link" href={HOME_URL[lang]} aria-label={t.nav.backToHome}>
           <Image src={`${BASE}/fox-icon.png`} alt="" width={30} height={30} priority />
           <span>snowfox <b>AI</b></span>
-        </div>
+        </a>
 
         <div className="nav-context">
           {screen === "quiz" && <><span className="nav-context-label">{t.nav.contextQuiz}</span><span className="nav-context-divider" />{sectionLabel}</>}
