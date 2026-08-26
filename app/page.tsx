@@ -13,10 +13,27 @@ import {
   type AssessmentDraftV2,
   type ReportSubmissionReceipt,
 } from "./assessmentDraft";
-import { type AnswerRecord, SECTIONS, clearDependentAnswers, getSections } from "./data";
+import { type AnswerRecord, SECTIONS, clearDependentAnswers, getAssessmentProgress, getSections } from "./data";
 import { useLanguage } from "./LanguageContext";
 import { buildReportSnapshot, type ParticipantIdentity, type ReportSnapshot } from "./reportSnapshot";
 import { getReportSubmissionRecovery, ReportSubmissionError, submitReportSnapshot } from "./reportSubmission";
+import {
+  clearFiredMilestones,
+  pendingMilestones,
+  persistFiredMilestones,
+  readFiredMilestones,
+  type FunnelEvent,
+} from "./analyticsFunnel";
+import { initAnalytics, trackEvent } from "./firebaseAnalytics";
+import {
+  hasAttribution,
+  parseAttribution,
+  persistAttribution,
+  readStoredAttribution,
+  resolveAttribution,
+  toEventParams,
+  type Attribution,
+} from "./attribution";
 // DEV SHORTCUT (remove with app/devShortcuts.ts): see effect below.
 import { buildStrategyGapTestAnswers } from "./devShortcuts";
 
@@ -42,6 +59,9 @@ export default function Home() {
   const [reportSubmitErrorCode, setReportSubmitErrorCode] = useState<string | null>(null);
   const activeSubmissionId = useRef<string | null>(null);
   const resumedPendingReport = useRef(false);
+  const firedMilestones = useRef<Set<FunnelEvent> | null>(null);
+  const trackedAssessmentView = useRef(false);
+  const attributionRef = useRef<Attribution | null>(null);
   const prefersReducedMotion = useReducedMotion();
   const { lang, t } = useLanguage();
 
@@ -95,6 +115,87 @@ export default function Home() {
       lang,
     });
   }, [pendingReport, lang]);
+
+  // --- Analytics -----------------------------------------------------------
+  // Drop-off instrumentation only. It observes state this component already
+  // holds, never changes behaviour, and never sends respondent identity.
+
+  const assessmentProgress = useMemo(() => getAssessmentProgress(answers), [answers]);
+  // These two mirror the render conditions below, so a milestone is reported
+  // only when the respondent can actually see that step.
+  const showsContactForm = screen === "results" && (!pendingReport || !reportReceipt);
+  const showsResults = screen === "results" && Boolean(displayReport) && Boolean(reportReceipt);
+
+  /**
+   * Which post this visitor arrived from.
+   *
+   * Resolved on first use rather than in an effect, so ordering against the
+   * milestone effects below cannot leave an event unattributed. A link with UTM
+   * parameters is stored, so the attribution survives a later visit that has no
+   * query string of its own.
+   */
+  const getAttribution = useCallback((): Attribution => {
+    if (attributionRef.current) return attributionRef.current;
+    const fromUrl = parseAttribution(window.location.search);
+    if (hasAttribution(fromUrl)) persistAttribution(fromUrl);
+    const resolved = resolveAttribution(fromUrl, readStoredAttribution());
+    attributionRef.current = resolved;
+    return resolved;
+  }, []);
+
+  /**
+   * Report a milestone the first time this assessment attempt reaches it.
+   *
+   * The fired set is remembered in local storage, so resuming a saved draft
+   * continues the funnel instead of recounting steps already measured.
+   */
+  const fireMilestone = useCallback((event: FunnelEvent, params?: Record<string, string | number | boolean>) => {
+    const fired = firedMilestones.current ?? new Set(readFiredMilestones());
+    firedMilestones.current = fired;
+    if (fired.has(event)) return;
+    fired.add(event);
+    persistFiredMilestones(fired);
+    trackEvent(event, { ...toEventParams(getAttribution()), ...params });
+  }, [getAttribution]);
+
+  // Start Google Analytics before the draft finishes loading, so standard
+  // audience, session, traffic-source, campaign, and device data is collected
+  // even for a visitor who leaves without answering anything.
+  useEffect(() => {
+    initAnalytics();
+  }, []);
+
+  // Once per page load rather than once per attempt: a returning respondent
+  // opening the assessment again is a new view.
+  useEffect(() => {
+    if (!hydrated || trackedAssessmentView.current) return;
+    trackedAssessmentView.current = true;
+    trackEvent("assessment_view", {
+      ...toEventParams(getAttribution()),
+      lang,
+      resumed: resumeScreen !== null,
+    });
+  }, [getAttribution, hydrated, lang, resumeScreen]);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    const fired = firedMilestones.current ?? new Set(readFiredMilestones());
+    firedMilestones.current = fired;
+    const due = pendingMilestones({
+      answered: assessmentProgress.answered,
+      percent: assessmentProgress.percent,
+      complete: assessmentProgress.complete,
+      onContactForm: showsContactForm,
+      resultsVisible: showsResults,
+    }, fired);
+    for (const event of due) {
+      fireMilestone(event, {
+        lang,
+        progress_percent: assessmentProgress.percent,
+        questions_answered: assessmentProgress.answered,
+      });
+    }
+  }, [assessmentProgress, fireMilestone, hydrated, lang, showsContactForm, showsResults]);
 
   const reportSubmitError = reportSubmitErrorCode === null
     ? null
@@ -230,6 +331,8 @@ export default function Home() {
     setReportSubmitState("idle");
     setReportSubmitErrorCode(null);
     setSection(0);
+    firedMilestones.current = null;
+    clearFiredMilestones();
     try {
       window.localStorage.removeItem(STORAGE_KEY);
       setSaveState("idle");
@@ -257,8 +360,10 @@ export default function Home() {
     resumedPendingReport.current = true;
     setPendingReport(snapshot);
     setReportReceipt(null);
+    // The form passed validation. Deliberately carries no identity fields.
+    fireMilestone("contact_info_submitted", { lang });
     void saveReport(snapshot);
-  }, [answers, lang, saveReport]);
+  }, [answers, fireMilestone, lang, saveReport]);
 
   const retryReport = useCallback(() => {
     if (!pendingReport) return;

@@ -12,7 +12,7 @@ afterEach(async () => {
 
 describe("deployment manifest", () => {
   it("ships a release verification module", () => {
-    expect(release.REPORT_VERSION).toBe("1.2.24");
+    expect(release.REPORT_VERSION).toBe("1.2.25");
   });
 
   it("validates and writes exact deployment identity", async () => {
