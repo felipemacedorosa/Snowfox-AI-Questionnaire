@@ -19,6 +19,16 @@
 export const HEARTBEAT_INTERVAL_MS = 30_000;
 
 /**
+ * Delay before the first report of a visit.
+ *
+ * GA4 counts a session as engaged once it passes ten seconds, so reporting the
+ * opening stretch at that mark is what lets a short visit register any
+ * engagement at all. Waiting a full interval would book everyone who leaves
+ * inside the first half-minute as zero.
+ */
+export const FIRST_HEARTBEAT_DELAY_MS = 10_000;
+
+/**
  * Longest single stretch that may be banked at once.
  *
  * The page banks time on every heartbeat, so a visible stretch should never
@@ -94,6 +104,25 @@ export function stopStretch(state: TimingState, now: number): TimingState {
 export function bankStretch(state: TimingState, now: number): TimingState {
   if (state.since === null) return state;
   return { activeMs: state.activeMs + stretchMs(state, now), since: now };
+}
+
+/**
+ * Engagement to report on a beat: active time accrued since the previous report.
+ *
+ * This is the figure Analytics actually counts. GA4 builds "average engagement
+ * time" from the `engagement_time_msec` parameter alone, and gtag only fills
+ * that in by itself while `document.hasFocus()` is true -- so a respondent
+ * reading in a background tab or behind another window banks nothing. Reporting
+ * our own measured foreground time makes the metric independent of that.
+ *
+ * GA4 sums the parameter across events, so each beat carries only the stretch
+ * since the last one. Sending the running total would count the opening minutes
+ * of a visit once per beat.
+ */
+export function engagementDeltaMs(totalMs: number, reportedMs: number): number {
+  const delta = totalMs - reportedMs;
+  if (!Number.isFinite(delta) || delta <= 0) return 0;
+  return Math.round(delta);
 }
 
 /** True once the clock has run past the point where heartbeats stop. */

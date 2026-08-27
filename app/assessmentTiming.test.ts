@@ -6,6 +6,7 @@ import {
   activeMs,
   activeSeconds,
   bankStretch,
+  engagementDeltaMs,
   exhausted,
   parseTimingState,
   startStretch,
@@ -96,5 +97,27 @@ describe("parseTimingState", () => {
 
   it("clamps a stored total past the ceiling", () => {
     expect(parseTimingState({ activeMs: MAX_TRACKED_MS * 10 }).activeMs).toBe(MAX_TRACKED_MS);
+  });
+});
+
+describe("engagement reported to Analytics", () => {
+  it("reports the stretch since the last beat, not the running total", () => {
+    expect(engagementDeltaMs(30_000, 0)).toBe(30_000);
+    expect(engagementDeltaMs(60_000, 30_000)).toBe(30_000);
+    expect(engagementDeltaMs(90_000, 60_000)).toBe(30_000);
+  });
+
+  it("reports nothing when no time has passed since the last beat", () => {
+    expect(engagementDeltaMs(30_000, 30_000)).toBe(0);
+  });
+
+  it("never reports negative engagement if the clock moves backwards", () => {
+    expect(engagementDeltaMs(10_000, 30_000)).toBe(0);
+    expect(engagementDeltaMs(Number.NaN, 0)).toBe(0);
+  });
+
+  it("skips time banked by an earlier load when a draft resumes", () => {
+    // A previous visit banked two minutes; this load has added ten seconds.
+    expect(engagementDeltaMs(130_000, 120_000)).toBe(10_000);
   });
 });

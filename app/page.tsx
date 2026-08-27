@@ -28,8 +28,11 @@ import {
 } from "./analyticsFunnel";
 import {
   HEARTBEAT_EVENT,
+  FIRST_HEARTBEAT_DELAY_MS,
   HEARTBEAT_INTERVAL_MS,
+  activeMs,
   activeSeconds,
+  engagementDeltaMs,
   bankStretch,
   clearTimingState,
   exhausted,
@@ -78,6 +81,13 @@ export default function Home() {
   const trackedAssessmentView = useRef(false);
   const attributionRef = useRef<Attribution | null>(null);
   const timing = useRef<TimingState | null>(null);
+  /**
+   * Active milliseconds already reported to Analytics as engagement.
+   *
+   * Seeded from the time a previous load banked, so resuming a draft reports
+   * only what this load adds rather than re-reporting the whole clock.
+   */
+  const reportedEngagement = useRef<number | null>(null);
   const prefersReducedMotion = useReducedMotion();
   const { lang, t } = useLanguage();
 
@@ -228,6 +238,7 @@ export default function Home() {
     if (!hydrated) return;
     const now = Date.now();
     let state = timing.current ?? readTimingState();
+    if (reportedEngagement.current === null) reportedEngagement.current = state.activeMs;
     if (document.visibilityState === "visible") state = startStretch(state, now);
     timing.current = state;
 
@@ -257,31 +268,64 @@ export default function Home() {
   }, [hydrated]);
 
   /**
+   * What a beat reports, held in a ref rather than in the timer's dependencies.
+   *
+   * Language and progress change as the respondent works. Listing them as
+   * dependencies of the timer below would tear the timer down and start it
+   * again on every answer, so a respondent answering faster than one question
+   * per interval would never reach a beat -- leaving the most engaged visitors
+   * as precisely the ones measured at zero.
+   */
+  const beatPayload = useRef({ lang, percent: assessmentProgress.percent });
+  useEffect(() => {
+    beatPayload.current = { lang, percent: assessmentProgress.percent };
+  }, [assessmentProgress.percent, lang]);
+
+  /**
    * Report the running total on a fixed cadence.
    *
    * This is what repairs Analytics' own engagement measurement: it banks time
    * against the next event a page sends, so a periodic event turns a silent
    * questionnaire into a measured one. It also stops the clock drifting, since
    * every beat banks the stretch that just elapsed.
+   *
+   * The first beat comes early, at `FIRST_HEARTBEAT_DELAY_MS`, because a visit
+   * that ends before the first report contributes only the few milliseconds
+   * between `page_view` and `assessment_view`. Beating on GA4's own
+   * engaged-session threshold means a short visit still counts as the time it
+   * actually lasted.
    */
   useEffect(() => {
     if (!hydrated) return;
-    const beat = window.setInterval(() => {
+    const beat = () => {
       const current = timing.current;
       if (!current || document.visibilityState !== "visible") return;
       const now = Date.now();
       if (exhausted(current, now)) return;
       timing.current = bankStretch(current, now);
       persistTimingState(timing.current);
+      const { lang: beatLang, percent } = beatPayload.current;
+      const total = activeMs(timing.current, now);
+      const engagement = engagementDeltaMs(total, reportedEngagement.current ?? 0);
+      reportedEngagement.current = total;
       trackEvent(HEARTBEAT_EVENT, {
         ...toEventParams(getAttribution()),
-        lang,
+        lang: beatLang,
+        // The parameter GA4 builds "average engagement time" from. Reported
+        // here rather than left to gtag, which measures nothing unless the
+        // document holds focus.
+        engagement_time_msec: engagement,
         active_seconds: activeSeconds(timing.current, now),
-        progress_percent: assessmentProgress.percent,
+        progress_percent: percent,
       });
-    }, HEARTBEAT_INTERVAL_MS);
-    return () => window.clearInterval(beat);
-  }, [assessmentProgress.percent, getAttribution, hydrated, lang]);
+    };
+    const lead = window.setTimeout(beat, FIRST_HEARTBEAT_DELAY_MS);
+    const cadence = window.setInterval(beat, HEARTBEAT_INTERVAL_MS);
+    return () => {
+      window.clearTimeout(lead);
+      window.clearInterval(cadence);
+    };
+  }, [getAttribution, hydrated]);
 
   useEffect(() => {
     if (!hydrated) return;
