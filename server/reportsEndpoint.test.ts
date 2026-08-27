@@ -33,6 +33,7 @@ describePhp("reports.php", () => {
     },
     submissionId: "4b4d9728-6f1d-4f9d-b3fc-ff824d856e25",
     clientSubmittedAt: "2026-08-04T20:00:00.000Z",
+    activeSeconds: 634,
   });
 
   const freePort = () => new Promise<number>((resolve, reject) => {
@@ -170,6 +171,50 @@ describePhp("reports.php", () => {
     const saved = JSON.parse(await readFile(path.join(reportDir, "0f4be0e1-6f1e-4c68-9a2a-9d0b0b1a3f77.json"), "utf8"));
     expect(saved.participant).not.toHaveProperty("companyName");
     expect(saved.participant).not.toHaveProperty("jobTitle");
+  });
+
+  it("persists how long the respondent spent on the assessment", async () => {
+    const response = await post({ ...snapshot, submissionId: "1a2b3c4d-5e6f-4a7b-8c9d-0e1f2a3b4c5d" });
+    expect(response.status).toBe(201);
+    const saved = JSON.parse(await readFile(path.join(reportDir, "1a2b3c4d-5e6f-4a7b-8c9d-0e1f2a3b4c5d.json"), "utf8"));
+    expect(saved.activeSeconds).toBe(634);
+  });
+
+  it("accepts a retry captured before the assessment was timed", async () => {
+    // The same bargain as the legacy participant above: an older pendingReport
+    // carries no duration, and the report is worth more than the measurement.
+    const { activeSeconds: _activeSeconds, ...untimed } = snapshot;
+    const response = await post({
+      ...untimed,
+      submissionId: "2b3c4d5e-6f7a-4b8c-9d0e-1f2a3b4c5d6e",
+    });
+
+    expect(response.status).toBe(201);
+    const saved = JSON.parse(await readFile(path.join(reportDir, "2b3c4d5e-6f7a-4b8c-9d0e-1f2a3b4c5d6e.json"), "utf8"));
+    expect(saved).not.toHaveProperty("activeSeconds");
+  });
+
+  it("rejects a duration that could not have been measured", async () => {
+    for (const activeSeconds of [-1, 86401, "634", null, true]) {
+      const response = await post({
+        ...snapshot,
+        submissionId: "3c4d5e6f-7a8b-4c9d-8e1f-2a3b4c5d6e7f",
+        activeSeconds,
+      });
+      expect(response.status, `activeSeconds=${JSON.stringify(activeSeconds)}`).toBe(400);
+      expect((await response.json()).code).toBe("invalid_active_seconds");
+    }
+  });
+
+  it("accepts a zero duration, which is a measurement rather than a gap", async () => {
+    const response = await post({
+      ...snapshot,
+      submissionId: "4d5e6f7a-8b9c-4d0e-9f2a-3b4c5d6e7f80",
+      activeSeconds: 0,
+    });
+    expect(response.status).toBe(201);
+    const saved = JSON.parse(await readFile(path.join(reportDir, "4d5e6f7a-8b9c-4d0e-9f2a-3b4c5d6e7f80.json"), "utf8"));
+    expect(saved.activeSeconds).toBe(0);
   });
 
   it("rejects requests over 256 KiB", async () => {

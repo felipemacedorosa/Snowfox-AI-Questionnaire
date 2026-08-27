@@ -35,6 +35,7 @@ function snapshotFor(answers: AnswerRecord) {
     },
     submissionId: "4b4d9728-6f1d-4f9d-b3fc-ff824d856e25",
     clientSubmittedAt: "2026-08-04T20:00:00.000Z",
+    activeSeconds: 412,
   });
 }
 
@@ -63,6 +64,7 @@ describe("buildReportSnapshot", () => {
       },
       submissionId: "4b4d9728-6f1d-4f9d-b3fc-ff824d856e25",
       clientSubmittedAt: "2026-08-04T20:00:00.000Z",
+      activeSeconds: 412,
     };
 
     const first = buildReportSnapshot(input);
@@ -75,6 +77,7 @@ describe("buildReportSnapshot", () => {
       submissionId: input.submissionId,
       participant: input.participant,
       clientSubmittedAt: input.clientSubmittedAt,
+      activeSeconds: input.activeSeconds,
       answers: input.answers,
     });
     expect(first.report.executiveSummary.priorityId).toBe(first.report.quarterlyRecommendations[0].priorityId);
@@ -128,6 +131,7 @@ describe("report language", () => {
     },
     submissionId: "4b4d9728-6f1d-4f9d-b3fc-ff824d856e25",
     clientSubmittedAt: "2026-08-04T20:00:00.000Z",
+    activeSeconds: 412,
   };
 
   it("renders pillar titles in the requested language", () => {
@@ -176,5 +180,37 @@ describe("report language", () => {
     walk(en, "snapshot");
 
     expect(found).toEqual([]);
+  });
+});
+
+describe("time on the assessment", () => {
+  const timedInput = (activeSeconds: number) => ({
+    answers: { dados_q1: 3, est_q1: 2, est_q1b: 2, tec_q1: 3, tec_q1b: 2 },
+    participant: {
+      name: "Teste Interno Snowfox",
+      email: "teste-interno@snowfox.ai",
+      companyName: "Snowfox AI",
+      jobTitle: "Diretor de Operações",
+      storageAcknowledged: true as const,
+    },
+    submissionId: "4b4d9728-6f1d-4f9d-b3fc-ff824d856e25",
+    clientSubmittedAt: "2026-08-04T20:00:00.000Z",
+    activeSeconds,
+  });
+
+  it("records the duration it was given rather than measuring one", () => {
+    // The builder must stay a pure function of its input: the results screen
+    // rebuilds the snapshot to change language, and a clock read in here would
+    // make the displayed report disagree with the one that was submitted.
+    expect(buildReportSnapshot(timedInput(837)).activeSeconds).toBe(837);
+    expect(buildReportSnapshot({ ...timedInput(837), lang: "en" }).activeSeconds).toBe(837);
+  });
+
+  it("keeps a zero duration rather than dropping the field", () => {
+    // A respondent whose browser refused local storage can legitimately submit
+    // zero. It must report as zero, not vanish into "not measured".
+    const snapshot = buildReportSnapshot(timedInput(0));
+    expect(snapshot.activeSeconds).toBe(0);
+    expect("activeSeconds" in snapshot).toBe(true);
   });
 });

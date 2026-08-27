@@ -103,6 +103,11 @@ function isReportSnapshot(value: unknown): value is ReportSnapshot {
   if (participant.companyName !== undefined && typeof participant.companyName !== "string") return false;
   if (participant.jobTitle !== undefined && typeof participant.jobTitle !== "string") return false;
 
+  // Optional for the same reason, and for the same cost if it were not: a draft
+  // captured before the assessment was timed still holds finished answers.
+  const activeSeconds = value.activeSeconds;
+  if (activeSeconds !== undefined && (typeof activeSeconds !== "number" || !Number.isFinite(activeSeconds) || activeSeconds < 0)) return false;
+
   const report = value.report;
   if (!isRecord(report) || !REPORT_KEYS.every(key => key in report)) return false;
   if (typeof report.overallScore !== "number" || !isRecord(report.result)) return false;

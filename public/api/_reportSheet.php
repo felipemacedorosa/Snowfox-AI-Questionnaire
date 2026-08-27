@@ -144,6 +144,9 @@ function report_sheet_row(array $saved): array
         report_sheet_value($source['utmTerm'] ?? ''),
         report_sheet_value($participant['companyName'] ?? ''),
         report_sheet_value($participant['jobTitle'] ?? ''),
+        // Appended, never inserted: this list is positional, so a new column
+        // anywhere but the end would shift every row already in the Sheet.
+        report_sheet_value($saved['activeSeconds'] ?? ''),
     ];
 }
 

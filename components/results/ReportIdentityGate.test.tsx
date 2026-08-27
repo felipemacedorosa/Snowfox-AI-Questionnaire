@@ -15,6 +15,7 @@ const pendingSnapshot = buildReportSnapshot({
   },
   submissionId: "4b4d9728-6f1d-4f9d-b3fc-ff824d856e25",
   clientSubmittedAt: "2026-08-04T20:00:00.000Z",
+  activeSeconds: 190,
 });
 
 describe("ReportIdentityGate", () => {

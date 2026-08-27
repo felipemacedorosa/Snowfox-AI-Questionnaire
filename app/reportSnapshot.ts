@@ -62,6 +62,15 @@ export interface ReportSnapshot {
   submissionId: string;
   participant: ParticipantIdentity;
   clientSubmittedAt: string;
+  /**
+   * Foreground seconds the respondent spent on the assessment.
+   *
+   * Optional for the same reason `companyName` is optional in the draft guard:
+   * a report captured before this was collected and retried from a saved draft
+   * is still a valid snapshot, and rejecting it would discard finished answers.
+   * Every new snapshot sets it -- see `BuildReportSnapshotInput`.
+   */
+  activeSeconds?: number;
   answers: AnswerRecord;
   report: ReportContents;
 }
@@ -71,6 +80,14 @@ export interface BuildReportSnapshotInput {
   participant: ParticipantIdentity;
   submissionId: string;
   clientSubmittedAt: string;
+  /**
+   * Required, so no caller can quietly submit a report with no duration.
+   *
+   * Passed in rather than read from a clock here: this builder is deterministic
+   * for identical input, which is what lets the results screen rebuild the
+   * report in another language without changing what was submitted.
+   */
+  activeSeconds: number;
   lang?: Lang;
 }
 
@@ -115,6 +132,7 @@ export function buildReportSnapshot(input: BuildReportSnapshotInput): ReportSnap
     submissionId: input.submissionId,
     participant: { ...input.participant },
     clientSubmittedAt: input.clientSubmittedAt,
+    activeSeconds: input.activeSeconds,
     answers,
     report: {
       overallScore,

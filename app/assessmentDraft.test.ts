@@ -13,6 +13,7 @@ const validSnapshot = buildReportSnapshot({
   },
   submissionId: "4b4d9728-6f1d-4f9d-b3fc-ff824d856e25",
   clientSubmittedAt: "2026-08-04T20:00:00.000Z",
+  activeSeconds: 300,
 });
 
 function makeValidDraft(overrides: Record<string, unknown> = {}) {
@@ -87,6 +88,26 @@ describe("parseAssessmentDraft", () => {
     for (const field of ["companyName", "jobTitle"]) {
       const corrupt = JSON.parse(JSON.stringify(validSnapshot));
       corrupt.participant[field] = 42;
+      expect(parseAssessmentDraft(makeValidDraft({ pendingReport: corrupt }))).toBeNull();
+    }
+  });
+
+  it("keeps a pending report saved before the assessment was timed", () => {
+    // Same bargain as company and job title above: a draft from the older build
+    // carries no duration, and a missing measurement is no reason to discard a
+    // finished questionnaire.
+    const untimed = JSON.parse(JSON.stringify(validSnapshot));
+    delete untimed.activeSeconds;
+
+    const parsed = parseAssessmentDraft(makeValidDraft({ pendingReport: untimed }));
+    expect(parsed?.pendingReport).toEqual(untimed);
+    expect(parsed?.pendingReport?.activeSeconds).toBeUndefined();
+  });
+
+  it("rejects a pending report whose duration is not a usable number", () => {
+    for (const bad of [-1, "300", Number.NaN, Number.POSITIVE_INFINITY, null]) {
+      const corrupt = JSON.parse(JSON.stringify(validSnapshot));
+      corrupt.activeSeconds = bad;
       expect(parseAssessmentDraft(makeValidDraft({ pendingReport: corrupt }))).toBeNull();
     }
   });

@@ -162,8 +162,13 @@ function sync_saved_report(array $saved, string $reportDir): void
 
 function validate_payload(array $payload): void
 {
-    $topLevelKeys = ['schemaVersion', 'assessmentVersion', 'submissionId', 'participant', 'clientSubmittedAt', 'answers', 'report'];
-    if (!has_exact_keys($payload, $topLevelKeys)) {
+    // Two accepted shapes, for the same reason as the participant check below:
+    // a report captured before the assessment was timed and retried from a saved
+    // draft carries no `activeSeconds`, and rejecting it would throw away a
+    // respondent's finished answers over a measurement.
+    $legacyTopLevel = ['schemaVersion', 'assessmentVersion', 'submissionId', 'participant', 'clientSubmittedAt', 'answers', 'report'];
+    $currentTopLevel = [...$legacyTopLevel, 'activeSeconds'];
+    if (!has_exact_keys($payload, $currentTopLevel) && !has_exact_keys($payload, $legacyTopLevel)) {
         reject_request(400, 'invalid_payload', 'Estrutura do relatório inválida.');
     }
     if ($payload['schemaVersion'] !== 1 || $payload['assessmentVersion'] !== 2) {
@@ -174,6 +179,20 @@ function validate_payload(array $payload): void
     }
     if (!valid_timestamp($payload['clientSubmittedAt'])) {
         reject_request(400, 'invalid_timestamp', 'Data de envio inválida.');
+    }
+    // Deliberately generous. The page stops counting at thirty minutes, so any
+    // value under a day is plausible for a draft resumed across sittings, and
+    // turning away a real report over an odd duration is the worse failure.
+    if (array_key_exists('activeSeconds', $payload)) {
+        $activeSeconds = $payload['activeSeconds'];
+        if (
+            (!is_int($activeSeconds) && !is_float($activeSeconds))
+            || !is_finite((float) $activeSeconds)
+            || $activeSeconds < 0
+            || $activeSeconds > 86400
+        ) {
+            reject_request(400, 'invalid_active_seconds', 'Tempo de preenchimento inválido.');
+        }
     }
 
     $participant = $payload['participant'];

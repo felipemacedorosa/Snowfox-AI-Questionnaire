@@ -128,6 +128,9 @@ export default function Home() {
       participant: pendingReport.participant,
       submissionId: pendingReport.submissionId,
       clientSubmittedAt: pendingReport.clientSubmittedAt,
+      // Carried through, never re-measured: this rebuild only changes language,
+      // and a draft saved before the field existed has no duration to carry.
+      activeSeconds: pendingReport.activeSeconds ?? 0,
       lang,
     });
   }, [pendingReport, lang]);
@@ -471,6 +474,7 @@ export default function Home() {
       participant,
       submissionId: crypto.randomUUID(),
       clientSubmittedAt: new Date().toISOString(),
+      activeSeconds: trackedSeconds(),
       lang,
     });
     activeSubmissionId.current = snapshot.submissionId;
