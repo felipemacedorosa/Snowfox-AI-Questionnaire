@@ -13,17 +13,32 @@ import {
   type AssessmentDraftV2,
   type ReportSubmissionReceipt,
 } from "./assessmentDraft";
-import { type AnswerRecord, SECTIONS, clearDependentAnswers, getAssessmentProgress, getSections } from "./data";
+import { type AnswerRecord, SECTIONS, clearDependentAnswers, getAssessmentProgress, getSectionProgress, getSections } from "./data";
 import { useLanguage } from "./LanguageContext";
 import { buildReportSnapshot, type ParticipantIdentity, type ReportSnapshot } from "./reportSnapshot";
 import { getReportSubmissionRecovery, ReportSubmissionError, submitReportSnapshot } from "./reportSubmission";
 import {
   clearFiredMilestones,
+  milestoneEventName,
+  parseSectionMilestoneKey,
   pendingMilestones,
   persistFiredMilestones,
   readFiredMilestones,
-  type FunnelEvent,
+  type MilestoneKey,
 } from "./analyticsFunnel";
+import {
+  HEARTBEAT_EVENT,
+  HEARTBEAT_INTERVAL_MS,
+  activeSeconds,
+  bankStretch,
+  clearTimingState,
+  exhausted,
+  persistTimingState,
+  readTimingState,
+  startStretch,
+  stopStretch,
+  type TimingState,
+} from "./assessmentTiming";
 import { initAnalytics, trackEvent } from "./firebaseAnalytics";
 import {
   hasAttribution,
@@ -59,9 +74,10 @@ export default function Home() {
   const [reportSubmitErrorCode, setReportSubmitErrorCode] = useState<string | null>(null);
   const activeSubmissionId = useRef<string | null>(null);
   const resumedPendingReport = useRef(false);
-  const firedMilestones = useRef<Set<FunnelEvent> | null>(null);
+  const firedMilestones = useRef<Set<MilestoneKey> | null>(null);
   const trackedAssessmentView = useRef(false);
   const attributionRef = useRef<Attribution | null>(null);
+  const timing = useRef<TimingState | null>(null);
   const prefersReducedMotion = useReducedMotion();
   const { lang, t } = useLanguage();
 
@@ -121,6 +137,13 @@ export default function Home() {
   // holds, never changes behaviour, and never sends respondent identity.
 
   const assessmentProgress = useMemo(() => getAssessmentProgress(answers), [answers]);
+  // Which named stretches of the questionnaire are finished. Derived from the
+  // same helper the sidebar checkmarks use, so a reported section is one the
+  // respondent saw tick over.
+  const completedSectionIds = useMemo(
+    () => SECTIONS.filter(section => getSectionProgress(section, answers).complete).map(section => section.id),
+    [answers]
+  );
   // These two mirror the render conditions below, so a milestone is reported
   // only when the respondent can actually see that step.
   const showsContactForm = screen === "results" && (!pendingReport || !reportReceipt);
@@ -149,14 +172,26 @@ export default function Home() {
    * The fired set is remembered in local storage, so resuming a saved draft
    * continues the funnel instead of recounting steps already measured.
    */
-  const fireMilestone = useCallback((event: FunnelEvent, params?: Record<string, string | number | boolean>) => {
+  const fireMilestone = useCallback((key: MilestoneKey, params?: Record<string, string | number | boolean>) => {
     const fired = firedMilestones.current ?? new Set(readFiredMilestones());
     firedMilestones.current = fired;
-    if (fired.has(event)) return;
-    fired.add(event);
+    if (fired.has(key)) return;
+    fired.add(key);
     persistFiredMilestones(fired);
-    trackEvent(event, { ...toEventParams(getAttribution()), ...params });
+    trackEvent(milestoneEventName(key), { ...toEventParams(getAttribution()), ...params });
   }, [getAttribution]);
+
+  /**
+   * How long this respondent has actually had the assessment in front of them.
+   *
+   * Reported on every event, which is the whole point: Analytics only banks the
+   * time a page reports, and a questionnaire that sends nothing between its
+   * first screen and its last would otherwise measure as a few milliseconds.
+   */
+  const trackedSeconds = useCallback((): number => {
+    const state = timing.current ?? (timing.current = readTimingState());
+    return activeSeconds(state, Date.now());
+  }, []);
 
   // Start Google Analytics before the draft finishes loading, so standard
   // audience, session, traffic-source, campaign, and device data is collected
@@ -174,8 +209,76 @@ export default function Home() {
       ...toEventParams(getAttribution()),
       lang,
       resumed: resumeScreen !== null,
+      active_seconds: trackedSeconds(),
     });
-  }, [getAttribution, hydrated, lang, resumeScreen]);
+  }, [getAttribution, hydrated, lang, resumeScreen, trackedSeconds]);
+
+  /**
+   * Run the clock while the page is in the foreground.
+   *
+   * Hiding the tab banks the stretch and stops counting, so time spent in
+   * another window is never charged to the respondent. `pagehide` banks the
+   * final stretch, which is the only chance to keep the last stretch of a visit
+   * that ends by closing the tab.
+   */
+  useEffect(() => {
+    if (!hydrated) return;
+    const now = Date.now();
+    let state = timing.current ?? readTimingState();
+    if (document.visibilityState === "visible") state = startStretch(state, now);
+    timing.current = state;
+
+    const bankNow = () => {
+      const current = timing.current;
+      if (!current) return;
+      timing.current = stopStretch(current, Date.now());
+      persistTimingState(timing.current);
+    };
+    const onVisibility = () => {
+      const current = timing.current;
+      if (!current) return;
+      if (document.visibilityState === "visible") {
+        timing.current = startStretch(current, Date.now());
+      } else {
+        bankNow();
+      }
+    };
+
+    document.addEventListener("visibilitychange", onVisibility);
+    window.addEventListener("pagehide", bankNow);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisibility);
+      window.removeEventListener("pagehide", bankNow);
+      bankNow();
+    };
+  }, [hydrated]);
+
+  /**
+   * Report the running total on a fixed cadence.
+   *
+   * This is what repairs Analytics' own engagement measurement: it banks time
+   * against the next event a page sends, so a periodic event turns a silent
+   * questionnaire into a measured one. It also stops the clock drifting, since
+   * every beat banks the stretch that just elapsed.
+   */
+  useEffect(() => {
+    if (!hydrated) return;
+    const beat = window.setInterval(() => {
+      const current = timing.current;
+      if (!current || document.visibilityState !== "visible") return;
+      const now = Date.now();
+      if (exhausted(current, now)) return;
+      timing.current = bankStretch(current, now);
+      persistTimingState(timing.current);
+      trackEvent(HEARTBEAT_EVENT, {
+        ...toEventParams(getAttribution()),
+        lang,
+        active_seconds: activeSeconds(timing.current, now),
+        progress_percent: assessmentProgress.percent,
+      });
+    }, HEARTBEAT_INTERVAL_MS);
+    return () => window.clearInterval(beat);
+  }, [assessmentProgress.percent, getAttribution, hydrated, lang]);
 
   useEffect(() => {
     if (!hydrated) return;
@@ -185,17 +288,29 @@ export default function Home() {
       answered: assessmentProgress.answered,
       percent: assessmentProgress.percent,
       complete: assessmentProgress.complete,
+      completedSectionIds,
       onContactForm: showsContactForm,
       resultsVisible: showsResults,
     }, fired);
-    for (const event of due) {
-      fireMilestone(event, {
+    for (const key of due) {
+      const sectionId = parseSectionMilestoneKey(key);
+      fireMilestone(key, {
         lang,
         progress_percent: assessmentProgress.percent,
         questions_answered: assessmentProgress.answered,
+        // Time-to-milestone: how long the respondent had been working when this
+        // step was reached, which is what turns the funnel into a drop-off
+        // story rather than a set of counts.
+        active_seconds: trackedSeconds(),
+        // Every section reports under one event name, so these parameters are
+        // what separates "finished Dados" from "finished Estrategia" in GA4.
+        ...(sectionId === null ? {} : {
+          section_id: sectionId,
+          section_index: SECTIONS.findIndex(section => section.id === sectionId),
+        }),
       });
     }
-  }, [assessmentProgress, fireMilestone, hydrated, lang, showsContactForm, showsResults]);
+  }, [assessmentProgress, completedSectionIds, fireMilestone, hydrated, lang, showsContactForm, showsResults, trackedSeconds]);
 
   const reportSubmitError = reportSubmitErrorCode === null
     ? null
@@ -333,6 +448,8 @@ export default function Home() {
     setSection(0);
     firedMilestones.current = null;
     clearFiredMilestones();
+    timing.current = startStretch({ activeMs: 0, since: null }, Date.now());
+    clearTimingState();
     try {
       window.localStorage.removeItem(STORAGE_KEY);
       setSaveState("idle");
@@ -361,9 +478,9 @@ export default function Home() {
     setPendingReport(snapshot);
     setReportReceipt(null);
     // The form passed validation. Deliberately carries no identity fields.
-    fireMilestone("contact_info_submitted", { lang });
+    fireMilestone("contact_info_submitted", { lang, active_seconds: trackedSeconds() });
     void saveReport(snapshot);
-  }, [answers, fireMilestone, lang, saveReport]);
+  }, [answers, fireMilestone, lang, saveReport, trackedSeconds]);
 
   const retryReport = useCallback(() => {
     if (!pendingReport) return;

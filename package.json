@@ -1,6 +1,6 @@
 {
   "name": "snowfox-ai-questionnaire",
-  "version": "1.2.25",
+  "version": "1.2.27",
   "private": true,
   "scripts": {
     "dev": "next dev",
