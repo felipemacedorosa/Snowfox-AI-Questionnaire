@@ -1,0 +1,14 @@
+event,type,when it fires,frequency,key parameters
+page_view,automatic,Page loads,Every load,GA4 standard
+session_start,automatic,Session begins,Every session,GA4 standard
+first_visit,automatic,First ever visit,Once per user,GA4 standard
+user_engagement,automatic,GA4 engagement ping,Periodic,GA4 standard
+assessment_view,custom,Assessment UI rendered,Once per page load,"lang, resumed, active_seconds, post_*, visitor_type"
+first_question_completed,custom,First question answered or skipped by branching,Once per attempt,"lang, progress_percent, questions_answered, active_seconds, post_*, visitor_type"
+assessment_halfway,custom,Progress reaches 50%,Once per attempt,"lang, progress_percent, questions_answered, active_seconds, post_*, visitor_type"
+last_question_completed,custom,All visible questions resolved,Once per attempt,"lang, progress_percent, questions_answered, active_seconds, post_*, visitor_type"
+contact_form_view,custom,Contact-information gate on screen,Once per attempt,"lang, progress_percent, questions_answered, active_seconds, post_*, visitor_type"
+contact_info_submitted,custom,Contact details submitted (conversion),Once per attempt,"lang, active_seconds, post_*, visitor_type"
+results_viewed,custom,Personalized report rendered,Once per attempt,"lang, progress_percent, questions_answered, active_seconds, post_*, visitor_type"
+section_completed,custom,One section finished,Up to 5x per attempt,"section_id, section_index, lang, progress_percent, active_seconds, post_*, visitor_type"
+assessment_heartbeat,custom,10s after load then every 30s while tab visible,Repeating,"visitor_type, engagement_time_msec | unverified_engagement_msec, active_seconds, progress_percent, lang, post_*"

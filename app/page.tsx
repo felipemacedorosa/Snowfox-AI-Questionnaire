@@ -52,6 +52,16 @@ import {
   toEventParams,
   type Attribution,
 } from "./attribution";
+import {
+  VISITOR_HUMAN,
+  classifyVisitor,
+  observeTrustedInteraction,
+  persistVisitorVerified,
+  readVisitorClass,
+  toEngagementParams,
+  toVisitorParams,
+  type VisitorClass,
+} from "./visitorClass";
 // DEV SHORTCUT (remove with app/devShortcuts.ts): see effect below.
 import { buildStrategyGapTestAnswers } from "./devShortcuts";
 
@@ -88,6 +98,10 @@ export default function Home() {
    * only what this load adds rather than re-reporting the whole clock.
    */
   const reportedEngagement = useRef<number | null>(null);
+  /** A trusted gesture has reached this load. Set by the observer, never reset. */
+  const interacted = useRef(false);
+  /** Verification recovered from storage, then latched. Null until first read. */
+  const humanVerified = useRef<boolean | null>(null);
   const prefersReducedMotion = useReducedMotion();
   const { lang, t } = useLanguage();
 
@@ -180,6 +194,34 @@ export default function Home() {
   }, []);
 
   /**
+   * Whether this visit has produced verified human interaction.
+   *
+   * Read from refs at call time rather than from render state, for the same
+   * reason attribution is: a gesture need not cause a re-render, so a verdict
+   * refreshed by an effect could lag the signal it reports. The empty
+   * dependency list keeps this callback's identity stable, so listing it as a
+   * dependency below cannot restart the heartbeat timer.
+   *
+   * Latching here rather than in the observer keeps one pure function deciding
+   * the question wherever it is asked.
+   */
+  const visitorClass = useCallback((): VisitorClass => {
+    if (humanVerified.current === null) humanVerified.current = readVisitorClass() === VISITOR_HUMAN;
+    if (humanVerified.current) return VISITOR_HUMAN;
+    const state = timing.current ?? (timing.current = readTimingState());
+    const verdict = classifyVisitor({
+      verified: false,
+      interacted: interacted.current,
+      activeMs: activeMs(state, Date.now()),
+    });
+    if (verdict === VISITOR_HUMAN) {
+      humanVerified.current = true;
+      persistVisitorVerified();
+    }
+    return verdict;
+  }, []);
+
+  /**
    * Report a milestone the first time this assessment attempt reaches it.
    *
    * The fired set is remembered in local storage, so resuming a saved draft
@@ -191,8 +233,12 @@ export default function Home() {
     if (fired.has(key)) return;
     fired.add(key);
     persistFiredMilestones(fired);
-    trackEvent(milestoneEventName(key), { ...toEventParams(getAttribution()), ...params });
-  }, [getAttribution]);
+    trackEvent(milestoneEventName(key), {
+      ...toEventParams(getAttribution()),
+      ...toVisitorParams(visitorClass()),
+      ...params,
+    });
+  }, [getAttribution, visitorClass]);
 
   /**
    * How long this respondent has actually had the assessment in front of them.
@@ -220,11 +266,15 @@ export default function Home() {
     trackedAssessmentView.current = true;
     trackEvent("assessment_view", {
       ...toEventParams(getAttribution()),
+      // Necessarily unverified on a first visit: this fires on hydration,
+      // before interaction is possible. A resumed visit that verified earlier
+      // reports human straight away.
+      ...toVisitorParams(visitorClass()),
       lang,
       resumed: resumeScreen !== null,
       active_seconds: trackedSeconds(),
     });
-  }, [getAttribution, hydrated, lang, resumeScreen, trackedSeconds]);
+  }, [getAttribution, hydrated, lang, resumeScreen, trackedSeconds, visitorClass]);
 
   /**
    * Run the clock while the page is in the foreground.
@@ -258,9 +308,17 @@ export default function Home() {
       }
     };
 
+    // A person acted on the page. Registered here because this effect already
+    // owns the page's listeners; it shares no event name or handler with the
+    // clock above, and detaches itself as soon as it has fired once.
+    const stopWatching = interacted.current
+      ? () => {}
+      : observeTrustedInteraction(() => { interacted.current = true; });
+
     document.addEventListener("visibilitychange", onVisibility);
     window.addEventListener("pagehide", bankNow);
     return () => {
+      stopWatching();
       document.removeEventListener("visibilitychange", onVisibility);
       window.removeEventListener("pagehide", bankNow);
       bankNow();
@@ -308,13 +366,19 @@ export default function Home() {
       const total = activeMs(timing.current, now);
       const engagement = engagementDeltaMs(total, reportedEngagement.current ?? 0);
       reportedEngagement.current = total;
+      const visitor = visitorClass();
       trackEvent(HEARTBEAT_EVENT, {
         ...toEventParams(getAttribution()),
+        ...toVisitorParams(visitor),
         lang: beatLang,
         // The parameter GA4 builds "average engagement time" from. Reported
         // here rather than left to gtag, which measures nothing unless the
         // document holds focus.
-        engagement_time_msec: engagement,
+        //
+        // Routed by verdict, so only a verified human's time reaches it. An
+        // unverified visit still reports the figure, under a name of our own,
+        // because no label can pull a value back out of a built-in metric.
+        ...toEngagementParams(visitor, engagement),
         active_seconds: activeSeconds(timing.current, now),
         progress_percent: percent,
       });
@@ -325,7 +389,7 @@ export default function Home() {
       window.clearTimeout(lead);
       window.clearInterval(cadence);
     };
-  }, [getAttribution, hydrated]);
+  }, [getAttribution, hydrated, visitorClass]);
 
   useEffect(() => {
     if (!hydrated) return;
@@ -497,6 +561,10 @@ export default function Home() {
     clearFiredMilestones();
     timing.current = startStretch({ activeMs: 0, since: null }, Date.now());
     clearTimingState();
+    // The clock restarts from zero, so the engagement watermark must too. Left
+    // standing, it would swallow every beat until the new clock passed the
+    // total banked before the restart.
+    reportedEngagement.current = 0;
     try {
       window.localStorage.removeItem(STORAGE_KEY);
       setSaveState("idle");
