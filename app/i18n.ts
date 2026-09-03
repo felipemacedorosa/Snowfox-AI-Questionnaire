@@ -16,6 +16,30 @@ export function bi(pt: string, en: string): Bilingual {
   return { pt, en };
 }
 
+/**
+ * The language a link asked for, from a query string such as
+ * `window.location.search`.
+ *
+ * Marketing shares one link per audience: the plain URL opens in Portuguese,
+ * and `?lang=en` opens in English so an English-speaking reader never has to
+ * find the toggle first. Returns null when the link says nothing, which leaves
+ * the saved preference and the default in charge.
+ */
+export function parseLangParam(search: string): Lang | null {
+  let params: URLSearchParams;
+  try {
+    params = new URLSearchParams(search);
+  } catch {
+    return null;
+  }
+  const requested = params.get("lang")?.trim().toLowerCase();
+  if (requested === "en" || requested === "pt") return requested;
+  // Accept the full locale tags a copied link may carry, e.g. en-US, pt-BR.
+  if (requested?.startsWith("en-")) return "en";
+  if (requested?.startsWith("pt-")) return "pt";
+  return null;
+}
+
 // Static chrome text shared across components: navigation, buttons, labels
 // that aren't driven by quiz content or generated report copy.
 const UI_PT = {

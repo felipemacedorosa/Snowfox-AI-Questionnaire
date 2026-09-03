@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
-import { DEFAULT_LANG, Lang, UI } from "./i18n";
+import { DEFAULT_LANG, Lang, UI, parseLangParam } from "./i18n";
 
 const STORAGE_KEY = "snowfox-ai-lang";
 
@@ -22,12 +22,22 @@ const LanguageContext = createContext<LanguageContextValue | null>(null);
 export function LanguageProvider({ children }: { children: React.ReactNode }) {
   const [lang, setLangState] = useState<Lang>(DEFAULT_LANG);
 
+  // A ?lang= link is an explicit choice made by whoever shared it, so it wins
+  // over a preference stored on an earlier visit, and is stored in turn: the
+  // rest of the assessment, and a reload partway through, stay in that
+  // language without the parameter having to be carried along.
   useEffect(() => {
+    const requested = parseLangParam(window.location.search);
+    if (requested) setLangState(requested);
     try {
+      if (requested) {
+        window.localStorage.setItem(STORAGE_KEY, requested);
+        return;
+      }
       const saved = window.localStorage.getItem(STORAGE_KEY);
       if (saved === "pt" || saved === "en") setLangState(saved);
     } catch {
-      // Language preference is best-effort; default stands if unavailable.
+      // Language preference is best-effort; the link or the default stands.
     }
   }, []);
 
