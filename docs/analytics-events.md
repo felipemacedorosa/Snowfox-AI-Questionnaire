@@ -32,6 +32,7 @@ recount a step that was already measured.
 | contact_info_submitted | Contact details submitted. The conversion event. |
 | results_viewed | The personalized report rendered. |
 | section_completed | One named section finished. Fires up to 5x per attempt; separate the sections with the `section_id` / `section_index` parameters. |
+| visit_verified | The visit demonstrated human interaction: a trusted gesture plus 10s of foreground time. Fired once per page load. Read its **user count** against the property total for the human share — see Reading it in Firebase. |
 | assessment_heartbeat | Running engagement report: first at 10s, then every 30s while the tab is visible. Carries the engagement figure under `engagement_time_msec` for a verified human and `unverified_engagement_msec` otherwise — see Human verification. |
 
 ## Sections reported by section_completed
@@ -124,6 +125,27 @@ GA4 builds average engagement time and engaged sessions from
 of a built-in metric. Reporting unverified time under a separate name keeps it
 countable in an exploration while leaving the property's headline engagement
 metrics describing verified humans only.
+
+### Reading it in Firebase
+
+`visitor_type` is a GA4 answer and needs GA4 to give it. Until the custom
+dimension is registered, GA4 collects it and shows nothing; the Firebase
+console cannot break an event down by parameter regardless of registration,
+because it has no exploration surface at all.
+
+`visit_verified` exists for that gap. An event *name* needs no registration and
+lists itself in both consoles, so the human share is legible with no reporting
+setup:
+
+- Firebase console → Analytics → Events, or GA4 → Reports → Engagement → Events.
+- Compare the **Total users** column for `visit_verified` against the property's
+  users for the same range. That ratio is the verified-human share.
+- Read users, never event count. The event fires once per page load, so a
+  visitor who returns is counted once per visit and twice in the totals.
+
+It answers only "how many". Filtering the funnel by verdict, or splitting
+engagement time, still needs the registered `visitor_type` dimension and GA4's
+Explore. The two are complementary, not alternatives.
 
 ### Automatic events are not covered
 

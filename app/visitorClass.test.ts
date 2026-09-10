@@ -4,12 +4,14 @@ import {
   MIN_HUMAN_DWELL_MS,
   TRUSTED_INTERACTION_EVENTS,
   UNVERIFIED_ENGAGEMENT_PARAM,
+  VISIT_VERIFIED_EVENT,
   VISITOR_HUMAN,
   VISITOR_PARAM,
   VISITOR_UNVERIFIED,
   classifyVisitor,
   isHuman,
   parseVisitorClass,
+  shouldReportVerification,
   toEngagementParams,
   toVisitorParams,
   type VisitorSignals,
@@ -124,6 +126,26 @@ describe("trusted interaction events", () => {
   });
 });
 
+describe("shouldReportVerification", () => {
+  it("announces a verified visit that has not announced yet", () => {
+    expect(shouldReportVerification(VISITOR_HUMAN, false)).toBe(true);
+  });
+
+  it("announces only once per load", () => {
+    // The event counts visits, not beats. Firing on every heartbeat would
+    // multiply one verified visitor by the length of their session.
+    expect(shouldReportVerification(VISITOR_HUMAN, true)).toBe(false);
+  });
+
+  it("stays silent while nothing has been demonstrated", () => {
+    // Silence is the whole signal: the human share is this event's user count
+    // read against the property's total, so an unverified visit must not
+    // appear at all rather than appear with a negative label.
+    expect(shouldReportVerification(VISITOR_UNVERIFIED, false)).toBe(false);
+    expect(shouldReportVerification(VISITOR_UNVERIFIED, true)).toBe(false);
+  });
+});
+
 describe("analytics naming", () => {
   it("pins the strings that become permanent dimension values", () => {
     // Renaming any of these splits the reporting history in two: past rows keep
@@ -132,10 +154,11 @@ describe("analytics naming", () => {
     expect(VISITOR_HUMAN).toBe("human");
     expect(VISITOR_UNVERIFIED).toBe("unverified");
     expect(UNVERIFIED_ENGAGEMENT_PARAM).toBe("unverified_engagement_msec");
+    expect(VISIT_VERIFIED_EVENT).toBe("visit_verified");
   });
 
   it("stays inside the parameter name and value limits", () => {
-    for (const name of [VISITOR_PARAM, UNVERIFIED_ENGAGEMENT_PARAM]) {
+    for (const name of [VISITOR_PARAM, UNVERIFIED_ENGAGEMENT_PARAM, VISIT_VERIFIED_EVENT]) {
       expect(name.length).toBeLessThanOrEqual(40);
     }
     for (const value of [VISITOR_HUMAN, VISITOR_UNVERIFIED]) {

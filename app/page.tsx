@@ -53,11 +53,13 @@ import {
   type Attribution,
 } from "./attribution";
 import {
+  VISIT_VERIFIED_EVENT,
   VISITOR_HUMAN,
   classifyVisitor,
   observeTrustedInteraction,
   persistVisitorVerified,
   readVisitorClass,
+  shouldReportVerification,
   toEngagementParams,
   toVisitorParams,
   type VisitorClass,
@@ -102,6 +104,8 @@ export default function Home() {
   const interacted = useRef(false);
   /** Verification recovered from storage, then latched. Null until first read. */
   const humanVerified = useRef<boolean | null>(null);
+  /** `visit_verified` already announced this load. Deliberately per load. */
+  const verifiedReported = useRef(false);
   const prefersReducedMotion = useReducedMotion();
   const { lang, t } = useLanguage();
 
@@ -367,6 +371,21 @@ export default function Home() {
       const engagement = engagementDeltaMs(total, reportedEngagement.current ?? 0);
       reportedEngagement.current = total;
       const visitor = visitorClass();
+      // Announced from the beat rather than from the observer because both
+      // halves of the verdict are only ever true together here: a gesture
+      // cannot verify a visit before the dwell threshold, and the first beat
+      // lands exactly on it. A gesture arriving later is picked up by the next
+      // beat, which is late by at most one interval and costs nothing in a
+      // figure that counts users rather than moments.
+      if (shouldReportVerification(visitor, verifiedReported.current)) {
+        verifiedReported.current = true;
+        trackEvent(VISIT_VERIFIED_EVENT, {
+          ...toEventParams(getAttribution()),
+          ...toVisitorParams(visitor),
+          lang: beatLang,
+          active_seconds: activeSeconds(timing.current, now),
+        });
+      }
       trackEvent(HEARTBEAT_EVENT, {
         ...toEventParams(getAttribution()),
         ...toVisitorParams(visitor),

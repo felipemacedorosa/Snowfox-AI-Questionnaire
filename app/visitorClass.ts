@@ -111,6 +111,36 @@ export function toEngagementParams(visitor: VisitorClass, deltaMs: number): Reco
     : { [UNVERIFIED_ENGAGEMENT_PARAM]: deltaMs };
 }
 
+/**
+ * Event announcing that a visit demonstrated human interaction.
+ *
+ * `visitor_type` answers the same question with more precision, but only in
+ * GA4 and only after someone registers it as a custom dimension: an
+ * unregistered event parameter is collected and then hidden, and the Firebase
+ * console cannot break an event down by parameter at all. An event *name*
+ * needs no registration and lists itself in both consoles, so the human share
+ * stays readable beside `first_visit` with no reporting setup at all.
+ *
+ * This duplicates the parameter rather than replacing it. The parameter is
+ * what slices the funnel; this only counts.
+ */
+export const VISIT_VERIFIED_EVENT = "visit_verified";
+
+/**
+ * Whether this page load should announce its verification.
+ *
+ * Once per load rather than once per browser. Both consoles report unique
+ * users per event, so a returning visitor re-announcing costs nothing in the
+ * figure this event exists to produce, while a resumed draft that opens
+ * already verified is still counted instead of silently missing.
+ */
+export function shouldReportVerification(
+  visitor: VisitorClass,
+  alreadyReported: boolean
+): boolean {
+  return !alreadyReported && isHuman(visitor);
+}
+
 /** Verification remembered across reloads, so a resumed draft stays verified. */
 export const VISITOR_STORAGE_KEY = "snowfox-ai-visitor-v1";
 
